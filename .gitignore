@@ -1,0 +1,26 @@
+# Dependências
+node_modules/
+vendor/
+
+# Build
+dist/
+build/
+out/
+*.log
+
+# Ambiente
+.env
+.env.local
+.env.*.local
+
+# Editores / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
