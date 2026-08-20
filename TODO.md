@@ -244,7 +244,7 @@ Composição do MVP definida na Fase 0 — ver [`docs/product/mvp.md`](docs/prod
 | --- | --- | --- | --- | --- |
 | 0 | Descoberta e definição do produto | ✅ | — | — |
 | 1 | Fundação técnica | ✅ | sim | 0 |
-| 2 | Usuários e autenticação | ⬜ | sim | 1 |
+| 2 | Usuários e autenticação | 🟨 | sim | 1 |
 | 3 | Perfil profissional | ⬜ | reduzida | 2 |
 | 4 | Localização e área de atendimento | ⬜ | **não** | 3 |
 | 5 | Gestão de alunos | ⬜ | sim | 2, 3 |
@@ -460,8 +460,7 @@ CI verde com lint, typecheck, build e testes; um endpoint `/health` consumido pe
 
 - [x] Ambiente local sobe com `pnpm db:up` seguido de `pnpm dev`
 - [x] CI verde no GitHub Actions (formatação, lint, tipos, build, testes)
-- [ ] **CI obrigatório para merge em `main`** — falta proteger a branch no GitHub;
-      é ação sua, não há como fazer pelo código
+- [x] **CI obrigatório para merge em `main`** — branch protegida no GitHub em 2026-08-20
 - [x] Web consome `/health` por SSR, com Postgres e Redis reportando "disponível"
 - [x] App Expo consome `/health`; bundle verificado com 1236 módulos
 - [ ] ~~Migration inicial aplicada e reversível~~ → **adiado para a Fase 2, com motivo.**
@@ -472,7 +471,7 @@ CI verde com lint, typecheck, build e testes; um endpoint `/health` consumido pe
 
 ---
 
-## Fase 2 — Usuários e autenticação ⬜
+## Fase 2 — Usuários e autenticação 🟨
 
 **Objetivo:**
 Identidade da plataforma: cadastro, login, recuperação de senha, papéis e autorização,
