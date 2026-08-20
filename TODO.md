@@ -499,23 +499,41 @@ ela ·
 ### Épicos e tarefas
 
 - [ ] **Epic 2.1 — Modelo de identidade**
-  - [ ] Entidade `user` e credenciais
-  - [ ] Papéis: profissional, aluno, administrador
-  - [ ] Vínculo entre `user` e perfis específicos
+  - [ ] Módulo `iam` com a fronteira definida (nada fora dele importa entidade de identidade)
+  - [ ] `users`: e-mail único em minúsculas, `full_name`, `birth_date`, `is_platform_admin`, aceite dos termos com versão e data
+  - [ ] `user_identities`: uma linha por forma de entrar; hoje só `PASSWORD`
+  - [ ] `professionals`: esqueleto, com unicidade sobre `user_id`
+  - [ ] `students`: `professional_id` não nulo, `user_id` anulável, `status`, `access_holder`
+  - [ ] `student_invites` e o link público do profissional
+  - [ ] `refresh_tokens` por aparelho — **nunca** chamar de `sessions`
+  - [ ] **Primeira migration do projeto**, escrita à mão e revertível *(fecha a pendência da Fase 1)*
+  - [ ] Papéis derivados do dado, sem coluna de papel
+  - [ ] Seeds: admin por variável de ambiente, profissional com alunos com e sem conta, aluno em dois profissionais *(fecha DT-003)*
 - [ ] **Epic 2.2 — Autenticação**
-  - [ ] Cadastro com verificação de e-mail
+  - [ ] Hash argon2id com `@node-rs/argon2`, parâmetros calibrados na máquina de destino
+  - [ ] Política de senha: mínimo 10 caracteres, lista local de senhas vazadas, sem regra de composição
+  - [ ] Cadastro de profissional e cadastro aberto de aluno
+  - [ ] Convite endereçado, convite avulso e link público — os três com aceite pelo navegador
+  - [ ] Verificação de e-mail: não bloqueia a entrada; exigida ao enviar o primeiro convite
   - [ ] Login e logout
-  - [ ] Refresh token e revogação
+  - [ ] Renovação com rotação e **detecção de reuso** (invalida a família do aparelho)
   - [ ] Recuperação e redefinição de senha
-  - [ ] Rate limiting nas rotas sensíveis (Redis)
+  - [ ] Troca de e-mail com confirmação no endereço novo e aviso no antigo
+  - [ ] Respostas indistinguíveis nas rotas que revelariam a existência de uma conta
+  - [ ] Rate limiting por IP **e** por alvo, em Redis
 - [ ] **Epic 2.3 — Autorização**
-  - [ ] Guards e decorators de papel/permissão
-  - [ ] Matriz papel × recurso documentada
-  - [ ] Regra de propriedade do recurso (dono do dado)
+  - [ ] Guard global: rota é protegida por padrão, pública só com marcação explícita
+  - [ ] Regra de propriedade (dono) e de participação, como decorators reutilizáveis
+  - [ ] Recurso de outro dono responde **404**, não 403
+  - [ ] Matriz papel × recurso implementada conforme `docs/domain/iam.md` §6
+  - [ ] Log estruturado de toda leitura de dado pessoal feita por administrador
 - [ ] **Epic 2.4 — Front-end de auth**
-  - [ ] Telas web (cadastro, login, esqueci a senha, redefinir)
-  - [ ] Telas mobile equivalentes
-  - [ ] Persistência de sessão (web e mobile) e rotas protegidas
+  - [ ] Telas web: cadastro de profissional, login, esqueci a senha, redefinir
+  - [ ] Aceite de convite e cadastro por link público — **no navegador, sem instalar app**
+  - [ ] Telas mobile equivalentes, com token em `expo-secure-store`
+  - [ ] Persistência de acesso e rotas protegidas em web e mobile
+  - [ ] Estado vazio do aluno sem professor
+  - [ ] Playwright: navegadores instalados e os fluxos de cadastro, login e aceite cobertos no CI
 - [ ] **Epic 2.5 — E-mail transacional mínimo 🔁** *(antecipado da Fase 10)*
   - [ ] Provedor de e-mail configurado
   - [ ] Fila BullMQ para envio assíncrono
@@ -528,15 +546,25 @@ ela ·
 
 ### Decisões da fase
 
-- [ ] Autenticação própria vs. provedor gerenciado (Cognito, Auth0, Clerk, Supabase Auth)
-- [ ] JWT + refresh token vs. sessão em Redis; tempo de vida e rotação
-- [ ] Um usuário pode ser **profissional e aluno ao mesmo tempo**? (impacta todo o modelo)
-- [ ] RBAC simples vs. permissões granulares
-- [ ] Verificação obrigatória de e-mail e/ou telefone antes de usar o sistema
-- [ ] Login social (Google/Apple) entra agora ou depois? (Apple é exigência de loja para apps com login social)
-- [ ] Política de senha e algoritmo de hash (argon2 recomendado)
-- [ ] LGPD: base legal, consentimento no cadastro, exclusão de conta e retenção de dados
-- [ ] Onde ficam os dados de menores de idade (aluno menor com responsável)?
+Todas resolvidas em 2026-08-20. Registro completo em [`docs/domain/iam.md`](docs/domain/iam.md)
+§8 e em [ADR-004](docs/adr/ADR-004-estrategia-de-autenticacao.md).
+
+- [x] Autenticação própria vs. provedor gerenciado → **própria** (Passport + JWT no módulo `iam`)
+- [x] JWT + refresh vs. sessão em Redis → **JWT de 15 min + renovação rotativa** com detecção de reuso
+- [x] Um usuário pode ser **profissional e aluno ao mesmo tempo**? → **sim**, mesma conta
+- [x] RBAC simples vs. granular → **simples**: 3 papéis derivados + dono/participante
+- [x] Verificação obrigatória de e-mail → **não bloqueia a entrada**; exigida só para enviar convite
+- [x] Login social agora ou depois? → **depois**, mas `user_identities` nasce agora
+- [x] Política de senha e hash → **argon2id** via `@node-rs/argon2`; mínimo 10 caracteres, sem regra de composição
+- [x] LGPD: base legal, consentimento, exclusão e retenção → aceite obrigatório com versão e data; exclusão **anonimiza a conta e mantém o histórico**
+- [x] Dados de menores → **idade mínima 18** para conta; menor existe só como ficha, responsável acessa
+
+**Decisões que o TODO não previa e que apareceram na abertura da fase:**
+
+- [x] Aluno pode se cadastrar sozinho, sem convite? → **sim**, cadastro aberto
+- [x] Como ele chega a um professor sem busca? → **link público do profissional** ("treine comigo")
+- [x] `Student` é a pessoa ou a ficha de cada profissional? → **a ficha**. `StudentLink` sai do glossário
+- [x] "Sessão" pode significar login? → **não**. `Session` é aula; use `AccessToken`, `RefreshToken`, `Device`
 
 ### Tecnologias
 
@@ -551,10 +579,13 @@ ela ·
 
 ### Critérios de conclusão
 
-- [ ] Cadastro → verificação → login → refresh → logout funcionando ponta a ponta
-- [ ] Rotas protegidas retornam 401/403 corretamente, com testes de integração
+- [ ] Cadastro → verificação → login → renovação → logout funcionando ponta a ponta
+- [ ] Aceite de convite funciona **inteiramente no navegador**, coberto por teste Playwright
+- [ ] Rotas protegidas retornam 401/403/404 conforme `iam.md` §7, com testes de integração
+- [ ] **Cada célula "não pode" da matriz tem um teste** — célula sem teste é lacuna
+- [ ] Reutilizar token de renovação já rotacionado invalida a família, com teste explícito
 - [ ] Recuperação de senha entregue por e-mail real em *staging*
-- [ ] Matriz de permissões documentada em `docs/domain/iam.md`
+- [x] Matriz de permissões documentada em `docs/domain/iam.md`
 - [ ] *Staging* publicado e atualizado automaticamente a partir da `main`
 - [ ] Revisão de segurança do fluxo de auth registrada
 
@@ -1711,7 +1742,7 @@ ADRs previstas (não escritas ainda):
 | ADR-001 | Monólito modular | 0 | ✅ |
 | ADR-002 | Monorepo, gerenciador de pacotes e toolchain | 1 | ✅ |
 | ADR-003 | Identificadores e convenções de dados | 1 | ✅ |
-| ADR-004 | Estratégia de autenticação | 2 | ⬜ |
+| ADR-004 | Estratégia de autenticação | 2 | ✅ |
 | ADR-005 | PostGIS e provedor de geocoding | 12 | ⬜ |
 | ADR-006 | Modelagem temporal da agenda | 6 | ⬜ |
 | ADR-007 | Provedor de pagamento | 9 | ⬜ |
@@ -1771,24 +1802,26 @@ Estrutura-alvo. **Criar cada diretório apenas quando ele tiver conteúdo real.*
 | ~~P2 — aluno em web responsiva ou app nativo?~~ ✅ app nativo | 1 | `docs/product/mvp.md` |
 | ~~Monorepo, gerenciador de pacotes, chave primária~~ ✅ | 1 | ADR-002, ADR-003 |
 | Monorepo, migrations e convenções de banco | 1 | ADR-002 |
-| Estratégia de autenticação e modelo de papéis | 2 | ADR-003 |
-| Usuário pode ser profissional e aluno ao mesmo tempo | 2 | `docs/domain/iam.md` |
+| ~~Estratégia de autenticação e modelo de papéis~~ ✅ | 2 | ADR-004 |
+| ~~Usuário pode ser profissional e aluno ao mesmo tempo~~ ✅ sim | 2 | `docs/domain/iam.md` |
+| **Painel administrativo: em que fase entra?** — está no MVP e não tem épico em lugar nenhum | a definir | `docs/domain/iam.md` §11 |
+| **Termos de Uso e Política de Privacidade** — não existem, são pré-requisito do lançamento | antes do lançamento | trabalho jurídico, sem dono |
 | Catálogo de modalidades aberto ou curado | 3 | `docs/domain/professional-profile.md` |
-| Provedor de geocoding e precisão pública de localização | 4 | ADR-004 |
+| Provedor de geocoding e precisão pública de localização | 12 | ADR-005 |
 | Propriedade e privacidade dos dados do aluno | 5 | `docs/domain/students.md` |
 | Política de conflitos de agenda | 6 | `docs/domain/scheduling.md` |
-| Timezone e modelagem temporal | 6 | ADR-005 |
+| Timezone e modelagem temporal | 6 | ADR-006 |
 | Política de cancelamento | 6 / 7 | `docs/domain/scheduling.md` |
 | Consumo, validade e estorno de créditos | 7 | `docs/domain/packages-credits.md` |
 | Comportamento da lista de espera | 8 | `docs/domain/class-groups.md` |
-| Provedor de pagamento e fluxo do dinheiro | 9 | ADR-006 |
+| Provedor de pagamento e fluxo do dinheiro | 9 | ADR-007 |
 | Modelo de monetização | 9 | `docs/product/` |
 | Provedor e custo de WhatsApp | 10 | `docs/domain/notifications.md` |
 | Quem pode reservar e cancelar no app | 11 | `docs/domain/scheduling.md` |
 | Critérios de ranking do marketplace | 12 | `docs/domain/marketplace.md` |
 | Elegibilidade e moderação de avaliações | 13 | `docs/domain/reviews.md` |
 | Arquitetura do feed social | 14 | ADR (a criar) |
-| Compute AWS e IaC | 18 | ADR-007 |
+| Compute AWS e IaC | 18 | ADR-008 |
 
 ---
 

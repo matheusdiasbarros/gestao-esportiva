@@ -6,13 +6,13 @@ Vocabulário único do projeto. Produto e interface em **pt-BR**; código, tabel
 Regra: se um termo aparece aqui, é assim que ele se chama — na conversa, no documento, na
 tela e no código. Sinônimo novo para conceito existente é bug de vocabulário.
 
-Última atualização: 2026-08-19
+Última atualização: 2026-08-20
 
 ---
 
 ## Termos ambíguos — leia antes
 
-Três palavras do português significam mais de uma coisa neste domínio. Confundi-las gera
+Quatro palavras do português significam mais de uma coisa neste domínio. Confundi-las gera
 modelagem errada.
 
 ### "Aula"
@@ -39,19 +39,54 @@ Nunca usar `Subscription` sozinho. A colisão entre esses dois é a mais prováv
 
 | Conceito | Significa | Termo em código |
 | --- | --- | --- |
-| **vínculo** | o aluno é aluno daquele profissional | `StudentLink` |
+| **vínculo** | o aluno é aluno daquele profissional | `students.status` — **não é entidade** |
 | **matrícula** | o aluno pertence àquela turma | `Enrollment` |
+
+Vínculo **não tem entidade própria**. Decidido na Fase 2: `Student` é a ficha que um
+profissional mantém sobre alguém, então o vínculo já é a existência da ficha, e o estado dele
+(`ATIVO`, `PAUSADO`, `ENCERRADO`) é uma coluna. Havia um `StudentLink` na primeira versão
+deste glossário; ele foi removido junto com a tabela que nunca chegou a existir. Razão em
+[`iam.md`](iam.md).
+
+### "Sessão"
+
+| Sentido em pt-BR | Vale neste projeto? | O que usar |
+| --- | --- | --- |
+| a aula marcada na agenda | **sim** | `Session` |
+| o estado de estar logado | **não — proibido** | `AccessToken`, `RefreshToken`, `Device` |
+
+`Session` é a unidade central da agenda e a palavra está tomada. "Sessões ativas" numa tela de
+conta significaria aulas, não logins. Na interface: **"aparelhos conectados"**. No banco:
+`refresh_tokens`, nunca `sessions`.
 
 ---
 
-## Pessoas
+## Pessoas e acesso
+
+Detalhamento completo do modelo em [`iam.md`](iam.md).
 
 | pt-BR | Código | Definição |
 | --- | --- | --- |
-| Profissional | `Professional` | Quem dá as aulas e administra o próprio negócio. É quem paga pela plataforma |
-| Aluno | `Student` | Quem recebe as aulas. Pode existir como registro sem ter conta |
-| Administrador | `Admin` | Operador da plataforma |
-| Vínculo | `StudentLink` | Relação entre um profissional e um aluno. Um aluno pode ter vínculo com vários profissionais |
+| Conta | `User` | Uma pessoa que consegue entrar no sistema. Tem e-mail, senha e nome. Não é profissional nem aluno por si só — é só o acesso |
+| Profissional | `Professional` | Quem dá as aulas e administra o próprio negócio. É quem paga pela plataforma. **Um por conta** |
+| Aluno | `Student` | A ficha que **um** profissional mantém sobre alguém que treina com ele. Pode não ter conta associada |
+| Administrador | `Admin` | Operador da plataforma. É `users.is_platform_admin`, não entidade |
+| Papel | `Role` | Profissional, aluno ou administrador. **Derivado do dado**, nunca uma coluna de papel |
+| Convite | `StudentInvite` | Link de uso único que liga uma ficha existente a uma conta |
+| Link público | `SignupLink` | Link permanente do profissional ("treine comigo"). Quem se cadastra por ele vira aluno dele, sem ficha prévia |
+
+A mesma pessoa é aluna de dois profissionais tendo **duas fichas** que apontam para **uma
+conta**. Rodrigo nunca sabe que Ana existe.
+
+## Tokens de acesso
+
+| pt-BR | Código | Definição |
+| --- | --- | --- |
+| Token de acesso | `AccessToken` | Prova de identidade de vida curta, enviada em cada requisição |
+| Token de renovação | `RefreshToken` | Permite obter um novo token de acesso sem digitar a senha. Rotacionado a cada uso |
+| Aparelho conectado | `Device` | Onde a pessoa está logada. Base para "sair de todos os aparelhos" |
+
+Nunca chamar nada disto de "sessão" — ver *Termos ambíguos*.
 
 ## Agenda
 
