@@ -45,6 +45,30 @@ Nove papéis estão especificados abaixo, mas **não devem existir todos desde o
 **Começar com quatro:** Orchestrator, Product, Architect e Backend. Os demais entram
 quando a fase correspondente exigir.
 
+### Quem decide o acionamento
+
+**O `TODO.md` manda.** Cada fase declara, na linha "Agentes desta fase", quais papéis são
+obrigatórios (⬤) e quais são recomendados (○), com a tabela consolidada na seção 1 do
+`TODO.md`. Agente marcado como obrigatório é acionado — não é sugestão —, e o que ele apontar
+precisa ser respondido: corrigido, ou registrado em `docs/tech-debt.md` com o motivo.
+
+### Correção sobre o valor dos agentes
+
+A seção 8 deste documento desenha um fluxo em que quase todo o trabalho passa por agentes.
+A prática das fases 0 e 1 mostrou que isso é otimista demais, e vale registrar por quê.
+
+**Um subagente começa sem o contexto da conversa.** Para *continuar* um trabalho em
+andamento, isso é defeito: ele redescobre decisões já tomadas, às vezes divergindo delas, e
+escrever o briefing custa mais que executar a tarefa.
+
+**Para revisar, a mesma característica é vantagem.** Um revisor que não herdou as suposições
+de quem escreveu enxerga o que passou despercebido por proximidade.
+
+Daí a regra que a tabela do `TODO.md` reflete: `product` e `architect` **antes** de existir
+código, para levantar regra e modelagem; `security` e `qa` **antes de fechar a fase**, para
+revisar com olhar independente. Os agentes de implementação entram quando a tarefa é isolada
+o bastante para caber num briefing curto.
+
 ---
 
 ## 3. Formato portátil dos agentes

@@ -41,6 +41,51 @@ Quando o comando for **"iniciar Fase X"**, seguir exatamente esta sequência:
 > mapa em `AI-DEVELOPMENT.md` seção 6.9. Instalar e validar a ferramenta faz parte da
 > **preparação** da fase, nunca do meio da implementação.
 
+### Agentes por fase
+
+Cada fase declara, na linha **"Agentes desta fase"**, quais papéis devem ser acionados e em
+que momento. Isso **não é sugestão**: agente marcado como obrigatório é acionado, e o que ele
+apontar precisa ser respondido — corrigido ou registrado em `docs/tech-debt.md` com o motivo
+de não ter sido corrigido.
+
+Momento de cada tipo de agente:
+
+| Quando | Agentes | Para quê |
+| --- | --- | --- |
+| **Início** (passos 2–5) | `product`, `architect` | levantar regras e propor modelagem antes de existir código |
+| **Durante** (passo 10) | `backend`, `web`, `mobile`, `devops` | implementar |
+| **Antes de fechar** | `security`, `qa` | revisar com olhar independente |
+
+**Por que a revisão é o uso mais valioso:** um agente começa sem o contexto desta conversa.
+Para continuar um trabalho em andamento isso é defeito — ele redescobre o que já foi
+decidido. Para revisar, é justamente a vantagem: ele não herda os meus vieses nem as minhas
+suposições, e enxerga o que eu deixei passar por estar perto demais.
+
+**Tabela consolidada** (⬤ obrigatório · ○ recomendado):
+
+| Fase | product | architect | backend | web | mobile | qa | security | devops |
+| --- | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
+| 2 — Autenticação | ⬤ | ○ | ⬤ | ○ | | ⬤ | ⬤ | ⬤ |
+| 3 — Perfil | ⬤ | ○ | ⬤ | ⬤ | | ○ | ⬤ | |
+| 4 — Localização | ○ | ⬤ | ⬤ | ○ | | ○ | ⬤ | |
+| 5 — Alunos | ⬤ | ○ | ⬤ | ⬤ | | ○ | ⬤ | |
+| 6 — Agenda | ⬤ | ⬤ | ⬤ | ⬤ | | ⬤ | ○ | |
+| 7 — Créditos | ⬤ | ⬤ | ⬤ | ○ | | ⬤ | ○ | |
+| 8 — Turmas | ⬤ | ○ | ⬤ | ⬤ | | ⬤ | | |
+| 9 — Financeiro | ⬤ | ⬤ | ⬤ | ⬤ | | ⬤ | ⬤ | |
+| 10 — Notificações | ⬤ | ⬤ | ⬤ | | ○ | ○ | ○ | ○ |
+| 11 — App do aluno | ○ | | ○ | | ⬤ | ⬤ | ⬤ | ○ |
+| 12 — Marketplace | ⬤ | ⬤ | ⬤ | ⬤ | ○ | ○ | ○ | |
+| 13 — Avaliações | ⬤ | ○ | ⬤ | ⬤ | | ○ | ⬤ | |
+| 14 — Social | ⬤ | ⬤ | ⬤ | ⬤ | ○ | ○ | ⬤ | |
+| 15 — Locais | ⬤ | ○ | ⬤ | ⬤ | | | ○ | |
+| 16 — Comunidade | ⬤ | ○ | ⬤ | ○ | ⬤ | ○ | ⬤ | |
+| 17 — IA | ⬤ | ⬤ | ○ | | | ○ | ⬤ | ○ |
+| 18 — Produção | | ⬤ | ○ | | | ○ | ⬤ | ⬤ |
+| 19 — Escala | | ⬤ | ⬤ | ○ | | ○ | | ⬤ |
+
+O `orchestrator` fica de fora da tabela porque é acionado no passo 1 de **toda** fase.
+
 ### Ritual de fim de fase
 
 1. Checar os *Critérios de conclusão*.
@@ -428,6 +473,16 @@ recuperação de senha por e-mail funcionando; ambiente de *staging* publicado (
 **Ferramentas a instalar nesta fase:** Playwright CLI (`@playwright/test`), obrigatório —
 primeiros fluxos de UI a proteger. Playwright MCP opcional. Ver `AI-DEVELOPMENT.md` §6.6.
 
+**Agentes desta fase:**
+`product` ⬤ modelo de identidade e matriz de permissões ·
+`backend` ⬤ implementação ·
+`security` ⬤ **revisão obrigatória** de senha, sessão, token e LGPD — nenhum épico fecha sem
+ela ·
+`qa` ⬤ testes de autorização, inclusive acesso ao recurso de outro usuário ·
+`devops` ⬤ Epic 2.6 (staging) ·
+`architect` ○ fronteira do módulo `iam` ·
+`web` ○ telas de auth
+
 ### Épicos e tarefas
 
 - [ ] **Epic 2.1 — Modelo de identidade**
@@ -502,6 +557,13 @@ experiência, preços e fotos, com separação clara entre dados públicos e pri
 Editor de perfil na web, perfil retornado pela API e uma página pública mínima (🔁).
 
 **Dependências:** Fase 2.
+
+**Agentes desta fase:**
+`product` ⬤ catálogo de modalidades, preços e o que é público ·
+`backend` ⬤ · `web` ⬤ editor de perfil ·
+`security` ⬤ **revisão obrigatória**: garantir que a resposta da API pública não devolve dado
+privado — verificar a resposta, não só a tela ·
+`architect` ○ · `qa` ○
 
 ### Épicos e tarefas
 
@@ -578,6 +640,13 @@ atendem neste ponto" usando PostGIS, com índices e desempenho medido.
 para o banco local — o schema fica grande aqui e as consultas PostGIS exigem inspeção de
 plano. Ver `AI-DEVELOPMENT.md` §6.7.
 
+**Agentes desta fase:**
+`architect` ⬤ ADR de PostGIS e do provedor de geocoding ·
+`backend` ⬤ índices espaciais e plano de consulta ·
+`security` ⬤ **revisão obrigatória**: precisão pública da localização — endereço de aluno é
+dado sensível ·
+`product` ○ · `web` ○ · `qa` ○
+
 ### Épicos e tarefas
 
 - [ ] **Epic 4.1 — Locais**
@@ -642,6 +711,13 @@ CRUD de alunos, convite/vínculo aluno↔profissional e ficha do aluno na web.
 
 **Dependências:** Fases 2 e 3.
 
+**Agentes desta fase:**
+`product` ⬤ propriedade do dado e regras do vínculo ·
+`backend` ⬤ · `web` ⬤ ·
+`security` ⬤ **revisão obrigatória**: anamnese e lesão são dado sensível pela LGPD, e o
+profissional cadastra aluno que não consentiu ·
+`architect` ○ · `qa` ○
+
 ### Épicos e tarefas
 
 - [ ] **Epic 5.1 — Cadastro de alunos**
@@ -702,6 +778,15 @@ recorrentes, sem possibilidade de agendamento conflitante (garantido no banco).
 
 **Dependências:** Fases 3 e 5 — a Fase 4 saiu do caminho crítico na Fase 0.
 **É a fase de maior risco técnico do projeto.**
+
+**Agentes desta fase:**
+`architect` ⬤ modelagem temporal e ADR — decisão difícil de reverter depois que houver aulas
+no banco ·
+`product` ⬤ política de conflito, recorrência, cancelamento e timezone ·
+`backend` ⬤ · `web` ⬤ calendário ·
+`qa` ⬤ **teste de concorrência obrigatório**: dois agendamentos simultâneos no mesmo horário
+não podem passar ·
+`security` ○
 
 ### Épicos e tarefas
 
@@ -777,6 +862,14 @@ extrato auditável de movimentação de créditos.
 
 **Dependências:** Fase 6.
 
+**Agentes desta fase:**
+`product` ⬤ consumo, validade, estorno e reposição de crédito ·
+`architect` ⬤ desenho do livro-razão — saldo derivado, nunca guardado solto ·
+`backend` ⬤ ·
+`qa` ⬤ **teste de concorrência obrigatório**: consumo simultâneo não pode produzir saldo
+inconsistente ·
+`web` ○ · `security` ○
+
 ### Épicos e tarefas
 
 - [ ] **Epic 7.1 — Produtos de venda**
@@ -839,6 +932,12 @@ lista de espera funcional e registro de presença.
 
 **Dependências:** Fases 6 e 7.
 
+**Agentes desta fase:**
+`product` ⬤ comportamento da lista de espera e regras de matrícula ·
+`backend` ⬤ · `web` ⬤ ·
+`qa` ⬤ **teste de concorrência obrigatório**: capacidade da turma não pode ser excedida ·
+`architect` ○
+
 ### Épicos e tarefas
 
 - [ ] **Epic 8.1 — Turma**
@@ -897,6 +996,13 @@ Cobrança gerada a partir de pacote/mensalidade, pagamento por PIX confirmado vi
 idempotente, e painel financeiro com recebido/a receber/inadimplência.
 
 **Dependências:** Fases 7 e 8.
+
+**Agentes desta fase:**
+`product` ⬤ inadimplência, estorno e por onde o dinheiro passa ·
+`architect` ⬤ ADR do provedor de pagamento ·
+`backend` ⬤ · `web` ⬤ painel financeiro ·
+`qa` ⬤ **obrigatório**: webhook duplicado não pode gerar efeito duplicado ·
+`security` ⬤ **revisão obrigatória** de assinatura de webhook, segredo do gateway e replay
 
 ### Épicos e tarefas
 
@@ -963,6 +1069,12 @@ e centro de preferências do usuário.
 
 **Dependências:** Fases 6 e 9 (eventos que disparam notificações). Reaproveita o Epic 2.5.
 
+**Agentes desta fase:**
+`product` ⬤ quais notificações são obrigatórias e quais o usuário pode desligar ·
+`architect` ⬤ desenho evento → template → canal, para adicionar canal sem mexer no núcleo ·
+`backend` ⬤ ·
+`mobile` ○ push · `qa` ○ · `security` ○ consentimento · `devops` ○ entregabilidade de e-mail
+
 ### Épicos e tarefas
 
 - [ ] **Epic 10.1 — Núcleo de notificações**
@@ -1022,6 +1134,15 @@ App Expo publicado em canal de teste (TestFlight / Google Play internal) com os 
 principais do aluno funcionando.
 
 **Dependências:** Fases 6, 7, 9 e 10.
+
+**Agentes desta fase:**
+`mobile` ⬤ implementação ·
+`qa` ⬤ E2E dos fluxos críticos do aluno ·
+`security` ⬤ **revisão obrigatória**: token em secure store, nunca em armazenamento comum ·
+`product` ○ · `backend` ○ · `devops` ○ build EAS
+
+> Verificar a política de compra dentro do aplicativo **antes** de implementar pagamento no
+> app. Ver a pendência P2 em `docs/product/mvp.md`.
 
 ### Épicos e tarefas
 
@@ -1084,6 +1205,12 @@ e páginas indexáveis por buscadores.
 
 **Dependências:** Fases 3, 4 e 6. Evolui o Epic 3.6 e puxa a Fase 4, que ficou fora do MVP.
 
+**Agentes desta fase:**
+`product` ⬤ critérios de ranking e onde o contato acontece ·
+`architect` ⬤ custo da busca com filtro de disponibilidade em tempo real ·
+`backend` ⬤ · `web` ⬤ busca e SEO ·
+`mobile` ○ · `qa` ○ · `security` ○
+
 ### Épicos e tarefas
 
 - [ ] **Epic 12.1 — Perfil público completo**
@@ -1142,6 +1269,12 @@ ferramenta de moderação.
 
 **Dependências:** Fases 6 e 12.
 
+**Agentes desta fase:**
+`product` ⬤ elegibilidade, janela para avaliar e critérios de moderação ·
+`backend` ⬤ · `web` ⬤ ·
+`security` ⬤ **revisão obrigatória**: prevenção de avaliação falsa e autoavaliação ·
+`architect` ○ · `qa` ○
+
 ### Épicos e tarefas
 
 - [ ] **Epic 13.1 — Avaliações**
@@ -1199,6 +1332,13 @@ Seguir/seguidores, publicação de posts e feed navegável com moderação bási
 
 **Dependências:** Fases 12 e 13. **Só iniciar se houver evidência de demanda real.**
 
+**Agentes desta fase:**
+`product` ⬤ o que aparece no feed e quem pode postar ·
+`architect` ⬤ fan-out na escrita ou na leitura — ADR, porque muda o custo de infraestrutura ·
+`backend` ⬤ · `web` ⬤ ·
+`security` ⬤ **revisão obrigatória**: moderação, denúncia e contenção de spam ·
+`mobile` ○ · `qa` ○
+
 ### Épicos e tarefas
 
 - [ ] **Epic 14.1 — Grafo social** — seguir/deixar de seguir, contadores, privacidade
@@ -1243,6 +1383,11 @@ Cadastro de locais esportivos, associação com profissionais e página pública
 
 **Dependências:** Fases 4 e 12.
 
+**Agentes desta fase:**
+`product` ⬤ quem cadastra o local e se a associação precisa de confirmação ·
+`backend` ⬤ · `web` ⬤ ·
+`architect` ○ deduplicação de locais · `security` ○
+
 ### Épicos e tarefas
 
 - [ ] **Epic 15.1 — Entidade `venue`** — dados, endereço, modalidades, estrutura, fotos
@@ -1285,6 +1430,13 @@ encontrar parceiros de treino e jogo.
 Perfil esportivo do aluno e busca/matching de parceiros com contato mediado com segurança.
 
 **Dependências:** Fases 11 e 14. **Só iniciar com base de alunos ativa suficiente.**
+
+**Agentes desta fase:**
+`security` ⬤ **a fase é conduzida pela revisão dele, não por último**: aproximar
+desconhecidos por localização é a funcionalidade de maior risco do produto inteiro ·
+`product` ⬤ opt-in explícito e o que fica visível ·
+`backend` ⬤ · `mobile` ⬤ ·
+`architect` ○ · `web` ○ · `qa` ○ bloqueio e denúncia
 
 ### Épicos e tarefas
 
@@ -1331,6 +1483,12 @@ Um caso de uso de IA validado, com métrica de sucesso e comparação contra uma
 *baseline* simples (heurística ou SQL).
 
 **Dependências:** dados de produção com histórico relevante (fases 6–12 em uso real).
+
+**Agentes desta fase:**
+`product` ⬤ qual problema real justifica IA e qual o custo de errar ·
+`architect` ⬤ ADR; e a baseline sem IA precisa ser derrotada antes de qualquer modelo ·
+`security` ⬤ **revisão obrigatória**: dado de usuário sair para terceiro exige base legal ·
+`backend` ○ · `qa` ○ · `devops` ○ custo por inferência
 
 ### Épicos e tarefas
 
@@ -1386,6 +1544,15 @@ rollback e resposta a incidentes definida.
 **Ferramentas a instalar nesta fase:** MCP de documentação AWS e MCP de Terraform — ambos
 somente leitura. Operação real na conta exige role IAM dedicada e decisão à parte.
 Ver `AI-DEVELOPMENT.md` §6.8.
+
+**Agentes desta fase:**
+`devops` ⬤ conduz a fase ·
+`security` ⬤ **revisão obrigatória** de IAM, rede, secrets e conformidade LGPD ·
+`architect` ⬤ ADR de compute e IaC ·
+`backend` ○ · `qa` ○
+
+> Nenhuma operação destrutiva sem confirmação sua. Backup só conta como backup depois de a
+> restauração ter sido testada de verdade.
 
 ### Épicos e tarefas
 
@@ -1455,6 +1622,12 @@ Otimizar com base em métricas reais. **Só iniciar quando existirem gargalos me
 Gargalos identificados por medição, corrigidos e comprovados com dados antes/depois.
 
 **Dependências:** produção com tráfego real e métricas confiáveis.
+
+**Agentes desta fase:**
+`architect` ⬤ só aprova extrair módulo do monólito com evidência medida, nunca por intuição ·
+`backend` ⬤ otimização de consulta e índice ·
+`devops` ⬤ escala e teste de carga ·
+`web` ○ · `qa` ○
 
 ### Épicos e tarefas
 
