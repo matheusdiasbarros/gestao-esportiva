@@ -1,0 +1,1527 @@
+# TODO — Roadmap de Desenvolvimento
+
+Documento **vivo** e principal de condução do projeto **Gestão Esportiva**.
+
+Última atualização: 2026-08-19
+
+---
+
+## 1. Como usar este documento
+
+Este arquivo divide o projeto em **fases progressivas**. A estrutura é sempre:
+
+```text
+Fase
+  Épico
+    Tarefa
+```
+
+Cada fase contém: objetivo, épicos/tarefas, entregável, tecnologias, dependências,
+aprendizados necessários, **decisões da fase** e critérios de conclusão.
+
+> **Regra de ouro:** as *Decisões da fase* **não são resolvidas antecipadamente**.
+> Elas são levantadas, discutidas e documentadas **quando a fase começa**.
+
+### Ritual de início de fase
+
+Quando o comando for **"iniciar Fase X"**, seguir exatamente esta sequência:
+
+1. Ler a descrição da fase neste documento.
+2. Identificar tudo que precisa ser decidido (seção *Decisões da fase*).
+3. Fazer as perguntas de produto necessárias.
+4. Propor regras de negócio.
+5. Documentar as decisões (ADR e/ou `docs/domain/`).
+6. Detalhar as tarefas da fase (quebrar épicos em tarefas executáveis).
+7. Identificar dependências (fases anteriores, dados, integrações).
+8. Indicar modelo de banco, endpoints e integrações.
+9. Indicar estratégia de testes.
+10. **Só então** iniciar a implementação.
+
+### Ritual de fim de fase
+
+1. Checar os *Critérios de conclusão*.
+2. Marcar os checkboxes da fase.
+3. Registrar ADRs e documentação de domínio criadas.
+4. Atualizar o *Registro de fases* (seção 12) e o `README.md`.
+5. Registrar débitos técnicos conscientes em `docs/tech-debt.md`.
+
+### Legenda de status
+
+| Símbolo | Significado |
+| --- | --- |
+| ⬜ | Não iniciada |
+| 🟨 | Em andamento |
+| ✅ | Concluída |
+| ⏸️ | Pausada / bloqueada |
+
+---
+
+## 2. Regra principal do projeto
+
+> Planejar o suficiente para saber para onde estamos indo,
+> mas decidir os detalhes somente quando eles se tornam relevantes.
+
+Evitar, em qualquer fase:
+
+- overengineering e arquitetura prematura;
+- microsserviços antes de existir dor real de escala ou de time;
+- definir regras de negócio de fases futuras;
+- adicionar dependências, agentes de IA ou MCPs sem necessidade concreta;
+- documentação extensa que ninguém vai ler nem manter.
+
+Toda tecnologia nova fora da stack de referência exige **ADR antes da implementação**.
+
+---
+
+## 3. Visão do produto (requisitos gerais permanentes)
+
+Plataforma para **profissionais esportivos autônomos**: personal trainers, professores de
+tênis, beach tennis, padel, futebol, corrida, natação, lutas, dança e outras modalidades.
+
+Estas três áreas são o norte de longo prazo. Ficam documentadas aqui em caráter permanente;
+as regras específicas de cada item são definidas na fase correspondente.
+
+### 3.1 Gestão profissional
+
+Alunos · agenda · aulas · turmas · disponibilidade · pacotes de aulas · créditos ·
+cancelamentos · reposições · lista de espera · pagamentos · financeiro · notificações.
+
+### 3.2 Marketplace
+
+Busca de profissionais por esporte, cidade, bairro, localização, distância, preço,
+disponibilidade, avaliação e local de atendimento.
+
+Modelos de atendimento a suportar:
+
+- local fixo único;
+- múltiplos locais;
+- atendimento por região/bairro;
+- deslocamento até o aluno;
+- raio de atendimento definido pelo profissional.
+
+### 3.3 Reputação e comunidade
+
+Avaliações · avaliações verificadas · recomendações · seguir profissionais · seguidores ·
+posts · feed · descoberta · recomendações de conhecidos · locais esportivos ·
+interação entre alunos.
+
+---
+
+## 4. Stack de referência
+
+Direção inicial. Mudanças exigem ADR **antes** da implementação.
+
+| Camada | Tecnologia |
+| --- | --- |
+| Linguagem | TypeScript |
+| Web | React, Next.js, Tailwind CSS |
+| Mobile | React Native, Expo |
+| Backend | Node.js, NestJS, REST |
+| Banco | PostgreSQL + PostGIS |
+| ORM | TypeORM |
+| Cache / filas | Redis, BullMQ |
+| Infra | Docker, AWS, GitHub Actions |
+| Testes | unitários, integração, Playwright (E2E web) |
+
+**Não adotar sem necessidade concreta e ADR:** microsserviços, Kubernetes, Kafka, GraphQL,
+MongoDB, service mesh, event sourcing, CQRS.
+
+---
+
+## 5. Arquitetura inicial
+
+- **Monólito modular** na API (`apps/api`), com módulos NestJS de fronteiras explícitas.
+- Comunicação entre módulos por **serviços de aplicação**, nunca por acesso direto às
+  tabelas de outro módulo.
+- **PostgreSQL é a única fonte de verdade.**
+- **Redis apenas onde traz benefício real:** cache, filas (BullMQ), locks distribuídos,
+  realtime e rate limiting. Nunca como armazenamento primário.
+- Módulos previstos (nascem conforme as fases): `iam`, `professionals`, `locations`,
+  `students`, `scheduling`, `packages`, `classes`, `billing`, `notifications`,
+  `marketplace`, `reviews`, `social`, `venues`.
+- O desenho de módulos é **preparação para extração futura**, não compromisso de extrair.
+
+---
+
+## 6. Trilhas transversais (contínuas, não são fases)
+
+Estas trilhas atravessam todas as fases e entram na definição de pronto de cada uma.
+
+- [ ] **Segurança e LGPD** — autenticação, autorização, dados pessoais, consentimento,
+      retenção, exclusão de conta, logs sem PII.
+- [ ] **Testes** — cada fase entrega testes unitários e de integração dos seus fluxos críticos.
+- [ ] **Documentação** — ADRs em `docs/adr/`, regras de negócio em `docs/domain/`.
+- [ ] **Observabilidade** — logs estruturados desde a Fase 1; métricas e tracing evoluem.
+- [ ] **Acessibilidade e i18n** — pt-BR primeiro; não bloquear i18n futuro (textos fora do código).
+- [ ] **Performance** — orçamento de performance revisado a cada fase de leitura pesada (4, 12).
+- [ ] **Débito técnico** — registrado em `docs/tech-debt.md` no encerramento de cada fase.
+
+---
+
+## 7. Ajustes propostos na ordem das fases
+
+A numeração das fases é **mantida** para não quebrar a referência ("iniciar Fase X"), mas
+três ajustes são aplicados como épicos marcados com 🔁 dentro de fases anteriores:
+
+1. **Deploy mínimo antecipado (parte da Fase 18 → fim da Fase 2).**
+   Justificativa: deixar o primeiro deploy real para a Fase 18 concentra todo o risco de
+   infraestrutura em um *big bang* no fim do projeto. A Fase 2 já entrega algo publicável;
+   um ambiente de *staging* com CI/CD básico a partir daí valida a cadeia de entrega cedo.
+   A Fase 18 continua existindo como **endurecimento de produção** (observabilidade,
+   backup, custos, segurança, DR).
+
+2. **E-mail transacional antecipado (parte da Fase 10 → Fase 2).**
+   Justificativa: recuperação de senha e verificação de e-mail são requisitos da Fase 2 e
+   não funcionam sem envio de e-mail. Entra apenas o mínimo (provedor + template básico +
+   fila); a Fase 10 constrói a plataforma de notificações completa.
+
+3. **Perfil público mínimo antecipado (parte da Fase 12 → Fase 3).**
+   Justificativa: uma página pública de perfil valida cedo o modelo de dados públicos vs.
+   privados e permite que o profissional compartilhe um link muito antes do marketplace.
+   Busca, filtros e ranking permanecem na Fase 12.
+
+---
+
+## 8. Índice de fases
+
+| # | Fase | Status | Depende de |
+| --- | --- | --- | --- |
+| 0 | Descoberta e definição do produto | ⬜ | — |
+| 1 | Fundação técnica | ⬜ | 0 |
+| 2 | Usuários e autenticação | ⬜ | 1 |
+| 3 | Perfil profissional | ⬜ | 2 |
+| 4 | Localização e área de atendimento | ⬜ | 3 |
+| 5 | Gestão de alunos | ⬜ | 2, 3 |
+| 6 | Agenda | ⬜ | 4, 5 |
+| 7 | Pacotes e créditos | ⬜ | 6 |
+| 8 | Turmas | ⬜ | 6, 7 |
+| 9 | Financeiro | ⬜ | 7, 8 |
+| 10 | Notificações | ⬜ | 6, 9 |
+| 11 | Aplicativo do aluno | ⬜ | 6, 7, 9, 10 |
+| 12 | Marketplace | ⬜ | 3, 4, 6 |
+| 13 | Avaliações e reputação | ⬜ | 6, 12 |
+| 14 | Recursos sociais | ⬜ | 12, 13 |
+| 15 | Locais esportivos | ⬜ | 4, 12 |
+| 16 | Comunidade entre alunos | ⬜ | 11, 14 |
+| 17 | Inteligência Artificial | ⬜ | dados reais em produção |
+| 18 | Produção (endurecimento) | ⬜ | 2 (deploy mínimo), MVP definido |
+| 19 | Escala e otimização | ⬜ | métricas reais |
+
+---
+
+## Fase 0 — Descoberta e definição do produto ⬜
+
+**Objetivo:**
+Entender o problema, definir personas, escopo do MVP e o vocabulário do domínio **antes**
+de escrever qualquer linha de código de aplicação.
+
+**Entregável esperado:**
+`docs/product/` com visão, personas, jornadas, escopo do MVP e glossário; `TODO.md`
+revisado com o escopo real do MVP; ADR-001 registrando a arquitetura de monólito modular.
+
+**Dependências:** nenhuma.
+
+### Épicos e tarefas
+
+- [ ] **Epic 0.1 — Problema e proposta de valor**
+  - [ ] Descrever o problema central do profissional autônomo hoje (planilha, WhatsApp, caderno)
+  - [ ] Levantar 3–5 concorrentes/alternativas e o que eles não resolvem
+  - [ ] Escrever a proposta de valor em uma frase
+- [ ] **Epic 0.2 — Personas e jornadas**
+  - [ ] Persona profissional (autônomo, 1 modalidade, poucos alunos)
+  - [ ] Persona aluno
+  - [ ] Persona administrador da plataforma
+  - [ ] Jornadas principais de cada persona (descoberta → contratação → aula → pagamento)
+- [ ] **Epic 0.3 — Escopo e MVP**
+  - [ ] Lista explícita do que **entra** no MVP
+  - [ ] Lista explícita do que **fica fora** do MVP
+  - [ ] Métrica de sucesso do MVP
+- [ ] **Epic 0.4 — Fluxos principais**
+  - [ ] Diagramas (Mermaid) dos 3–5 fluxos críticos
+  - [ ] Mapa de entidades de alto nível (sem modelagem física)
+- [ ] **Epic 0.5 — Glossário do domínio**
+  - [ ] `docs/domain/glossary.md` com termo pt-BR ↔ termo em código
+  - [ ] Definir: aula, sessão, turma, pacote, crédito, reposição, matrícula, disponibilidade
+
+### Decisões da fase
+
+- [ ] Qual perfil de profissional é o **primeiro alvo** (nicho inicial)?
+- [ ] O MVP é **gestão-first** (ferramenta para o profissional) ou **marketplace-first** (aquisição de alunos)?
+- [ ] Idioma do código e do banco (código em inglês com glossário pt-BR é a recomendação)
+- [ ] Modelo de tenancy: profissional como entidade dentro de um banco único (recomendado) vs. multi-tenant isolado
+- [ ] Hipótese de monetização (assinatura, take rate, freemium) — hipótese, não decisão final
+- [ ] Escopo geográfico inicial (uma cidade? Brasil inteiro?)
+
+### Tecnologias
+
+- Markdown, Mermaid. Nenhuma tecnologia de aplicação.
+
+### Aprendizados
+
+- Product discovery e recorte de MVP;
+- event storming leve / mapeamento de fluxos;
+- Ubiquitous Language e escrita de glossário;
+- escrita de ADR.
+
+### Critérios de conclusão
+
+- [ ] MVP escrito, com o que fica de fora explicitado
+- [ ] Personas e jornadas documentadas em `docs/product/`
+- [ ] Glossário cobrindo os termos que aparecerão no código
+- [ ] ADR-001 (monólito modular) registrada
+- [ ] `TODO.md` ajustado ao escopo real acordado
+
+---
+
+## Fase 1 — Fundação técnica ⬜
+
+**Objetivo:**
+Ter um monorepo funcional com API, web e mobile inicializados, ambiente local em Docker,
+padrões de qualidade automatizados e CI rodando em cada push.
+
+**Entregável esperado:**
+`pnpm dev` sobe API + web; `docker compose up` sobe Postgres/PostGIS + Redis;
+CI verde com lint, typecheck, build e testes; um endpoint `/health` consumido pela web.
+
+**Dependências:** Fase 0.
+
+### Épicos e tarefas
+
+- [ ] **Epic 1.1 — Monorepo**
+  - [ ] Escolher gerenciador de pacotes e ferramenta de monorepo
+  - [ ] Estrutura `apps/` + `packages/`
+  - [ ] `packages/config` (tsconfig, eslint, prettier compartilhados)
+  - [ ] `packages/types` (contratos compartilhados entre API, web e mobile)
+- [ ] **Epic 1.2 — API (NestJS)**
+  - [ ] Bootstrap do NestJS com estrutura modular
+  - [ ] Configuração e validação de variáveis de ambiente (falhar no boot se inválidas)
+  - [ ] Conexão TypeORM + estratégia de migrations
+  - [ ] Módulo de health check (banco + Redis)
+  - [ ] Logger estruturado e filtro global de exceções
+  - [ ] OpenAPI/Swagger
+- [ ] **Epic 1.3 — Web (Next.js)**
+  - [ ] Bootstrap Next.js + Tailwind
+  - [ ] Camada de acesso à API tipada
+  - [ ] Layout base e página que consome `/health`
+- [ ] **Epic 1.4 — Mobile (Expo)**
+  - [ ] Bootstrap Expo + navegação
+  - [ ] Consumo do `/health` para validar a cadeia
+- [ ] **Epic 1.5 — Infra local**
+  - [ ] `docker-compose.yml` com PostgreSQL+PostGIS e Redis
+  - [ ] Seeds e script de reset do banco
+  - [ ] `.env.example` documentado
+- [ ] **Epic 1.6 — Qualidade**
+  - [ ] ESLint + Prettier + EditorConfig
+  - [ ] Husky + lint-staged + commitlint (Conventional Commits em pt-BR)
+  - [ ] Runner de testes configurado nos três apps
+- [ ] **Epic 1.7 — CI inicial (GitHub Actions)**
+  - [ ] Workflow: install → lint → typecheck → test → build
+  - [ ] Cache de dependências
+  - [ ] Proteção da branch `main`
+
+### Decisões da fase
+
+- [ ] Gerenciador de pacotes (pnpm recomendado) e ferramenta de monorepo (Turborepo vs. Nx vs. workspaces puro)
+- [ ] Estrutura interna de um módulo NestJS (controller/service/repository vs. camadas mais formais)
+- [ ] Padrão de resposta e de erro da API (envelope? RFC 7807?)
+- [ ] Estratégia de versionamento da API (`/v1` desde o início?)
+- [ ] Migrations: geradas pelo TypeORM vs. escritas à mão; política de `synchronize` (nunca em produção)
+- [ ] Convenções de banco: `snake_case`, plural, chaves primárias (UUID v7 vs. bigint)
+- [ ] Estratégia de soft delete e colunas de auditoria (`created_at`, `updated_at`, `deleted_at`)
+- [ ] Fuso horário e tipo de data no banco (`timestamptz` é a recomendação) — decisão preliminar, revisada na Fase 6
+- [ ] Runner de testes (Jest vs. Vitest) e cobertura mínima exigida no CI
+
+### Tecnologias
+
+- TypeScript, NestJS, Next.js, Expo, TypeORM, PostgreSQL/PostGIS, Redis, Docker, GitHub Actions.
+
+### Aprendizados
+
+- monorepos e grafos de build;
+- injeção de dependência e ciclo de vida no NestJS;
+- migrations e versionamento de schema;
+- Docker Compose para desenvolvimento;
+- pipelines de CI.
+
+### Critérios de conclusão
+
+- [ ] Um comando sobe o ambiente local completo
+- [ ] CI verde obrigatório para merge em `main`
+- [ ] Web e mobile consomem com sucesso um endpoint real da API
+- [ ] Migration inicial aplicada e reversível
+- [ ] `README.md` com instruções de setup que funcionam em máquina limpa
+
+---
+
+## Fase 2 — Usuários e autenticação ⬜
+
+**Objetivo:**
+Identidade da plataforma: cadastro, login, recuperação de senha, papéis e autorização,
+com os perfis de profissional, aluno e administrador.
+
+**Entregável esperado:**
+Fluxo completo de cadastro e login em web e mobile; rotas protegidas por papel;
+recuperação de senha por e-mail funcionando; ambiente de *staging* publicado (🔁).
+
+**Dependências:** Fase 1.
+
+### Épicos e tarefas
+
+- [ ] **Epic 2.1 — Modelo de identidade**
+  - [ ] Entidade `user` e credenciais
+  - [ ] Papéis: profissional, aluno, administrador
+  - [ ] Vínculo entre `user` e perfis específicos
+- [ ] **Epic 2.2 — Autenticação**
+  - [ ] Cadastro com verificação de e-mail
+  - [ ] Login e logout
+  - [ ] Refresh token e revogação
+  - [ ] Recuperação e redefinição de senha
+  - [ ] Rate limiting nas rotas sensíveis (Redis)
+- [ ] **Epic 2.3 — Autorização**
+  - [ ] Guards e decorators de papel/permissão
+  - [ ] Matriz papel × recurso documentada
+  - [ ] Regra de propriedade do recurso (dono do dado)
+- [ ] **Epic 2.4 — Front-end de auth**
+  - [ ] Telas web (cadastro, login, esqueci a senha, redefinir)
+  - [ ] Telas mobile equivalentes
+  - [ ] Persistência de sessão (web e mobile) e rotas protegidas
+- [ ] **Epic 2.5 — E-mail transacional mínimo 🔁** *(antecipado da Fase 10)*
+  - [ ] Provedor de e-mail configurado
+  - [ ] Fila BullMQ para envio assíncrono
+  - [ ] Templates de verificação e recuperação
+- [ ] **Epic 2.6 — Deploy mínimo 🔁** *(antecipado da Fase 18)*
+  - [ ] Dockerfiles de produção para API e web
+  - [ ] Ambiente de *staging* na AWS (compute + banco gerenciado + Redis)
+  - [ ] Pipeline de deploy automático da `main` para *staging*
+  - [ ] Secrets fora do repositório
+
+### Decisões da fase
+
+- [ ] Autenticação própria vs. provedor gerenciado (Cognito, Auth0, Clerk, Supabase Auth)
+- [ ] JWT + refresh token vs. sessão em Redis; tempo de vida e rotação
+- [ ] Um usuário pode ser **profissional e aluno ao mesmo tempo**? (impacta todo o modelo)
+- [ ] RBAC simples vs. permissões granulares
+- [ ] Verificação obrigatória de e-mail e/ou telefone antes de usar o sistema
+- [ ] Login social (Google/Apple) entra agora ou depois? (Apple é exigência de loja para apps com login social)
+- [ ] Política de senha e algoritmo de hash (argon2 recomendado)
+- [ ] LGPD: base legal, consentimento no cadastro, exclusão de conta e retenção de dados
+- [ ] Onde ficam os dados de menores de idade (aluno menor com responsável)?
+
+### Tecnologias
+
+- NestJS (Passport/Guards), TypeORM, PostgreSQL, Redis, BullMQ, Next.js, Expo, AWS.
+
+### Aprendizados
+
+- OAuth2/OIDC e JWT na prática;
+- hashing de senhas e ataques comuns (credential stuffing, enumeração de usuários);
+- armazenamento seguro de token em mobile (SecureStore) e web (cookie httpOnly);
+- fundamentos de LGPD aplicados a produto.
+
+### Critérios de conclusão
+
+- [ ] Cadastro → verificação → login → refresh → logout funcionando ponta a ponta
+- [ ] Rotas protegidas retornam 401/403 corretamente, com testes de integração
+- [ ] Recuperação de senha entregue por e-mail real em *staging*
+- [ ] Matriz de permissões documentada em `docs/domain/iam.md`
+- [ ] *Staging* publicado e atualizado automaticamente a partir da `main`
+- [ ] Revisão de segurança do fluxo de auth registrada
+
+---
+
+## Fase 3 — Perfil profissional ⬜
+
+**Objetivo:**
+Permitir que o profissional construa um perfil completo: modalidades, bio, especialidades,
+experiência, preços e fotos, com separação clara entre dados públicos e privados.
+
+**Entregável esperado:**
+Editor de perfil na web, perfil retornado pela API e uma página pública mínima (🔁).
+
+**Dependências:** Fase 2.
+
+### Épicos e tarefas
+
+- [ ] **Epic 3.1 — Modelo de perfil**
+  - [ ] Entidade `professional_profile`
+  - [ ] Catálogo de modalidades/esportes (tabela de referência)
+  - [ ] Especialidades, experiência, certificações
+  - [ ] Campos públicos vs. privados
+- [ ] **Epic 3.2 — Preços**
+  - [ ] Preço por modalidade e por tipo de atendimento (individual, dupla, turma)
+  - [ ] Moeda, formato monetário e armazenamento em inteiro (centavos)
+- [ ] **Epic 3.3 — Mídia**
+  - [ ] Upload de foto de perfil e galeria
+  - [ ] Armazenamento em S3 + URLs assinadas
+  - [ ] Redimensionamento/otimização assíncrona (BullMQ)
+- [ ] **Epic 3.4 — Edição do perfil (web)**
+  - [ ] Formulário com validação compartilhada (`packages/types`)
+  - [ ] Indicador de completude do perfil
+- [ ] **Epic 3.5 — Perfil público mínimo 🔁** *(antecipado da Fase 12)*
+  - [ ] Rota pública `/{slug}` com SSR e metadados sociais
+  - [ ] Botão de contato/interesse (sem agendamento ainda)
+
+### Decisões da fase
+
+- [ ] Catálogo de modalidades fechado (curado) vs. aberto (criado pelo profissional)
+- [ ] Um profissional pode atuar em múltiplas modalidades com preços diferentes?
+- [ ] Slug do perfil: gerado, escolhido pelo usuário, único global?
+- [ ] Preço é obrigatório e público, ou pode ser "sob consulta"?
+- [ ] Perfil precisa de aprovação/moderação antes de ficar público?
+- [ ] Certificações são verificadas? Por quem?
+- [ ] Limites de mídia (quantidade, tamanho, formato) e política de conteúdo
+- [ ] Quais dados pessoais nunca aparecem na página pública (CPF, telefone, endereço exato)
+
+### Tecnologias
+
+- NestJS, TypeORM, PostgreSQL, S3, BullMQ, Next.js (SSR), Tailwind.
+
+### Aprendizados
+
+- upload seguro e URLs pré-assinadas;
+- processamento assíncrono de mídia;
+- SSR e SEO no Next.js;
+- modelagem de dados públicos vs. privados.
+
+### Critérios de conclusão
+
+- [ ] Profissional cria e edita o perfil completo pela web
+- [ ] Upload de imagens funcionando com validação de tipo e tamanho
+- [ ] Página pública renderiza apenas dados públicos (verificado em teste)
+- [ ] Regras do domínio em `docs/domain/professional-profile.md`
+
+---
+
+## Fase 4 — Localização e área de atendimento ⬜
+
+**Objetivo:**
+Modelar onde o profissional atende: locais fixos, múltiplos locais, regiões, deslocamento
+até o aluno e raio de atendimento — com consultas geoespaciais eficientes.
+
+**Entregável esperado:**
+Cadastro de locais e área de atendimento; endpoint que responde "quais profissionais
+atendem neste ponto" usando PostGIS, com índices e desempenho medido.
+
+**Dependências:** Fase 3.
+
+### Épicos e tarefas
+
+- [ ] **Epic 4.1 — Locais**
+  - [ ] Entidade `location` (endereço + `geography(Point, 4326)`)
+  - [ ] Múltiplos locais por profissional, com local principal
+  - [ ] Tipos: local próprio, academia/clube parceiro, espaço público, casa do aluno
+- [ ] **Epic 4.2 — Área de atendimento**
+  - [ ] Atendimento por raio (centro + distância)
+  - [ ] Atendimento por bairros/regiões selecionados
+  - [ ] Flag de deslocamento até o aluno
+- [ ] **Epic 4.3 — Geocoding**
+  - [ ] Integração com provedor de geocoding
+  - [ ] Cache de resultados no Redis/Postgres
+  - [ ] Tratamento de endereços não encontrados
+- [ ] **Epic 4.4 — Consultas geoespaciais**
+  - [ ] Índices GiST e plano de consulta verificado
+  - [ ] Busca por proximidade com ordenação por distância
+  - [ ] Endpoint de cobertura ("você atende meu endereço?")
+- [ ] **Epic 4.5 — Privacidade de localização**
+  - [ ] Precisão reduzida em dados públicos
+  - [ ] Endereço exato revelado apenas após vínculo/confirmação
+
+### Decisões da fase
+
+- [ ] Provedor de geocoding (Google, Mapbox, Nominatim/OSM) — custo, licença e limites de uso
+- [ ] Base de bairros/regiões: IBGE, OSM ou lista própria?
+- [ ] Distância em linha reta vs. distância/tempo de rota (custo alto) para busca e ordenação
+- [ ] Raio de atendimento: único por profissional ou por local?
+- [ ] Precisão pública da localização (bairro? ponto ofuscado em ~500 m?)
+- [ ] Preço varia por distância? (regra fica na Fase 7/9, aqui só o modelo de dados)
+- [ ] Unidade e sistema de referência (SRID 4326 + `geography` é a recomendação)
+
+### Tecnologias
+
+- PostGIS, TypeORM (tipos espaciais), NestJS, Redis (cache de geocoding), provedor de mapas.
+
+### Aprendizados
+
+- PostGIS: `geography` vs. `geometry`, SRID, `ST_DWithin`, `ST_Distance`;
+- índices GiST e leitura de `EXPLAIN ANALYZE`;
+- geocoding, limites de taxa e custo de APIs de mapas;
+- privacidade aplicada a dados de localização.
+
+### Critérios de conclusão
+
+- [ ] Profissional configura locais e área de atendimento pela web
+- [ ] Busca por proximidade responde dentro do orçamento de performance definido
+- [ ] Consultas usam índice espacial (comprovado por `EXPLAIN`)
+- [ ] Dados públicos não expõem localização exata
+- [ ] ADR de PostGIS/geocoding registrada; `docs/domain/locations.md` escrito
+
+---
+
+## Fase 5 — Gestão de alunos ⬜
+
+**Objetivo:**
+Permitir que o profissional gerencie sua carteira de alunos, com vínculo, histórico,
+observações e status — inclusive para alunos que ainda não usam o app.
+
+**Entregável esperado:**
+CRUD de alunos, convite/vínculo aluno↔profissional e ficha do aluno na web.
+
+**Dependências:** Fases 2 e 3.
+
+### Épicos e tarefas
+
+- [ ] **Epic 5.1 — Cadastro de alunos**
+  - [ ] Aluno criado pelo profissional (sem conta na plataforma)
+  - [ ] Aluno com conta própria
+  - [ ] Reconciliação quando o aluno cria conta depois
+- [ ] **Epic 5.2 — Vínculo profissional↔aluno**
+  - [ ] Convite por link/e-mail e aceite
+  - [ ] Estados do vínculo (ativo, pausado, encerrado)
+  - [ ] Um aluno com múltiplos profissionais
+- [ ] **Epic 5.3 — Ficha do aluno**
+  - [ ] Dados de contato e informações básicas
+  - [ ] Observações privadas do profissional
+  - [ ] Objetivos e anamnese/restrições
+  - [ ] Histórico (preenchido pelas fases 6–9)
+- [ ] **Epic 5.4 — Listagem e organização**
+  - [ ] Busca, filtros por status e tags
+  - [ ] Importação simples (CSV) — avaliar necessidade
+
+### Decisões da fase
+
+- [ ] O profissional pode cadastrar um aluno sem consentimento dele? (LGPD — base legal e aviso)
+- [ ] Quem é o "dono" do dado do aluno quando o vínculo é encerrado?
+- [ ] Observações privadas são realmente invisíveis ao aluno? Sempre?
+- [ ] Dados de saúde (anamnese, lesões) são dados sensíveis — armazenar? criptografar? evitar?
+- [ ] Aluno menor de idade: responsável obrigatório?
+- [ ] O que acontece com o histórico quando o aluno pede exclusão da conta?
+- [ ] Status do aluno é manual ou derivado de atividade?
+
+### Tecnologias
+
+- NestJS, TypeORM, PostgreSQL, Next.js.
+
+### Aprendizados
+
+- modelagem de identidades parciais (aluno sem conta) e reconciliação;
+- dados sensíveis sob LGPD;
+- padrões de convite e aceite.
+
+### Critérios de conclusão
+
+- [ ] Profissional cadastra, edita e arquiva alunos
+- [ ] Convite e aceite testados ponta a ponta
+- [ ] Aluno sem conta que se cadastra depois é vinculado corretamente
+- [ ] Regras e base legal em `docs/domain/students.md`
+
+---
+
+## Fase 6 — Agenda ⬜
+
+**Objetivo:**
+Permitir que o profissional configure disponibilidade e gerencie aulas, com tratamento
+correto de recorrência, conflitos, fusos e bloqueios.
+
+**Entregável esperado:**
+Calendário funcional na web, criação/edição/cancelamento de aulas individuais e
+recorrentes, sem possibilidade de agendamento conflitante (garantido no banco).
+
+**Dependências:** Fases 4 e 5. **É a fase de maior risco técnico do projeto.**
+
+### Épicos e tarefas
+
+- [ ] **Epic 6.1 — Disponibilidade**
+  - [ ] Grade semanal recorrente por local
+  - [ ] Exceções e bloqueios pontuais (férias, feriados)
+  - [ ] Antecedência mínima e janela máxima de agendamento
+- [ ] **Epic 6.2 — Aulas (sessões)**
+  - [ ] Criação de aula individual
+  - [ ] Edição, remarcação e cancelamento
+  - [ ] Estados da aula (agendada, confirmada, realizada, cancelada, falta)
+  - [ ] Vínculo com aluno, local e modalidade
+- [ ] **Epic 6.3 — Recorrência**
+  - [ ] Modelo de série recorrente e materialização de ocorrências
+  - [ ] Edição de "esta ocorrência" vs. "toda a série"
+  - [ ] Fim da recorrência (data, número de ocorrências, indefinida)
+- [ ] **Epic 6.4 — Conflitos e concorrência**
+  - [ ] Detecção de sobreposição de horários
+  - [ ] Constraint de exclusão no PostgreSQL (`btree_gist` + `tstzrange`)
+  - [ ] Locks/transações no caminho de agendamento
+  - [ ] Tempo de deslocamento entre locais
+- [ ] **Epic 6.5 — Calendário (web)**
+  - [ ] Visões dia/semana/mês
+  - [ ] Criação e arraste com feedback de conflito
+- [ ] **Epic 6.6 — Registro de aula**
+  - [ ] Marcar presença/falta e realizada
+  - [ ] Notas da aula
+
+### Decisões da fase
+
+- [ ] Política de conflitos: bloquear sempre, permitir com aviso, permitir *overbooking* explícito?
+- [ ] Comportamento de aulas recorrentes ao editar disponibilidade retroativamente
+- [ ] Timezone: armazenar em UTC e converter na borda? Qual é o fuso de referência do profissional? Como tratar horário de verão?
+- [ ] Política de cancelamento: prazo, por quem, consequência (regra financeira detalhada na Fase 7)
+- [ ] Aula tem duração fixa por modalidade ou livre?
+- [ ] Quem pode agendar: só o profissional, ou o aluno também? (impacta a Fase 11)
+- [ ] Reagendamento cria nova aula ou altera a existente? (impacta histórico e auditoria)
+- [ ] Horizonte de materialização de séries recorrentes (gerar quantos meses à frente?)
+- [ ] Aula que aconteceu mas não foi marcada: fecha automaticamente após X horas?
+
+### Tecnologias
+
+- NestJS, PostgreSQL (`tstzrange`, `EXCLUDE USING gist`, `btree_gist`), TypeORM, Redis (locks),
+  BullMQ (materialização e fechamento automático), Next.js.
+
+### Aprendizados
+
+- transações, níveis de isolamento e concorrência;
+- locking pessimista/otimista e locks distribuídos;
+- modelagem temporal e ranges no PostgreSQL;
+- timezones, DST e `tstzrange`;
+- padrões de recorrência (RRULE/iCalendar).
+
+### Critérios de conclusão
+
+- [ ] Impossível criar duas aulas conflitantes, comprovado por teste de concorrência
+- [ ] Séries recorrentes criadas, editadas e canceladas corretamente
+- [ ] Fusos e horário de verão cobertos por testes
+- [ ] Bloqueios respeitados na geração de horários disponíveis
+- [ ] `docs/domain/scheduling.md` completo; ADR de modelagem temporal registrada
+
+---
+
+## Fase 7 — Pacotes e créditos ⬜
+
+**Objetivo:**
+Modelar as formas de contratação — aula avulsa, pacote, mensalidade — e o ciclo de vida
+dos créditos, incluindo validade, consumo, cancelamento e reposição.
+
+**Entregável esperado:**
+Contratação de pacotes, saldo de créditos correto após qualquer operação de agenda e
+extrato auditável de movimentação de créditos.
+
+**Dependências:** Fase 6.
+
+### Épicos e tarefas
+
+- [ ] **Epic 7.1 — Produtos de venda**
+  - [ ] Aula avulsa
+  - [ ] Pacote de N aulas
+  - [ ] Mensalidade / plano recorrente
+- [ ] **Epic 7.2 — Créditos**
+  - [ ] Entidade de saldo e **livro-razão de movimentações** (append-only)
+  - [ ] Consumo no agendamento ou na realização
+  - [ ] Validade e expiração automática (job)
+  - [ ] Estorno em cancelamento elegível
+- [ ] **Epic 7.3 — Cancelamentos e reposições**
+  - [ ] Cancelamento pelo aluno vs. pelo profissional
+  - [ ] Janela de cancelamento sem perda de crédito
+  - [ ] Fila/direito de reposição
+- [ ] **Epic 7.4 — Interface**
+  - [ ] Contratação e visualização de saldo (web)
+  - [ ] Extrato de créditos
+
+### Decisões da fase
+
+- [ ] Crédito é consumido no agendamento ou na realização da aula?
+- [ ] Prazo de cancelamento sem perda (ex.: 24 h) — fixo pela plataforma ou configurável pelo profissional?
+- [ ] Cancelamento pelo profissional sempre devolve crédito? Gera reposição obrigatória?
+- [ ] Créditos expiram? Qual validade padrão? Podem ser prorrogados?
+- [ ] Crédito é transferível entre modalidades? Entre alunos?
+- [ ] Mensalidade dá aulas ilimitadas ou N aulas/mês? Aulas não usadas acumulam?
+- [ ] Saldo negativo é permitido (aula "fiado")?
+- [ ] Falta sem aviso consome crédito?
+- [ ] Reposição tem prazo de uso? Ocupa vaga preferencial?
+
+### Tecnologias
+
+- NestJS, PostgreSQL (transações, constraints), TypeORM, BullMQ (expiração), Next.js.
+
+### Aprendizados
+
+- livro-razão / *ledger* append-only e consistência de saldo;
+- idempotência em operações de consumo;
+- máquinas de estado de domínio;
+- jobs agendados e recorrentes.
+
+### Critérios de conclusão
+
+- [ ] Saldo sempre reconstruível a partir do livro-razão
+- [ ] Operações concorrentes nunca produzem saldo inconsistente (teste de concorrência)
+- [ ] Expiração automática funcionando com job testado
+- [ ] `docs/domain/packages-credits.md` com todas as regras acordadas
+
+---
+
+## Fase 8 — Turmas ⬜
+
+**Objetivo:**
+Suportar aulas coletivas: capacidade, matrícula, recorrência, presença e lista de espera.
+
+**Entregável esperado:**
+Criação e gestão de turmas com matrícula respeitando capacidade sob concorrência,
+lista de espera funcional e registro de presença.
+
+**Dependências:** Fases 6 e 7.
+
+### Épicos e tarefas
+
+- [ ] **Epic 8.1 — Turma**
+  - [ ] Entidade `class_group` (modalidade, nível, local, capacidade)
+  - [ ] Horários recorrentes da turma
+  - [ ] Estados (aberta, fechada, encerrada)
+- [ ] **Epic 8.2 — Matrícula**
+  - [ ] Matrícula fixa na turma vs. reserva por sessão
+  - [ ] Controle de capacidade sob concorrência
+  - [ ] Saída da turma
+- [ ] **Epic 8.3 — Lista de espera**
+  - [ ] Entrada na lista e ordenação
+  - [ ] Promoção automática ao abrir vaga
+  - [ ] Janela de aceite e expiração da oferta
+- [ ] **Epic 8.4 — Presença**
+  - [ ] Chamada por sessão
+  - [ ] Relatório de frequência
+
+### Decisões da fase
+
+- [ ] Aluno se matricula na **turma** (todas as sessões) ou reserva **sessão a sessão**?
+- [ ] Comportamento da lista de espera: FIFO, prioridade por plano, prioridade por reposição?
+- [ ] Prazo para o primeiro da fila aceitar a vaga antes de passar ao próximo
+- [ ] Vaga liberada perto do horário (< 2 h) ainda vai para a lista de espera?
+- [ ] Turma tem mínimo de alunos? Cancela automaticamente abaixo do mínimo?
+- [ ] Falta em turma consome crédito? Dá direito a reposição em outra turma?
+- [ ] Aluno pode entrar em turma no meio do mês? Como fica a cobrança? (detalhe na Fase 9)
+
+### Tecnologias
+
+- NestJS, PostgreSQL (locks, constraints de capacidade), Redis (locks/fila), BullMQ, Next.js.
+
+### Aprendizados
+
+- controle de capacidade sob concorrência;
+- filas com prioridade e expiração de oferta;
+- reutilização do modelo temporal da Fase 6 em contexto coletivo.
+
+### Critérios de conclusão
+
+- [ ] Capacidade nunca é excedida, comprovado por teste de concorrência
+- [ ] Lista de espera promove corretamente e expira ofertas não aceitas
+- [ ] Presença registrada e refletida no histórico do aluno
+- [ ] `docs/domain/class-groups.md` escrito
+
+---
+
+## Fase 9 — Financeiro ⬜
+
+**Objetivo:**
+Cobrar e receber: geração de cobranças, PIX, gateway de pagamento, webhooks,
+contas a receber e relatórios básicos.
+
+**Entregável esperado:**
+Cobrança gerada a partir de pacote/mensalidade, pagamento por PIX confirmado via webhook
+idempotente, e painel financeiro com recebido/a receber/inadimplência.
+
+**Dependências:** Fases 7 e 8.
+
+### Épicos e tarefas
+
+- [ ] **Epic 9.1 — Cobranças**
+  - [ ] Entidade de cobrança e estados (pendente, paga, vencida, cancelada, estornada)
+  - [ ] Geração a partir de pacote, mensalidade ou avulsa
+  - [ ] Vencimento e cobrança recorrente
+- [ ] **Epic 9.2 — Pagamentos**
+  - [ ] Integração com gateway (PIX no mínimo)
+  - [ ] Registro de pagamento manual (dinheiro/transferência fora da plataforma)
+  - [ ] Estorno e pagamento parcial
+- [ ] **Epic 9.3 — Webhooks**
+  - [ ] Endpoint com verificação de assinatura
+  - [ ] Idempotência e reprocessamento
+  - [ ] Reconciliação periódica com o gateway
+- [ ] **Epic 9.4 — Contas a receber e relatórios**
+  - [ ] Visão de recebido, a receber e vencido
+  - [ ] Receita por período, por aluno e por modalidade
+  - [ ] Exportação (CSV)
+
+### Decisões da fase
+
+- [ ] Provedor de pagamento (ADR obrigatória): taxas, PIX, split, recorrência, KYC, sandbox
+- [ ] O dinheiro passa pela plataforma (marketplace/split) ou vai direto ao profissional?
+  Isso muda obrigações fiscais, KYC e responsabilidade legal — **decisão de negócio crítica**
+- [ ] Modelo de monetização: assinatura do profissional, taxa por transação, ou ambos?
+- [ ] Política de inadimplência: bloqueia agendamento? Após quantos dias?
+- [ ] Emissão de nota fiscal é responsabilidade da plataforma?
+- [ ] Estorno: automático em cancelamento, ou manual?
+- [ ] Cobrança recorrente: PIX recorrente, cartão, ou apenas lembrete de cobrança?
+- [ ] Arredondamento, moeda e representação monetária (inteiro em centavos — confirmar)
+
+### Tecnologias
+
+- NestJS, PostgreSQL (transações, ledger financeiro), BullMQ (cobranças e reconciliação),
+  gateway de pagamento, Next.js.
+
+### Aprendizados
+
+- idempotência e entrega "pelo menos uma vez" em webhooks;
+- consistência financeira e conciliação;
+- segurança de integrações (assinatura, replay, segredos);
+- obrigações fiscais/regulatórias de plataformas.
+
+### Critérios de conclusão
+
+- [ ] Ciclo cobrança → PIX → webhook → baixa funcionando em sandbox
+- [ ] Webhook duplicado não gera efeito duplicado (teste explícito)
+- [ ] Nenhum valor calculado em ponto flutuante
+- [ ] Painel financeiro bate com o ledger
+- [ ] ADR do provedor + `docs/domain/payments.md`
+
+---
+
+## Fase 10 — Notificações ⬜
+
+**Objetivo:**
+Plataforma de notificações multicanal (e-mail, push, WhatsApp) com filas, lembretes
+automáticos e preferências por usuário.
+
+**Entregável esperado:**
+Serviço de notificações com templates, canais plugáveis, lembretes de aula automáticos
+e centro de preferências do usuário.
+
+**Dependências:** Fases 6 e 9 (eventos que disparam notificações). Reaproveita o Epic 2.5.
+
+### Épicos e tarefas
+
+- [ ] **Epic 10.1 — Núcleo de notificações**
+  - [ ] Modelo de evento → template → canal → destinatário
+  - [ ] Filas BullMQ com retry e *dead letter*
+  - [ ] Histórico de envio e status de entrega
+- [ ] **Epic 10.2 — Canais**
+  - [ ] E-mail (evoluir o da Fase 2)
+  - [ ] Push (Expo Notifications)
+  - [ ] WhatsApp (avaliar provedor e custo)
+- [ ] **Epic 10.3 — Lembretes automáticos**
+  - [ ] Lembrete de aula (X horas antes)
+  - [ ] Aviso de cobrança e vencimento
+  - [ ] Vaga liberada na lista de espera
+  - [ ] Crédito expirando
+- [ ] **Epic 10.4 — Preferências**
+  - [ ] Opt-in/opt-out por tipo e por canal
+  - [ ] Janela de silêncio e limite de frequência
+
+### Decisões da fase
+
+- [ ] Provedor de WhatsApp (API oficial vs. alternativas) — custo, aprovação de templates, risco de bloqueio
+- [ ] Quais notificações são obrigatórias (transacionais) e não podem ser desativadas
+- [ ] Antecedência padrão dos lembretes e se é configurável
+- [ ] Quem paga o custo de WhatsApp/SMS (plataforma ou profissional)?
+- [ ] Política de retry e o que fazer com falhas definitivas
+- [ ] Notificação em massa/marketing entra no escopo? (implica consentimento específico)
+
+### Tecnologias
+
+- NestJS, BullMQ, Redis, provedor de e-mail, Expo Notifications, API de WhatsApp.
+
+### Aprendizados
+
+- arquitetura orientada a eventos dentro do monólito;
+- filas, retry, backoff e dead letter queue;
+- entregabilidade de e-mail (SPF, DKIM, DMARC);
+- regras de consentimento em comunicação.
+
+### Critérios de conclusão
+
+- [ ] Adicionar um novo tipo de notificação não exige mudar o núcleo
+- [ ] Lembretes disparam no horário correto respeitando o fuso do destinatário
+- [ ] Falhas são reprocessadas e observáveis
+- [ ] Preferências respeitadas em todos os canais (teste)
+
+---
+
+## Fase 11 — Aplicativo do aluno ⬜
+
+**Objetivo:**
+Entregar ao aluno a experiência mobile completa: agenda, reservas, cancelamentos,
+créditos, pagamentos e notificações.
+
+**Entregável esperado:**
+App Expo publicado em canal de teste (TestFlight / Google Play internal) com os fluxos
+principais do aluno funcionando.
+
+**Dependências:** Fases 6, 7, 9 e 10.
+
+### Épicos e tarefas
+
+- [ ] **Epic 11.1 — Base do app**
+  - [ ] Login e sessão persistente
+  - [ ] Navegação e design system mobile
+  - [ ] Estado offline básico e tratamento de erro de rede
+- [ ] **Epic 11.2 — Agenda do aluno**
+  - [ ] Próximas aulas e histórico
+  - [ ] Reserva em horário disponível
+  - [ ] Cancelamento com aviso das consequências
+  - [ ] Entrada em lista de espera
+- [ ] **Epic 11.3 — Créditos e pagamentos**
+  - [ ] Saldo e extrato
+  - [ ] Cobranças em aberto e pagamento por PIX
+- [ ] **Epic 11.4 — Notificações**
+  - [ ] Registro de push token
+  - [ ] Preferências e deep links
+- [ ] **Epic 11.5 — Publicação**
+  - [ ] Build EAS, ícones, splash, políticas de loja
+  - [ ] Distribuição interna
+
+### Decisões da fase
+
+- [ ] O aluno pode reservar sozinho ou toda reserva precisa de confirmação do profissional?
+- [ ] O aluno pode cancelar diretamente? Dentro de qual janela?
+- [ ] Existe app para o profissional também, ou ele fica só na web nesta etapa?
+- [ ] Estratégia de atualização (EAS Update / OTA) e política de versão mínima suportada
+- [ ] Nível de suporte offline
+
+### Tecnologias
+
+- React Native, Expo, EAS, Expo Notifications, TypeScript.
+
+### Aprendizados
+
+- ciclo de build e publicação mobile;
+- exigências de App Store e Google Play (inclusive regras de pagamento in-app);
+- deep links e push em produção;
+- padrões de UX mobile.
+
+### Critérios de conclusão
+
+- [ ] Aluno entra, vê agenda, reserva, cancela e paga pelo app
+- [ ] Push recebido e deep link abrindo a tela correta
+- [ ] Build distribuído em canal de teste com feedback coletado
+- [ ] E2E dos fluxos críticos do aluno
+
+---
+
+## Fase 12 — Marketplace ⬜
+
+**Objetivo:**
+Permitir que alunos encontrem profissionais por esporte, localização, distância, preço
+e disponibilidade — transformando a ferramenta de gestão em canal de aquisição.
+
+**Entregável esperado:**
+Busca pública com filtros e ordenação, perfil público completo com CTA de contratação,
+e páginas indexáveis por buscadores.
+
+**Dependências:** Fases 3, 4 e 6. Evolui o Epic 3.5.
+
+### Épicos e tarefas
+
+- [ ] **Epic 12.1 — Perfil público completo**
+  - [ ] Modalidades, preços, locais, horários disponíveis
+  - [ ] SEO: metadados, dados estruturados, sitemap
+- [ ] **Epic 12.2 — Busca e filtros**
+  - [ ] Filtros: esporte, cidade, bairro, distância, preço, local de atendimento
+  - [ ] Filtro por disponibilidade real (cruzamento com a agenda)
+  - [ ] Paginação e ordenação
+- [ ] **Epic 12.3 — Ranking e relevância**
+  - [ ] Critérios de ordenação padrão
+  - [ ] Cache dos resultados mais comuns (Redis)
+- [ ] **Epic 12.4 — Conversão**
+  - [ ] Solicitação de contato / aula experimental
+  - [ ] Fluxo do lead até virar aluno (liga com a Fase 5)
+- [ ] **Epic 12.5 — Descoberta no app**
+  - [ ] Busca no app do aluno com mapa/lista
+
+### Decisões da fase
+
+- [ ] Critério de ranking: distância, preço, avaliação, atividade, plano pago? Existe destaque patrocinado?
+- [ ] Perfis incompletos aparecem na busca?
+- [ ] Filtro por disponibilidade consulta a agenda em tempo real ou usa projeção materializada? (custo de performance)
+- [ ] Contato inicial acontece dentro da plataforma ou libera WhatsApp direto? (impacta take rate e desintermediação)
+- [ ] Aula experimental gratuita faz parte do produto?
+- [ ] O que fazer em regiões sem oferta (estado vazio)?
+
+### Tecnologias
+
+- Next.js (SSR/ISR), PostgreSQL + PostGIS, Redis (cache), NestJS, React Native.
+
+### Aprendizados
+
+- busca com múltiplos filtros e performance de consulta;
+- SEO técnico e renderização;
+- estratégias de cache e invalidação;
+- métricas de funil e conversão.
+
+### Critérios de conclusão
+
+- [ ] Busca com todos os filtros dentro do orçamento de performance
+- [ ] Perfis públicos indexáveis e com metadados corretos
+- [ ] Fluxo lead → aluno funcionando ponta a ponta
+- [ ] Critérios de ranking documentados em `docs/domain/marketplace.md`
+
+---
+
+## Fase 13 — Avaliações e reputação ⬜
+
+**Objetivo:**
+Construir confiança com avaliações verificadas, recomendações, moderação e prevenção de abuso.
+
+**Entregável esperado:**
+Sistema de avaliação vinculado a aulas realizadas, com nota agregada no perfil e
+ferramenta de moderação.
+
+**Dependências:** Fases 6 e 12.
+
+### Épicos e tarefas
+
+- [ ] **Epic 13.1 — Avaliações**
+  - [ ] Nota + comentário, vinculada a aula/vínculo real
+  - [ ] Selo de avaliação verificada
+  - [ ] Resposta do profissional
+- [ ] **Epic 13.2 — Agregação**
+  - [ ] Nota média e distribuição
+  - [ ] Exibição no perfil e na busca
+- [ ] **Epic 13.3 — Moderação**
+  - [ ] Denúncia de conteúdo
+  - [ ] Fila de moderação no painel admin
+  - [ ] Remoção e histórico de decisões
+- [ ] **Epic 13.4 — Antiabuso**
+  - [ ] Prevenção de avaliações falsas e autoavaliação
+  - [ ] Limite de frequência e detecção de padrões
+
+### Decisões da fase
+
+- [ ] Só quem teve aula pode avaliar? Quantas aulas no mínimo?
+- [ ] Janela de tempo para avaliar após a aula
+- [ ] Avaliação é editável? Removível pelo autor?
+- [ ] O profissional pode ocultar avaliações? (não recomendado — define credibilidade do produto)
+- [ ] Nota mínima de exibição e tratamento de perfis com poucas avaliações
+- [ ] O profissional avalia o aluno também?
+- [ ] Critérios de moderação e quem modera
+
+### Tecnologias
+
+- NestJS, PostgreSQL, Redis (cache de agregados), Next.js.
+
+### Aprendizados
+
+- design de sistemas de reputação e seus vieses;
+- moderação de conteúdo e trilha de auditoria;
+- prevenção de fraude e abuso.
+
+### Critérios de conclusão
+
+- [ ] Só avaliações elegíveis são aceitas (teste de regra)
+- [ ] Agregados corretos e atualizados
+- [ ] Fluxo de denúncia → moderação → decisão funcionando
+- [ ] `docs/domain/reviews.md` escrito
+
+---
+
+## Fase 14 — Recursos sociais ⬜
+
+**Objetivo:**
+Criar camada social leve: seguir profissionais, feed, posts e descoberta por recomendações
+de conhecidos.
+
+**Entregável esperado:**
+Seguir/seguidores, publicação de posts e feed navegável com moderação básica.
+
+**Dependências:** Fases 12 e 13. **Só iniciar se houver evidência de demanda real.**
+
+### Épicos e tarefas
+
+- [ ] **Epic 14.1 — Grafo social** — seguir/deixar de seguir, contadores, privacidade
+- [ ] **Epic 14.2 — Posts** — criação com texto e mídia, moderação, denúncia
+- [ ] **Epic 14.3 — Feed** — timeline, paginação, ordenação, cache
+- [ ] **Epic 14.4 — Descoberta social** — profissionais seguidos por quem você segue, sugestões
+
+### Decisões da fase
+
+- [ ] O feed é editorial, cronológico ou algorítmico?
+- [ ] Aluno pode postar ou só profissional?
+- [ ] Fan-out na escrita ou na leitura? (decisão de arquitetura com impacto de custo)
+- [ ] Seguidores são públicos?
+- [ ] Comentários e curtidas entram agora?
+- [ ] Como evitar que a camada social vire canal de spam?
+
+### Tecnologias
+
+- NestJS, PostgreSQL, Redis (cache de feed), Next.js, React Native.
+
+### Aprendizados
+
+- modelagem de grafo social em SQL;
+- estratégias de feed e custo de fan-out;
+- moderação em escala.
+
+### Critérios de conclusão
+
+- [ ] Feed carrega dentro do orçamento de performance com dados de teste realistas
+- [ ] Moderação e denúncia cobrem posts
+- [ ] Decisão de arquitetura do feed em ADR
+
+---
+
+## Fase 15 — Locais esportivos ⬜
+
+**Objetivo:**
+Modelar arenas, clubes e quadras como entidades próprias, associadas a profissionais e modalidades.
+
+**Entregável esperado:**
+Cadastro de locais esportivos, associação com profissionais e página pública do local.
+
+**Dependências:** Fases 4 e 12.
+
+### Épicos e tarefas
+
+- [ ] **Epic 15.1 — Entidade `venue`** — dados, endereço, modalidades, estrutura, fotos
+- [ ] **Epic 15.2 — Quadras/espaços** — subdivisão do local, tipo de piso, cobertura
+- [ ] **Epic 15.3 — Associação com profissionais** — vínculo, confirmação, exibição no perfil
+- [ ] **Epic 15.4 — Página pública do local** — perfil, profissionais que atendem ali, SEO
+
+### Decisões da fase
+
+- [ ] Quem cadastra o local: plataforma, profissional ou o próprio local?
+- [ ] O local tem conta e painel próprio? (pode virar um terceiro tipo de usuário)
+- [ ] A associação profissional↔local exige confirmação do local?
+- [ ] Reserva de quadra entra no escopo? (aumenta muito a complexidade — provavelmente não)
+- [ ] Como evitar locais duplicados?
+
+### Tecnologias
+
+- NestJS, PostgreSQL/PostGIS, S3, Next.js.
+
+### Aprendizados
+
+- deduplicação de entidades e *entity resolution*;
+- modelagem de dados colaborativos/curados.
+
+### Critérios de conclusão
+
+- [ ] Locais cadastrados e associados a profissionais
+- [ ] Página pública do local no ar
+- [ ] Processo de deduplicação definido
+
+---
+
+## Fase 16 — Comunidade entre alunos ⬜
+
+**Objetivo:**
+Conectar alunos entre si por esporte, nível, disponibilidade e localização, para
+encontrar parceiros de treino e jogo.
+
+**Entregável esperado:**
+Perfil esportivo do aluno e busca/matching de parceiros com contato mediado com segurança.
+
+**Dependências:** Fases 11 e 14. **Só iniciar com base de alunos ativa suficiente.**
+
+### Épicos e tarefas
+
+- [ ] **Epic 16.1 — Perfil esportivo do aluno** — esportes, nível, objetivos, disponibilidade
+- [ ] **Epic 16.2 — Matching** — busca por compatibilidade, filtros, distância
+- [ ] **Epic 16.3 — Contato e segurança** — solicitação, aceite, bloqueio, denúncia
+- [ ] **Epic 16.4 — Encontros** — proposta de jogo/treino em local e horário
+
+### Decisões da fase
+
+- [ ] Autodeclaração de nível ou escala padronizada por modalidade?
+- [ ] Que dados do aluno ficam visíveis para outros alunos? (**risco de privacidade e segurança**)
+- [ ] O aluno precisa optar por participar (opt-in explícito)?
+- [ ] Chat interno ou apenas troca de contato após aceite mútuo?
+- [ ] Medidas contra assédio e uso indevido como app de relacionamento
+
+### Tecnologias
+
+- NestJS, PostgreSQL/PostGIS, Redis, React Native, Next.js.
+
+### Aprendizados
+
+- design de matching e compatibilidade;
+- *trust & safety* em produtos sociais;
+- privacidade por padrão.
+
+### Critérios de conclusão
+
+- [ ] Participação é opt-in e reversível
+- [ ] Nenhum dado de contato exposto sem aceite mútuo
+- [ ] Bloqueio e denúncia funcionando
+- [ ] Revisão de segurança e privacidade aprovada
+
+---
+
+## Fase 17 — Inteligência Artificial ⬜
+
+**Objetivo:**
+Usar os dados reais da plataforma para gerar valor concreto ao profissional.
+**Só iniciar quando existirem dados reais em volume e um problema real identificado.**
+
+**Entregável esperado:**
+Um caso de uso de IA validado, com métrica de sucesso e comparação contra uma
+*baseline* simples (heurística ou SQL).
+
+**Dependências:** dados de produção com histórico relevante (fases 6–12 em uso real).
+
+### Épicos e tarefas
+
+- [ ] **Epic 17.1 — Fundação de dados** — qualidade, disponibilidade, base analítica separada
+- [ ] **Epic 17.2 — Baselines não-IA** — resolver primeiro com SQL/heurística e medir
+- [ ] **Epic 17.3 — Caso de uso escolhido** — apenas **um** por vez, com métrica clara
+- [ ] **Epic 17.4 — Entrega no produto** — onde aparece, o que o usuário faz com isso
+
+Casos de uso candidatos (não priorizados agora): risco de abandono de aluno,
+análise de ocupação da agenda, horários ociosos, sugestão de novas turmas,
+alunos com queda de frequência, resumo financeiro em linguagem natural.
+
+### Decisões da fase
+
+- [ ] Qual problema real justifica IA? Qual o custo de errar?
+- [ ] A baseline simples já resolve? (se sim, **não usar IA**)
+- [ ] LLM via API vs. modelo próprio vs. estatística clássica
+- [ ] Dados de usuários podem ser enviados a terceiros? (LGPD, consentimento, anonimização)
+- [ ] Como medir sucesso e como desligar se não funcionar?
+- [ ] Custo por inferência é sustentável no modelo de negócio?
+
+### Tecnologias
+
+- A definir na fase, com ADR obrigatória.
+
+### Aprendizados
+
+- avaliação de modelos e definição de baseline;
+- privacidade em processamento de dados pessoais;
+- custo e latência de inferência em produto.
+
+### Critérios de conclusão
+
+- [ ] Caso de uso mede-se melhor que a baseline
+- [ ] Impacto no usuário verificado
+- [ ] Custos e riscos de privacidade documentados
+- [ ] ADR registrada
+
+---
+
+## Fase 18 — Produção (endurecimento) ⬜
+
+**Objetivo:**
+Levar a plataforma a produção com confiabilidade, observabilidade, segurança e backup.
+Evolui o *staging* criado no Epic 2.6.
+
+**Entregável esperado:**
+Ambiente de produção estável, monitorado, com backup testado, deploy automatizado com
+rollback e resposta a incidentes definida.
+
+**Dependências:** Epic 2.6 e MVP funcionalmente completo.
+
+### Épicos e tarefas
+
+- [ ] **Epic 18.1 — Infraestrutura**
+  - [ ] Definição de ambientes (dev, staging, produção)
+  - [ ] Infraestrutura como código
+  - [ ] RDS PostgreSQL + PostGIS, Redis gerenciado, S3, CDN
+  - [ ] Domínio, DNS e TLS
+- [ ] **Epic 18.2 — CI/CD**
+  - [ ] Pipeline de produção com aprovação
+  - [ ] Migrations automatizadas com segurança e rollback
+  - [ ] Estratégia de deploy sem downtime
+- [ ] **Epic 18.3 — Observabilidade**
+  - [ ] Logs centralizados, métricas e alertas
+  - [ ] Rastreamento de erros
+  - [ ] Health checks e uptime externo
+- [ ] **Epic 18.4 — Backup e continuidade**
+  - [ ] Backup automatizado com retenção definida
+  - [ ] **Restauração testada de verdade**
+  - [ ] RTO e RPO documentados
+- [ ] **Epic 18.5 — Segurança**
+  - [ ] Gestão de secrets
+  - [ ] Hardening de rede e políticas IAM mínimas
+  - [ ] Revisão de dependências e varredura de vulnerabilidades
+  - [ ] Conformidade LGPD revisada ponta a ponta
+- [ ] **Epic 18.6 — Operação**
+  - [ ] Runbook de incidentes
+  - [ ] Painel de custos e alerta de gasto
+
+### Decisões da fase
+
+- [ ] Modelo de compute na AWS (ECS Fargate recomendado; EC2? App Runner? Lambda?) — **sem Kubernetes**
+- [ ] IaC: Terraform, CDK ou configuração manual documentada
+- [ ] Região AWS e implicações de latência/LGPD
+- [ ] Stack de observabilidade (CloudWatch, Grafana, Sentry, Datadog) e custo
+- [ ] RTO/RPO aceitáveis
+- [ ] Janela de manutenção e política de deploy
+- [ ] Orçamento mensal de infraestrutura
+
+### Tecnologias
+
+- AWS, Docker, GitHub Actions, Terraform/CDK, ferramentas de observabilidade.
+
+### Aprendizados
+
+- IaC e gestão de ambientes;
+- deploy sem downtime e migrations seguras;
+- SRE básico: SLO, alertas e resposta a incidentes;
+- controle de custos em nuvem.
+
+### Critérios de conclusão
+
+- [ ] Deploy de produção automatizado e reversível
+- [ ] Backup restaurado com sucesso em teste real
+- [ ] Alertas chegam a um humano e foram testados
+- [ ] Nenhum secret no repositório (verificado por varredura)
+- [ ] Runbook escrito e revisado
+
+---
+
+## Fase 19 — Escala e otimização ⬜
+
+**Objetivo:**
+Otimizar com base em métricas reais. **Só iniciar quando existirem gargalos medidos.**
+
+**Entregável esperado:**
+Gargalos identificados por medição, corrigidos e comprovados com dados antes/depois.
+
+**Dependências:** produção com tráfego real e métricas confiáveis.
+
+### Épicos e tarefas
+
+- [ ] **Epic 19.1 — Medição** — profiling, consultas lentas, APM, orçamento de performance
+- [ ] **Epic 19.2 — Banco** — índices, otimização de consultas, connection pooling, réplicas de leitura
+- [ ] **Epic 19.3 — Cache** — camadas, invalidação, cache HTTP/CDN
+- [ ] **Epic 19.4 — Escalabilidade** — escala horizontal, autoscaling, teste de carga
+- [ ] **Epic 19.5 — Arquitetura** — extrair módulo apenas se houver justificativa medida
+
+### Decisões da fase
+
+- [ ] Quais SLOs a plataforma se compromete a cumprir?
+- [ ] Réplicas de leitura são necessárias? Onde a consistência eventual é aceitável?
+- [ ] Algum módulo precisa mesmo ser extraído do monólito? Qual evidência sustenta isso?
+- [ ] Particionamento/arquivamento de dados históricos
+- [ ] Custo vs. ganho de cada otimização
+
+### Tecnologias
+
+- Ferramentas de profiling e APM, PostgreSQL (tuning), Redis, AWS (autoscaling), k6/Artillery.
+
+### Aprendizados
+
+- profiling e leitura de planos de execução;
+- estratégias de cache e invalidação;
+- teste de carga;
+- quando (e quando **não**) distribuir um sistema.
+
+### Critérios de conclusão
+
+- [ ] Cada otimização tem número antes/depois
+- [ ] SLOs definidos e monitorados
+- [ ] Nenhuma mudança arquitetural feita sem evidência
+
+---
+
+## 9. Documentação de decisões
+
+### ADRs — `docs/adr/`
+
+Para decisões **técnicas** relevantes e difíceis de reverter.
+
+Nomenclatura: `ADR-NNN-titulo-em-kebab-case.md`
+
+Estrutura mínima:
+
+```markdown
+# ADR-NNN — Título
+
+- Status: proposta | aceita | substituída por ADR-XXX | descontinuada
+- Data: AAAA-MM-DD
+- Fase: N
+
+## Contexto
+## Decisão
+## Alternativas consideradas
+## Consequências
+```
+
+ADRs previstas (não escritas ainda):
+
+| ID | Assunto | Fase |
+| --- | --- | --- |
+| ADR-001 | Monólito modular | 0 |
+| ADR-002 | Monorepo e gerenciador de pacotes | 1 |
+| ADR-003 | Estratégia de autenticação | 2 |
+| ADR-004 | PostGIS e provedor de geocoding | 4 |
+| ADR-005 | Modelagem temporal da agenda | 6 |
+| ADR-006 | Provedor de pagamento | 9 |
+| ADR-007 | Compute e IaC na AWS | 18 |
+
+### Documentação de domínio — `docs/domain/`
+
+Para **regras de negócio**. Um arquivo por domínio, escrito na fase correspondente:
+
+`glossary.md` · `iam.md` · `professional-profile.md` · `locations.md` · `students.md` ·
+`scheduling.md` · `packages-credits.md` · `class-groups.md` · `payments.md` ·
+`notifications.md` · `marketplace.md` · `reviews.md` · `social.md` · `venues.md`
+
+### Arquitetura — `docs/architecture/`
+
+Visão de módulos, fronteiras, diagrama de contexto e modelo de dados consolidado.
+
+---
+
+## 10. Estrutura do repositório
+
+Estrutura-alvo. **Criar cada diretório apenas quando ele tiver conteúdo real.**
+
+```text
+/
+├── apps/
+│   ├── web/            # Next.js
+│   ├── api/            # NestJS (monólito modular)
+│   └── mobile/         # Expo
+│
+├── packages/           # código compartilhado (config, types, ui)
+│
+├── docs/
+│   ├── adr/            # decisões técnicas
+│   ├── domain/         # regras de negócio
+│   ├── product/        # personas, MVP, jornadas
+│   └── architecture/   # módulos e fronteiras
+│
+├── agents/             # definições portáteis dos agentes de IA
+│
+├── TODO.md
+├── AI-DEVELOPMENT.md
+└── README.md
+```
+
+---
+
+## 11. Backlog de decisões em aberto
+
+Índice consolidado. Nenhuma destas decisões deve ser tomada antes da fase indicada.
+
+| Decisão | Fase | Registro |
+| --- | --- | --- |
+| Nicho inicial e recorte do MVP | 0 | `docs/product/` |
+| Monorepo, migrations e convenções de banco | 1 | ADR-002 |
+| Estratégia de autenticação e modelo de papéis | 2 | ADR-003 |
+| Usuário pode ser profissional e aluno ao mesmo tempo | 2 | `docs/domain/iam.md` |
+| Catálogo de modalidades aberto ou curado | 3 | `docs/domain/professional-profile.md` |
+| Provedor de geocoding e precisão pública de localização | 4 | ADR-004 |
+| Propriedade e privacidade dos dados do aluno | 5 | `docs/domain/students.md` |
+| Política de conflitos de agenda | 6 | `docs/domain/scheduling.md` |
+| Timezone e modelagem temporal | 6 | ADR-005 |
+| Política de cancelamento | 6 / 7 | `docs/domain/scheduling.md` |
+| Consumo, validade e estorno de créditos | 7 | `docs/domain/packages-credits.md` |
+| Comportamento da lista de espera | 8 | `docs/domain/class-groups.md` |
+| Provedor de pagamento e fluxo do dinheiro | 9 | ADR-006 |
+| Modelo de monetização | 9 | `docs/product/` |
+| Provedor e custo de WhatsApp | 10 | `docs/domain/notifications.md` |
+| Quem pode reservar e cancelar no app | 11 | `docs/domain/scheduling.md` |
+| Critérios de ranking do marketplace | 12 | `docs/domain/marketplace.md` |
+| Elegibilidade e moderação de avaliações | 13 | `docs/domain/reviews.md` |
+| Arquitetura do feed social | 14 | ADR (a criar) |
+| Compute AWS e IaC | 18 | ADR-007 |
+
+---
+
+## 12. Registro de fases
+
+Preencher ao concluir cada fase.
+
+| Fase | Início | Conclusão | ADRs | Docs de domínio | Observações |
+| --- | --- | --- | --- | --- | --- |
+| — | — | — | — | — | — |
