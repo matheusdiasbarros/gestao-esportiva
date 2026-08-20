@@ -12,8 +12,11 @@ export default {
   rules: {
     // Escopos livres: os módulos ainda vão nascer ao longo das fases.
     'scope-empty': [0],
-    // Descrição em pt-BR começa com letra minúscula e sem ponto final.
-    'subject-case': [2, 'always', 'lower-case'],
+    // A descrição não começa com maiúscula nem é um título — mas maiúscula **no meio** é
+    // permitida, porque "Fase 2", "API" e "PostgreSQL" aparecem o tempo todo.
+    // Cuidado: `[2, 'always', 'lower-case']` exigiria a frase inteira em minúscula e
+    // barraria todos esses casos.
+    'subject-case': [2, 'never', ['sentence-case', 'start-case', 'pascal-case', 'upper-case']],
     'subject-full-stop': [2, 'never', '.'],
     // Assunto curto o bastante para caber em `git log --oneline`.
     'header-max-length': [2, 'always', 72],

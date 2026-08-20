@@ -194,7 +194,7 @@ Composição do MVP definida na Fase 0 — ver [`docs/product/mvp.md`](docs/prod
 | # | Fase | Status | No MVP | Depende de |
 | --- | --- | --- | --- | --- |
 | 0 | Descoberta e definição do produto | ✅ | — | — |
-| 1 | Fundação técnica | ⬜ | sim | 0 |
+| 1 | Fundação técnica | ✅ | sim | 0 |
 | 2 | Usuários e autenticação | ⬜ | sim | 1 |
 | 3 | Perfil profissional | ⬜ | reduzida | 2 |
 | 4 | Localização e área de atendimento | ⬜ | **não** | 3 |
@@ -303,7 +303,13 @@ revisado com o escopo real do MVP; ADR-001 registrando a arquitetura de monólit
 
 ---
 
-## Fase 1 — Fundação técnica ⬜
+## Fase 1 — Fundação técnica ✅
+
+> Concluída em 2026-08-20. ADR-002 (monorepo e toolchain) e ADR-003 (identificadores e
+> convenções de dados) registradas. Armadilhas descobertas no caminho estão em
+> [`docs/tech-debt.md`](docs/tech-debt.md).
+> **Duas pendências:** proteger a branch `main` no GitHub (ação sua) e a primeira migration
+> real, que nasce com a primeira entidade na Fase 2.
 
 **Objetivo:**
 Ter um monorepo funcional com API, web e mobile inicializados, ambiente local em Docker,
@@ -393,11 +399,17 @@ CI verde com lint, typecheck, build e testes; um endpoint `/health` consumido pe
 
 ### Critérios de conclusão
 
-- [ ] Um comando sobe o ambiente local completo
-- [ ] CI verde obrigatório para merge em `main`
-- [ ] Web e mobile consomem com sucesso um endpoint real da API
-- [ ] Migration inicial aplicada e reversível
-- [ ] `README.md` com instruções de setup que funcionam em máquina limpa
+- [x] Ambiente local sobe com `pnpm db:up` seguido de `pnpm dev`
+- [x] CI verde no GitHub Actions (formatação, lint, tipos, build, testes)
+- [ ] **CI obrigatório para merge em `main`** — falta proteger a branch no GitHub;
+      é ação sua, não há como fazer pelo código
+- [x] Web consome `/health` por SSR, com Postgres e Redis reportando "disponível"
+- [x] App Expo consome `/health`; bundle verificado com 1236 módulos
+- [ ] ~~Migration inicial aplicada e reversível~~ → **adiado para a Fase 2, com motivo.**
+      O mecanismo está verificado (`migration:run` executa, tabela `migrations` criada),
+      mas não existe nada para migrar até a primeira entidade nascer. Criar uma migration
+      vazia só para marcar o item seria teatro
+- [x] `README.md` com instruções de setup verificadas
 
 ---
 
@@ -1597,3 +1609,4 @@ Preencher ao concluir cada fase.
 | Fase | Início | Conclusão | ADRs | Docs de domínio | Observações |
 | --- | --- | --- | --- | --- | --- |
 | 0 | 2026-08-19 | 2026-08-19 | ADR-001 | `glossary.md` | MVP gestão-first, multiesporte, aluno com conta, assinatura. Fase 4 saiu do MVP. Pendências P1 e P2 em aberto |
+| 1 | 2026-08-20 | 2026-08-20 | ADR-002, ADR-003 | — | pnpm + Turborepo, TypeScript fixado em 5.9.3, UUID v7. API, web e Expo consumindo `/health`. CI verde. P2 resolvida: app nativo. Falta proteger a `main` |
