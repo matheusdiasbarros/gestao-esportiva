@@ -179,41 +179,58 @@ três ajustes são aplicados como épicos marcados com 🔁 dentro de fases ante
    não funcionam sem envio de e-mail. Entra apenas o mínimo (provedor + template básico +
    fila); a Fase 10 constrói a plataforma de notificações completa.
 
-3. **Perfil público mínimo antecipado (parte da Fase 12 → Fase 3).**
-   Justificativa: uma página pública de perfil valida cedo o modelo de dados públicos vs.
-   privados e permite que o profissional compartilhe um link muito antes do marketplace.
-   Busca, filtros e ranking permanecem na Fase 12.
+3. ~~**Perfil público mínimo antecipado (parte da Fase 12 → Fase 3).**~~
+   **Revisto na Fase 0.** Com o MVP gestão-first, o perfil público não é necessário para o
+   profissional abandonar a planilha — é aquisição, não gestão. Sai do MVP e vira o primeiro
+   item pós-MVP (Epic 3.6). Em seu lugar, a Fase 3 absorve o **cadastro de locais** vindo da
+   Fase 4 (Epic 3.5), que o MVP realmente precisa.
 
 ---
 
 ## 8. Índice de fases
 
-| # | Fase | Status | Depende de |
-| --- | --- | --- | --- |
-| 0 | Descoberta e definição do produto | ⬜ | — |
-| 1 | Fundação técnica | ⬜ | 0 |
-| 2 | Usuários e autenticação | ⬜ | 1 |
-| 3 | Perfil profissional | ⬜ | 2 |
-| 4 | Localização e área de atendimento | ⬜ | 3 |
-| 5 | Gestão de alunos | ⬜ | 2, 3 |
-| 6 | Agenda | ⬜ | 4, 5 |
-| 7 | Pacotes e créditos | ⬜ | 6 |
-| 8 | Turmas | ⬜ | 6, 7 |
-| 9 | Financeiro | ⬜ | 7, 8 |
-| 10 | Notificações | ⬜ | 6, 9 |
-| 11 | Aplicativo do aluno | ⬜ | 6, 7, 9, 10 |
-| 12 | Marketplace | ⬜ | 3, 4, 6 |
-| 13 | Avaliações e reputação | ⬜ | 6, 12 |
-| 14 | Recursos sociais | ⬜ | 12, 13 |
-| 15 | Locais esportivos | ⬜ | 4, 12 |
-| 16 | Comunidade entre alunos | ⬜ | 11, 14 |
-| 17 | Inteligência Artificial | ⬜ | dados reais em produção |
-| 18 | Produção (endurecimento) | ⬜ | 2 (deploy mínimo), MVP definido |
-| 19 | Escala e otimização | ⬜ | métricas reais |
+Composição do MVP definida na Fase 0 — ver [`docs/product/mvp.md`](docs/product/mvp.md).
+
+| # | Fase | Status | No MVP | Depende de |
+| --- | --- | --- | --- | --- |
+| 0 | Descoberta e definição do produto | ✅ | — | — |
+| 1 | Fundação técnica | ⬜ | sim | 0 |
+| 2 | Usuários e autenticação | ⬜ | sim | 1 |
+| 3 | Perfil profissional | ⬜ | reduzida | 2 |
+| 4 | Localização e área de atendimento | ⬜ | **não** | 3 |
+| 5 | Gestão de alunos | ⬜ | sim | 2, 3 |
+| 6 | Agenda | ⬜ | sim | 3, 5 |
+| 7 | Pacotes e créditos | ⬜ | sim | 6 |
+| 8 | Turmas | ⬜ | pendente P1 | 6, 7 |
+| 9 | Financeiro | ⬜ | parcial | 7 |
+| 10 | Notificações | ⬜ | parcial | 6, 9 |
+| 11 | Área do aluno | ⬜ | pendente P2 | 6, 7, 9, 10 |
+| 12 | Marketplace | ⬜ | não | 3, 4, 6 |
+| 13 | Avaliações e reputação | ⬜ | não | 6, 12 |
+| 14 | Recursos sociais | ⬜ | não | 12, 13 |
+| 15 | Locais esportivos | ⬜ | não | 4, 12 |
+| 16 | Comunidade entre alunos | ⬜ | não | 11, 14 |
+| 17 | Inteligência Artificial | ⬜ | não | dados reais em produção |
+| 18 | Produção (endurecimento) | ⬜ | sim | 2 (deploy mínimo), MVP completo |
+| 19 | Escala e otimização | ⬜ | não | métricas reais |
+
+**Mudanças de dependência decididas na Fase 0:**
+
+- A **Fase 4 saiu do caminho crítico.** O MVP precisa saber *onde* a aula acontece, não *quão
+  perto* alguém está — localização vira campo de endereço dentro da Fase 3. PostGIS, geocoding
+  e raio só ganham função com busca, ou seja, na Fase 12.
+- Por consequência, a **Fase 6 passa a depender das fases 3 e 5**, não mais da 4.
+- A **Fase 9 não depende mais da Fase 8**, já que turmas provavelmente ficam fora do MVP.
 
 ---
 
-## Fase 0 — Descoberta e definição do produto ⬜
+## Fase 0 — Descoberta e definição do produto ✅
+
+> Concluída em 2026-08-19. Resultado em [`docs/product/`](docs/product/),
+> [`docs/domain/glossary.md`](docs/domain/glossary.md) e
+> [`docs/adr/ADR-001-monolito-modular.md`](docs/adr/ADR-001-monolito-modular.md).
+> **Duas pendências de confirmação** (turmas no MVP, web vs. app do aluno) estão em
+> [`docs/product/mvp.md`](docs/product/mvp.md) — não bloqueiam a Fase 1.
 
 **Objetivo:**
 Entender o problema, definir personas, escopo do MVP e o vocabulário do domínio **antes**
@@ -227,34 +244,42 @@ revisado com o escopo real do MVP; ADR-001 registrando a arquitetura de monólit
 
 ### Épicos e tarefas
 
-- [ ] **Epic 0.1 — Problema e proposta de valor**
-  - [ ] Descrever o problema central do profissional autônomo hoje (planilha, WhatsApp, caderno)
-  - [ ] Levantar 3–5 concorrentes/alternativas e o que eles não resolvem
-  - [ ] Escrever a proposta de valor em uma frase
-- [ ] **Epic 0.2 — Personas e jornadas**
-  - [ ] Persona profissional (autônomo, 1 modalidade, poucos alunos)
-  - [ ] Persona aluno
-  - [ ] Persona administrador da plataforma
-  - [ ] Jornadas principais de cada persona (descoberta → contratação → aula → pagamento)
-- [ ] **Epic 0.3 — Escopo e MVP**
-  - [ ] Lista explícita do que **entra** no MVP
-  - [ ] Lista explícita do que **fica fora** do MVP
-  - [ ] Métrica de sucesso do MVP
-- [ ] **Epic 0.4 — Fluxos principais**
-  - [ ] Diagramas (Mermaid) dos 3–5 fluxos críticos
-  - [ ] Mapa de entidades de alto nível (sem modelagem física)
-- [ ] **Epic 0.5 — Glossário do domínio**
-  - [ ] `docs/domain/glossary.md` com termo pt-BR ↔ termo em código
-  - [ ] Definir: aula, sessão, turma, pacote, crédito, reposição, matrícula, disponibilidade
+- [x] **Epic 0.1 — Problema e proposta de valor** → `docs/product/vision.md`
+  - [x] Descrever o problema central do profissional autônomo hoje (planilha, WhatsApp, caderno)
+  - [x] Levantar 3–5 concorrentes/alternativas e o que eles não resolvem
+  - [x] Escrever a proposta de valor em uma frase
+- [x] **Epic 0.2 — Personas e jornadas** → `docs/product/personas.md`, `journeys.md`
+  - [x] Persona profissional (Rodrigo — persona primária, é quem paga)
+  - [x] Persona aluno (Marina)
+  - [x] Persona administrador da plataforma
+  - [x] Jornadas principais: onboarding, entrada do aluno, ciclo da aula, remarcação, ciclo financeiro
+- [x] **Epic 0.3 — Escopo e MVP** → `docs/product/mvp.md`
+  - [x] Lista explícita do que **entra** no MVP
+  - [x] Lista explícita do que **fica fora** do MVP
+  - [x] Métrica de sucesso do MVP
+- [x] **Epic 0.4 — Fluxos principais** → `docs/product/journeys.md`
+  - [x] Diagramas (Mermaid) dos 5 fluxos críticos
+  - [x] Mapa de entidades de alto nível (nas tabelas do glossário)
+- [x] **Epic 0.5 — Glossário do domínio** → `docs/domain/glossary.md`
+  - [x] Termo pt-BR ↔ termo em código, com convenções de banco
+  - [x] Desambiguar "aula", "mensalidade vs. assinatura" e "matrícula vs. vínculo"
 
 ### Decisões da fase
 
-- [ ] Qual perfil de profissional é o **primeiro alvo** (nicho inicial)?
-- [ ] O MVP é **gestão-first** (ferramenta para o profissional) ou **marketplace-first** (aquisição de alunos)?
-- [ ] Idioma do código e do banco (código em inglês com glossário pt-BR é a recomendação)
-- [ ] Modelo de tenancy: profissional como entidade dentro de um banco único (recomendado) vs. multi-tenant isolado
-- [ ] Hipótese de monetização (assinatura, take rate, freemium) — hipótese, não decisão final
-- [ ] Escopo geográfico inicial (uma cidade? Brasil inteiro?)
+- [x] **Nicho inicial:** multiesporte, sem nicho de entrada
+- [x] **Recorte do MVP:** gestão-first — ferramenta para o profissional; marketplace depois
+- [x] **Idioma:** código, tabelas e colunas em inglês; produto, docs e commits em pt-BR
+- [x] **Tenancy:** banco único, profissional como entidade — sem isolamento multi-tenant
+- [x] **Monetização (hipótese):** assinatura paga pelo profissional; decisão final na Fase 9
+- [x] **Escopo geográfico:** sem trava técnica; foco comercial em uma cidade
+- [x] **Aluno tem conta no MVP:** sim — reserva, cancela e acompanha créditos sozinho
+
+**Pendentes de confirmação** (documentadas em `docs/product/mvp.md`, não bloqueiam a Fase 1):
+
+- [ ] **P1 — Turmas entram no MVP?** Recomendação: não. Multiesporte sem turmas atende bem
+      apenas esportes individuais; turmas viram o primeiro item pós-MVP
+- [ ] **P2 — Aluno acessa por web responsiva ou app nativo no MVP?** Recomendação: web
+      responsiva; app nativo logo depois
 
 ### Tecnologias
 
@@ -269,11 +294,11 @@ revisado com o escopo real do MVP; ADR-001 registrando a arquitetura de monólit
 
 ### Critérios de conclusão
 
-- [ ] MVP escrito, com o que fica de fora explicitado
-- [ ] Personas e jornadas documentadas em `docs/product/`
-- [ ] Glossário cobrindo os termos que aparecerão no código
-- [ ] ADR-001 (monólito modular) registrada
-- [ ] `TODO.md` ajustado ao escopo real acordado
+- [x] MVP escrito, com o que fica de fora explicitado
+- [x] Personas e jornadas documentadas em `docs/product/`
+- [x] Glossário cobrindo os termos que aparecerão no código
+- [x] ADR-001 (monólito modular) registrada
+- [x] `TODO.md` ajustado ao escopo real acordado
 
 ---
 
@@ -464,7 +489,11 @@ Editor de perfil na web, perfil retornado pela API e uma página pública mínim
 - [ ] **Epic 3.4 — Edição do perfil (web)**
   - [ ] Formulário com validação compartilhada (`packages/types`)
   - [ ] Indicador de completude do perfil
-- [ ] **Epic 3.5 — Perfil público mínimo 🔁** *(antecipado da Fase 12)*
+- [ ] **Epic 3.5 — Locais de atendimento 🔁** *(absorvido da Fase 4 — decidido na Fase 0)*
+  - [ ] Cadastro de locais com endereço em texto, sem mapa nem geolocalização
+  - [ ] Múltiplos locais por profissional, com local principal
+  - [ ] Tipos: local próprio, academia/clube, espaço público, casa do aluno
+- [ ] **Epic 3.6 — Perfil público mínimo** *(fora do MVP; primeiro item pós-MVP)*
   - [ ] Rota pública `/{slug}` com SSR e metadados sociais
   - [ ] Botão de contato/interesse (sem agendamento ainda)
 
@@ -500,6 +529,9 @@ Editor de perfil na web, perfil retornado pela API e uma página pública mínim
 ---
 
 ## Fase 4 — Localização e área de atendimento ⬜
+
+> **Fora do MVP** (decidido na Fase 0). Roda junto da Fase 12, quando existir busca.
+> O MVP resolve localização como campo de endereço dentro da Fase 3.
 
 **Objetivo:**
 Modelar onde o profissional atende: locais fixos, múltiplos locais, regiões, deslocamento
@@ -637,7 +669,8 @@ correto de recorrência, conflitos, fusos e bloqueios.
 Calendário funcional na web, criação/edição/cancelamento de aulas individuais e
 recorrentes, sem possibilidade de agendamento conflitante (garantido no banco).
 
-**Dependências:** Fases 4 e 5. **É a fase de maior risco técnico do projeto.**
+**Dependências:** Fases 3 e 5 — a Fase 4 saiu do caminho crítico na Fase 0.
+**É a fase de maior risco técnico do projeto.**
 
 ### Épicos e tarefas
 
@@ -1018,7 +1051,7 @@ e disponibilidade — transformando a ferramenta de gestão em canal de aquisiç
 Busca pública com filtros e ordenação, perfil público completo com CTA de contratação,
 e páginas indexáveis por buscadores.
 
-**Dependências:** Fases 3, 4 e 6. Evolui o Epic 3.5.
+**Dependências:** Fases 3, 4 e 6. Evolui o Epic 3.6 e puxa a Fase 4, que ficou fora do MVP.
 
 ### Épicos e tarefas
 
@@ -1510,7 +1543,10 @@ Estrutura-alvo. **Criar cada diretório apenas quando ele tiver conteúdo real.*
 
 | Decisão | Fase | Registro |
 | --- | --- | --- |
-| Nicho inicial e recorte do MVP | 0 | `docs/product/` |
+| ~~Nicho inicial e recorte do MVP~~ ✅ | 0 | `docs/product/mvp.md` |
+| ~~Idioma do código, tenancy, monetização (hipótese)~~ ✅ | 0 | `docs/product/mvp.md` |
+| **P1 — turmas entram no MVP?** | 0 → confirmar até o fim da Fase 1 | `docs/product/mvp.md` |
+| **P2 — aluno em web responsiva ou app nativo?** | 0 → confirmar até o fim da Fase 1 | `docs/product/mvp.md` |
 | Monorepo, migrations e convenções de banco | 1 | ADR-002 |
 | Estratégia de autenticação e modelo de papéis | 2 | ADR-003 |
 | Usuário pode ser profissional e aluno ao mesmo tempo | 2 | `docs/domain/iam.md` |
@@ -1539,4 +1575,4 @@ Preencher ao concluir cada fase.
 
 | Fase | Início | Conclusão | ADRs | Docs de domínio | Observações |
 | --- | --- | --- | --- | --- | --- |
-| — | — | — | — | — | — |
+| 0 | 2026-08-19 | 2026-08-19 | ADR-001 | `glossary.md` | MVP gestão-first, multiesporte, aluno com conta, assinatura. Fase 4 saiu do MVP. Pendências P1 e P2 em aberto |
