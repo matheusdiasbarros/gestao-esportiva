@@ -1,0 +1,8 @@
+# Prettier roda por arquivo alterado, via lint-staged.
+pnpm lint-staged
+
+# O ESLint roda pelo turbo, e não dentro do lint-staged, porque o flat config resolve a
+# configuração a partir do cwd, e não da pasta do arquivo: rodar `eslint apps/api/...` da
+# raiz usaria a config errada. O turbo executa o lint dentro de cada pacote, com a config
+# certa, e o cache faz a verificação ser quase instantânea quando nada mudou.
+pnpm lint

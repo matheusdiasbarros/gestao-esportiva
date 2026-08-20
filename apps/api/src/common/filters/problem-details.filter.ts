@@ -1,4 +1,11 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 import type { ProblemDetails, ValidationError } from '@gestao/types';
 
@@ -33,9 +40,7 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     const status =
-      exception instanceof HttpException
-        ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
+      exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
 
     const problem: ProblemDetails = {
       type: 'about:blank',
@@ -82,6 +87,9 @@ export class ProblemDetailsFilter implements ExceptionFilter {
   }
 
   private ehErroDeValidacao(body: object): body is ValidationExceptionBody {
-    return 'validationErrors' in body && Array.isArray((body as ValidationExceptionBody).validationErrors);
+    return (
+      'validationErrors' in body &&
+      Array.isArray((body as ValidationExceptionBody).validationErrors)
+    );
   }
 }

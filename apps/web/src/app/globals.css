@@ -1,0 +1,28 @@
+@import 'tailwindcss';
+
+/* Tailwind 4 declara o tema em CSS, não em tailwind.config.js.
+   Isto é o mínimo para a Fase 1 — o design system de verdade é assunto da Fase 3. */
+@theme {
+  --color-surface: oklch(99% 0 0);
+  --color-surface-muted: oklch(96.5% 0.003 250);
+  --color-ink: oklch(22% 0.01 250);
+  --color-ink-muted: oklch(52% 0.015 250);
+  --color-border: oklch(90% 0.005 250);
+  --color-ok: oklch(62% 0.15 150);
+  --color-danger: oklch(58% 0.19 25);
+}
+
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-surface: oklch(18% 0.01 250);
+    --color-surface-muted: oklch(23% 0.012 250);
+    --color-ink: oklch(96% 0.005 250);
+    --color-ink-muted: oklch(70% 0.015 250);
+    --color-border: oklch(32% 0.012 250);
+  }
+}
+
+body {
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+}

@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Um push novo na mesma branch cancela a execução anterior: não faz sentido gastar
+# minutos verificando um commit que já foi substituído.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: Lint, tipos, build e testes
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Instalar dependências
+        # --frozen-lockfile falha se o pnpm-lock.yaml estiver desatualizado em relação aos
+        # package.json. É o que impede um commit de mudar dependência sem atualizar o lock.
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache do Turborepo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-
+
+      - name: Formatação
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Tipos
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
+
+      - name: Testes
+        run: pnpm test
+
+  # Serviços de banco e cache entram aqui na Fase 2, quando existirem testes de integração.
+  # Subi-los agora só somaria tempo a cada execução, sem nada para testar contra eles.

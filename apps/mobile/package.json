@@ -1,0 +1,33 @@
+{
+  "name": "@gestao/mobile",
+  "version": "0.0.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "build": "echo \"build do app e feito pelo EAS, nao pelo turbo\" && exit 0",
+    "lint": "eslint app src",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"sem testes unitarios nesta fase\" && exit 0"
+  },
+  "dependencies": {
+    "@gestao/types": "workspace:*",
+    "expo": "^57.0.15",
+    "expo-constants": "~57.0.13",
+    "expo-linking": "~57.0.7",
+    "expo-router": "~57.0.15",
+    "expo-status-bar": "~57.0.1",
+    "react": "^19.2.8",
+    "react-native": "0.86.2",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.2"
+  },
+  "devDependencies": {
+    "@gestao/config": "workspace:*",
+    "@types/react": "^19.2.18",
+    "eslint": "^10.8.1",
+    "typescript": "5.9.3"
+  }
+}

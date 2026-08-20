@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Gestão Esportiva",
+    "slug": "gestao-esportiva",
+    "scheme": "gestaoesportiva",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "plugins": ["expo-router"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "br.com.gestaoesportiva.app"
+    },
+    "android": {
+      "package": "br.com.gestaoesportiva.app",
+      "edgeToEdgeEnabled": true
+    },
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

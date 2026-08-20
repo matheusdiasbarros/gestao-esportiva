@@ -2,7 +2,12 @@ node_modules
 dist
 build
 .next
+.expo
 .turbo
 coverage
 pnpm-lock.yaml
 *.md
+
+# Gerados por ferramenta — não editar nem formatar.
+apps/web/next-env.d.ts
+apps/mobile/expo-env.d.ts

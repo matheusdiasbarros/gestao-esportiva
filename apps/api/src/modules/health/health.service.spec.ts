@@ -10,7 +10,9 @@ describe('HealthService', () => {
   }): Promise<HealthService> => {
     const dataSource = {
       query: jest.fn(() =>
-        opcoes.bancoOk ? Promise.resolve([{ '?column?': 1 }]) : Promise.reject(new Error('sem conexão')),
+        opcoes.bancoOk
+          ? Promise.resolve([{ '?column?': 1 }])
+          : Promise.reject(new Error('sem conexão')),
       ),
     };
 

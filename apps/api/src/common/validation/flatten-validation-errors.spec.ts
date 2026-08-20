@@ -1,12 +1,17 @@
 import { ValidationError } from 'class-validator';
 import { flattenValidationErrors } from './flatten-validation-errors';
 
-const erro = (property: string, constraints?: Record<string, string>, children: ValidationError[] = []) =>
-  ({ property, constraints, children }) as ValidationError;
+const erro = (
+  property: string,
+  constraints?: Record<string, string>,
+  children: ValidationError[] = [],
+) => ({ property, constraints, children }) as ValidationError;
 
 describe('flattenValidationErrors', () => {
   it('achata um erro simples', () => {
-    const resultado = flattenValidationErrors([erro('email', { isEmail: 'email deve ser válido' })]);
+    const resultado = flattenValidationErrors([
+      erro('email', { isEmail: 'email deve ser válido' }),
+    ]);
 
     expect(resultado).toEqual([{ field: 'email', message: 'email deve ser válido' }]);
   });

@@ -333,26 +333,31 @@ CI verde com lint, typecheck, build e testes; um endpoint `/health` consumido pe
   - [x] Filtro global devolvendo Problem Details (RFC 9457) em `application/problem+json`
   - [x] OpenAPI/Swagger em `/api/v1/docs`, apenas fora de produção
   - [x] 27 testes unitários
-- [ ] **Epic 1.3 — Web (Next.js)**
-  - [ ] Bootstrap Next.js + Tailwind
-  - [ ] Camada de acesso à API tipada
-  - [ ] Layout base e página que consome `/health`
-- [ ] **Epic 1.4 — Mobile (Expo)**
-  - [ ] Bootstrap Expo + navegação
-  - [ ] Consumo do `/health` para validar a cadeia
+- [x] **Epic 1.3 — Web (Next.js)** ✅
+  - [x] Next.js 16 + Tailwind 4 (tema em CSS com `@theme`, sem `tailwind.config.js`)
+  - [x] Cliente de API tipado, com `ApiError` carregando o Problem Details
+  - [x] Layout em pt-BR e página consumindo `/health` por SSR
+  - [x] Cabeçalhos de segurança mínimos
+- [x] **Epic 1.4 — Mobile (Expo)** ✅
+  - [x] Expo SDK 57 + expo-router; Metro resolve o monorepo automaticamente
+  - [x] Tela consumindo `/health` com pull-to-refresh
+  - [x] URL da API derivada do host do Expo — `localhost` no aparelho é o próprio aparelho
+  - [x] Bundle verificado: 1236 módulos, incluindo `@gestao/types` do workspace
 - [x] **Epic 1.5 — Infra local** ✅ *(parcial: falta seed)*
   - [x] `docker-compose.yml` com PostgreSQL 17.5 + PostGIS 3.5 e Redis 8, ambos com healthcheck
   - [ ] Seeds do banco *(depende de existirem entidades — volta na Fase 2)*
   - [x] Script de reset: `pnpm db:reset`
   - [x] `.env.example` documentado
-- [ ] **Epic 1.6 — Qualidade**
-  - [ ] ESLint + Prettier + EditorConfig
-  - [ ] Husky + lint-staged + commitlint (Conventional Commits em pt-BR)
-  - [ ] Runner de testes configurado nos três apps
-- [ ] **Epic 1.7 — CI inicial (GitHub Actions)**
-  - [ ] Workflow: install → lint → typecheck → test → build
-  - [ ] Cache de dependências
-  - [ ] Proteção da branch `main`
+- [x] **Epic 1.6 — Qualidade** ✅
+  - [x] ESLint 10 flat config + Prettier + EditorConfig
+  - [x] Husky + lint-staged (pre-commit) + commitlint (commit-msg)
+  - [x] Conventional Commits com tipo em inglês e descrição em pt-BR
+  - [x] Jest configurado na API; web e mobile ainda sem teste unitário
+- [x] **Epic 1.7 — CI inicial (GitHub Actions)** ✅ *(parcial)*
+  - [x] Workflow: install → format → lint → typecheck → build → test
+  - [x] Cache de pnpm e do Turborepo, com cancelamento de execuções superadas
+  - [ ] **Proteção da branch `main`** — depende de ação sua no GitHub
+  - [ ] Serviços de Postgres e Redis no CI *(Fase 2, quando houver teste de integração)*
 
 ### Decisões da fase
 

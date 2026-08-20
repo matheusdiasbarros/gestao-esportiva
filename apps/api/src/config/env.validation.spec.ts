@@ -76,9 +76,7 @@ describe('validateEnv', () => {
     });
 
     it('recusa NODE_ENV fora do enum', () => {
-      expect(() => validateEnv({ ...ambienteMinimo, NODE_ENV: 'homologacao' })).toThrow(
-        /NODE_ENV/,
-      );
+      expect(() => validateEnv({ ...ambienteMinimo, NODE_ENV: 'homologacao' })).toThrow(/NODE_ENV/);
     });
 
     it('recusa porta fora da faixa válida', () => {
