@@ -2,7 +2,7 @@
 
 Documento de Fase 0. Define o que será construído antes do primeiro lançamento real.
 
-Última atualização: 2026-08-19
+Última atualização: 2026-08-20
 
 ---
 
@@ -20,6 +20,8 @@ Documento de Fase 0. Define o que será construído antes do primeiro lançament
 ## Princípio de recorte
 
 O MVP é o menor produto em que **Rodrigo abandona a planilha** (ver [personas.md](personas.md)).
+A ficha de Rodrigo diz "mistura de individual, dupla e turma" — por isso turma faz parte do
+menor produto, e não do próximo: sem ela, ele mantém a planilha para uma parte da agenda.
 Nada entra por ser interessante; entra por ser necessário para ele parar de usar o WhatsApp
 como sistema de agenda.
 
@@ -52,6 +54,13 @@ como sistema de agenda.
 - [ ] Prevenção de conflito de horário
 - [ ] Cancelamento e **remarcação**
 - [ ] Registro de presença, falta e aula realizada
+
+### Turmas (aulas coletivas)
+- [ ] Turma como entidade: modalidade, nível, local, capacidade e horários recorrentes
+- [ ] Matrícula respeitando capacidade, inclusive com dois alunos tentando a última vaga
+- [ ] Saída da turma
+- [ ] Chamada por sessão e relatório de frequência
+- [ ] **Sem lista de espera** — ver "O que fica de fora"
 
 ### Pacotes e créditos
 - [ ] Aula avulsa, pacote de N aulas e mensalidade
@@ -96,6 +105,7 @@ como sistema de agenda.
 | Qualquer recurso de IA | Fase 17 |
 | WhatsApp como canal de notificação | Fase 10 completa |
 | Split de pagamento, KYC, nota fiscal | Fase 9 completa |
+| **Lista de espera de turma** (Epic 8.3) | logo após o MVP |
 | Importação de alunos por CSV | quando alguém pedir |
 
 **Nota sobre a Fase 4:** o MVP precisa saber *onde* a aula acontece, não *quão perto* o
@@ -107,24 +117,37 @@ Isso remove uma fase inteira do caminho crítico.
 
 ## Pendências de confirmação
 
-Duas escolhas da Fase 0 geraram consequências que precisam de decisão explícita antes da
-Fase 1 fechar. Nenhuma bloqueia o início da Fase 1.
+Duas escolhas da Fase 0 geraram consequências que precisavam de decisão explícita antes da
+Fase 1 fechar. **Ambas foram resolvidas.**
 
-### P1 — Turmas entram no MVP?
+### ~~P1 — Turmas entram no MVP?~~ ✅ Resolvida em 2026-08-20
 
-**A tensão:** o nicho escolhido foi multiesporte, e dança, lutas e futebol são
-majoritariamente coletivos. Sem turmas, o produto atende bem apenas esportes individuais, e
-"multiesporte" fica verdadeiro no catálogo mas não na prática.
+**Decisão: turmas entram.** A recomendação era deixar fora; a escolha foi incluir, e ela vale.
 
-| Opção | Consequência |
-| --- | --- |
-| **Não entram** (recomendado) | MVP menor e mais seguro. O primeiro público real será de aulas individuais e duplas. Turmas viram o **primeiro item pós-MVP** |
-| Entram | O MVP atende multiesporte de verdade, ao custo de somar a Fase 8 ao caminho crítico |
+**A tensão que motivou a pergunta:** o nicho escolhido foi multiesporte, e dança, lutas e
+futebol são majoritariamente coletivos — beach tennis e padel, os esportes da persona
+primária, também são jogados em grupo. Sem turmas, o produto atenderia bem apenas aulas
+individuais, e "multiesporte" ficaria verdadeiro no catálogo mas não na prática.
 
-**Recomendação: não entram.** Turmas dependem de agenda e créditos já maduros — capacidade,
-matrícula e lista de espera são camadas sobre esses dois. Construir os três em paralelo
-concentra risco justamente na parte mais difícil do sistema. Melhor ter agenda e créditos
-sólidos e adicionar turmas sobre uma base testada.
+**Consequências assumidas:**
+
+- A **Fase 8 entra no caminho crítico.** O MVP passa a ir até a Fase 8, não até a 7.
+- **Turmas se apoiam em agenda e créditos**, então a ordem 6 → 7 → 8 é obrigatória. Capacidade
+  e matrícula são camadas sobre o modelo temporal da Fase 6 e sobre o saldo da Fase 7; nenhuma
+  delas pode ser construída em paralelo com a base que ainda não existe.
+- **Controle de capacidade sob concorrência vira requisito de MVP.** Dois alunos tocando
+  "matricular" na última vaga ao mesmo tempo é o caso que precisa de lock ou constraint no
+  banco, e de teste automatizado — não é detalhe de implementação.
+- **A Fase 9 herda a cobrança de turma**: entrada no meio do mês, mensalidade de turma e o que
+  acontece com o crédito na falta em aula coletiva.
+
+**Recorte dentro da Fase 8 — a lista de espera fica de fora.** É onde mora quase todo o custo
+da fase: ordenação da fila, promoção automática ao abrir vaga, janela de aceite, expiração da
+oferta e a regra de vaga liberada em cima da hora. Cada uma dessas é uma decisão de produto com
+casos de borda próprios, e todas exigem processamento em segundo plano. No MVP, o profissional
+resolve isso ligando para o próximo aluno — que é exatamente o que ele já faz hoje. Turma com
+capacidade, matrícula e presença entrega o valor; a fila entra logo depois, quando o uso real
+mostrar com que frequência ela é acionada.
 
 ### ~~P2 — O aluno acessa por web ou por app?~~ ✅ Resolvida em 2026-08-20
 
@@ -180,7 +203,7 @@ ele está mantendo o WhatsApp em paralelo — e nesse caso o produto não substi
 | 5 — Gestão de alunos | integral | |
 | 6 — Agenda | integral | núcleo do produto |
 | 7 — Pacotes e créditos | integral | núcleo do produto |
-| 8 — Turmas | **pendente P1** | recomendação: fora |
+| 8 — Turmas | reduzida | **P1 resolvida: entram.** Sem lista de espera (Epic 8.3) |
 | 9 — Financeiro | parcial | PIX e baixa manual; sem split, KYC ou NF |
 | 10 — Notificações | parcial | e-mail e push; sem WhatsApp |
 | 11 — Aplicativo do aluno | integral | app nativo Expo (P2 resolvida) |

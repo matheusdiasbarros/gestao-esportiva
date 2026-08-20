@@ -250,7 +250,7 @@ Composição do MVP definida na Fase 0 — ver [`docs/product/mvp.md`](docs/prod
 | 5 | Gestão de alunos | ⬜ | sim | 2, 3 |
 | 6 | Agenda | ⬜ | sim | 3, 5 |
 | 7 | Pacotes e créditos | ⬜ | sim | 6 |
-| 8 | Turmas | ⬜ | pendente P1 | 6, 7 |
+| 8 | Turmas | ⬜ | reduzida | 6, 7 |
 | 9 | Financeiro | ⬜ | parcial | 7 |
 | 10 | Notificações | ⬜ | parcial | 6, 9 |
 | 11 | Aplicativo do aluno | ⬜ | sim | 6, 7, 9, 10 |
@@ -269,7 +269,17 @@ Composição do MVP definida na Fase 0 — ver [`docs/product/mvp.md`](docs/prod
   perto* alguém está — localização vira campo de endereço dentro da Fase 3. PostGIS, geocoding
   e raio só ganham função com busca, ou seja, na Fase 12.
 - Por consequência, a **Fase 6 passa a depender das fases 3 e 5**, não mais da 4.
-- A **Fase 9 não depende mais da Fase 8**, já que turmas provavelmente ficam fora do MVP.
+- A **Fase 9 não depende tecnicamente da Fase 8**, mas vem depois dela no MVP e por isso herda
+  a cobrança de turma: entrada no meio do mês, mensalidade coletiva e o que acontece com o
+  crédito na falta em aula de turma.
+
+**Mudança decidida em 2026-08-20 (P1):**
+
+- **Turmas entram no MVP.** A Fase 8 volta ao caminho crítico e o MVP passa a ir até ela, não
+  até a Fase 7. A ordem 6 → 7 → 8 é obrigatória: capacidade e matrícula são camadas sobre o
+  modelo temporal da Fase 6 e sobre o saldo da Fase 7.
+- A **lista de espera (Epic 8.3) fica fora do MVP** — é a parte cara da fase, e no MVP o
+  profissional resolve ligando para o próximo aluno.
 
 ---
 
@@ -927,6 +937,10 @@ inconsistente ·
 
 ## Fase 8 — Turmas ⬜
 
+> **No MVP, sem a lista de espera.** P1 resolvida em 2026-08-20: turmas entram, porque a
+> persona primária dá aula individual, em dupla **e em turma** — sem isso ela mantém a planilha
+> para uma parte da agenda. O Epic 8.3 fica para logo depois do MVP.
+
 **Objetivo:**
 Suportar aulas coletivas: capacidade, matrícula, recorrência, presença e lista de espera.
 
@@ -952,7 +966,7 @@ lista de espera funcional e registro de presença.
   - [ ] Matrícula fixa na turma vs. reserva por sessão
   - [ ] Controle de capacidade sob concorrência
   - [ ] Saída da turma
-- [ ] **Epic 8.3 — Lista de espera**
+- [ ] **Epic 8.3 — Lista de espera** — *pós-MVP*
   - [ ] Entrada na lista e ordenação
   - [ ] Promoção automática ao abrir vaga
   - [ ] Janela de aceite e expiração da oferta
@@ -983,7 +997,7 @@ lista de espera funcional e registro de presença.
 ### Critérios de conclusão
 
 - [ ] Capacidade nunca é excedida, comprovado por teste de concorrência
-- [ ] Lista de espera promove corretamente e expira ofertas não aceitas
+- [ ] Lista de espera promove corretamente e expira ofertas não aceitas — *pós-MVP*
 - [ ] Presença registrada e refletida no histórico do aluno
 - [ ] `docs/domain/class-groups.md` escrito
 
@@ -1754,7 +1768,7 @@ Estrutura-alvo. **Criar cada diretório apenas quando ele tiver conteúdo real.*
 | --- | --- | --- |
 | ~~Nicho inicial e recorte do MVP~~ ✅ | 0 | `docs/product/mvp.md` |
 | ~~Idioma do código, tenancy, monetização (hipótese)~~ ✅ | 0 | `docs/product/mvp.md` |
-| **P1 — turmas entram no MVP?** | 0 → confirmar até o fim da Fase 1 | `docs/product/mvp.md` |
+| ~~P1 — turmas entram no MVP?~~ ✅ entram, sem lista de espera | 1 | `docs/product/mvp.md` |
 | ~~P2 — aluno em web responsiva ou app nativo?~~ ✅ app nativo | 1 | `docs/product/mvp.md` |
 | ~~Monorepo, gerenciador de pacotes, chave primária~~ ✅ | 1 | ADR-002, ADR-003 |
 | Monorepo, migrations e convenções de banco | 1 | ADR-002 |
@@ -1786,4 +1800,4 @@ Preencher ao concluir cada fase.
 | Fase | Início | Conclusão | ADRs | Docs de domínio | Observações |
 | --- | --- | --- | --- | --- | --- |
 | 0 | 2026-08-19 | 2026-08-19 | ADR-001 | `glossary.md` | MVP gestão-first, multiesporte, aluno com conta, assinatura. Fase 4 saiu do MVP. Pendências P1 e P2 em aberto |
-| 1 | 2026-08-20 | 2026-08-20 | ADR-002, ADR-003 | — | pnpm + Turborepo, TypeScript fixado em 5.9.3, UUID v7. API, web e Expo consumindo `/health`. CI verde. P2 resolvida: app nativo. Falta proteger a `main` |
+| 1 | 2026-08-20 | 2026-08-20 | ADR-002, ADR-003 | — | pnpm + Turborepo, TypeScript fixado em 5.9.3, UUID v7. API, web e Expo consumindo `/health`. CI verde. P2 resolvida: app nativo. P1 resolvida: turmas entram, sem lista de espera. Falta proteger a `main` |
