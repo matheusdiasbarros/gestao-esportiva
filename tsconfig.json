@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "//": "Âncora para o editor resolver a configuração base na raiz do monorepo. Cada app e pacote tem o seu próprio tsconfig.json — este não compila nada.",
+  "extends": "./packages/config/tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "files": []
+}

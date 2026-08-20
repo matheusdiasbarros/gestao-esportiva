@@ -204,7 +204,7 @@ Composição do MVP definida na Fase 0 — ver [`docs/product/mvp.md`](docs/prod
 | 8 | Turmas | ⬜ | pendente P1 | 6, 7 |
 | 9 | Financeiro | ⬜ | parcial | 7 |
 | 10 | Notificações | ⬜ | parcial | 6, 9 |
-| 11 | Área do aluno | ⬜ | pendente P2 | 6, 7, 9, 10 |
+| 11 | Aplicativo do aluno | ⬜ | sim | 6, 7, 9, 10 |
 | 12 | Marketplace | ⬜ | não | 3, 4, 6 |
 | 13 | Avaliações e reputação | ⬜ | não | 6, 12 |
 | 14 | Recursos sociais | ⬜ | não | 12, 13 |
@@ -278,8 +278,9 @@ revisado com o escopo real do MVP; ADR-001 registrando a arquitetura de monólit
 
 - [ ] **P1 — Turmas entram no MVP?** Recomendação: não. Multiesporte sem turmas atende bem
       apenas esportes individuais; turmas viram o primeiro item pós-MVP
-- [ ] **P2 — Aluno acessa por web responsiva ou app nativo no MVP?** Recomendação: web
-      responsiva; app nativo logo depois
+- [x] **P2 — Aluno acessa por web responsiva ou app nativo no MVP?** ✅ Resolvida em
+      2026-08-20: **app nativo (Expo) desde o MVP**. Fase 11 entra integralmente no MVP e o
+      Epic 1.4 permanece na Fase 1. Ciclo de revisão de loja passa a ser prazo do lançamento
 
 ### Tecnologias
 
@@ -316,11 +317,12 @@ CI verde com lint, typecheck, build e testes; um endpoint `/health` consumido pe
 
 ### Épicos e tarefas
 
-- [ ] **Epic 1.1 — Monorepo**
-  - [ ] Escolher gerenciador de pacotes e ferramenta de monorepo
-  - [ ] Estrutura `apps/` + `packages/`
-  - [ ] `packages/config` (tsconfig, eslint, prettier compartilhados)
-  - [ ] `packages/types` (contratos compartilhados entre API, web e mobile)
+- [x] **Epic 1.1 — Monorepo** ✅
+  - [x] pnpm 11.22.0 via corepack + Turborepo 2.10.11 → ADR-002
+  - [x] Estrutura `apps/` + `packages/` com `pnpm-workspace.yaml`
+  - [x] `packages/config` (tsconfig base, eslint flat config, prettier)
+  - [x] `packages/types` (ProblemDetails, HealthCheckResult, `API_PREFIX`)
+  - [x] TypeScript fixado em 5.9.3 — **não** 7.x, ver ADR-002
 - [ ] **Epic 1.2 — API (NestJS)**
   - [ ] Bootstrap do NestJS com estrutura modular
   - [ ] Configuração e validação de variáveis de ambiente (falhar no boot se inválidas)
@@ -335,10 +337,11 @@ CI verde com lint, typecheck, build e testes; um endpoint `/health` consumido pe
 - [ ] **Epic 1.4 — Mobile (Expo)**
   - [ ] Bootstrap Expo + navegação
   - [ ] Consumo do `/health` para validar a cadeia
-- [ ] **Epic 1.5 — Infra local**
-  - [ ] `docker-compose.yml` com PostgreSQL+PostGIS e Redis
-  - [ ] Seeds e script de reset do banco
-  - [ ] `.env.example` documentado
+- [x] **Epic 1.5 — Infra local** ✅ *(parcial: falta seed)*
+  - [x] `docker-compose.yml` com PostgreSQL 17.5 + PostGIS 3.5 e Redis 8, ambos com healthcheck
+  - [ ] Seeds do banco *(depende de existirem entidades — volta na Fase 2)*
+  - [x] Script de reset: `pnpm db:reset`
+  - [x] `.env.example` documentado
 - [ ] **Epic 1.6 — Qualidade**
   - [ ] ESLint + Prettier + EditorConfig
   - [ ] Husky + lint-staged + commitlint (Conventional Commits em pt-BR)
@@ -350,15 +353,23 @@ CI verde com lint, typecheck, build e testes; um endpoint `/health` consumido pe
 
 ### Decisões da fase
 
-- [ ] Gerenciador de pacotes (pnpm recomendado) e ferramenta de monorepo (Turborepo vs. Nx vs. workspaces puro)
-- [ ] Estrutura interna de um módulo NestJS (controller/service/repository vs. camadas mais formais)
-- [ ] Padrão de resposta e de erro da API (envelope? RFC 7807?)
-- [ ] Estratégia de versionamento da API (`/v1` desde o início?)
-- [ ] Migrations: geradas pelo TypeORM vs. escritas à mão; política de `synchronize` (nunca em produção)
-- [ ] Convenções de banco: `snake_case`, plural, chaves primárias (UUID v7 vs. bigint)
-- [ ] Estratégia de soft delete e colunas de auditoria (`created_at`, `updated_at`, `deleted_at`)
-- [ ] Fuso horário e tipo de data no banco (`timestamptz` é a recomendação) — decisão preliminar, revisada na Fase 6
-- [ ] Runner de testes (Jest vs. Vitest) e cobertura mínima exigida no CI
+- [x] **Gerenciador de pacotes e monorepo:** pnpm (via corepack) + Turborepo → ADR-002
+- [x] **Chave primária:** UUID v7 gerado na aplicação → ADR-003
+- [x] **Convenções de banco:** `snake_case` plural, `timestamptz` em UTC, dinheiro em
+      centavos, `created_at`/`updated_at` em tudo, soft delete seletivo → ADR-003
+- [x] **Estrutura de módulo NestJS:** `src/modules/<nome>/` com module, controller, service,
+      `dto/` e `entities/`. Superfície pública é o service exportado pelo module; nenhum
+      módulo acessa tabela de outro
+- [x] **Resposta e erro da API:** sucesso devolve o recurso direto, sem envelope; erro segue
+      Problem Details (RFC 9457) — `type`, `title`, `status`, `detail`, `instance` e `errors`
+      para falha de validação
+- [x] **Versionamento:** prefixo `/api/v1` desde o primeiro endpoint
+- [x] **Migrations:** geradas pelo TypeORM, **revisadas à mão** e commitadas.
+      `synchronize` sempre `false`, inclusive em desenvolvimento
+- [x] **Runner de testes:** Jest nos três apps (o `@nestjs/testing` assume Jest; consistência
+      vale mais que a diferença de velocidade). Playwright para E2E web, a partir da Fase 2
+- [x] **Cobertura no CI:** sem percentual mínimo agora. A exigência é ter teste nos fluxos
+      críticos — meta percentual cedo demais produz teste de fachada
 
 ### Tecnologias
 
@@ -1485,15 +1496,16 @@ Estrutura mínima:
 
 ADRs previstas (não escritas ainda):
 
-| ID | Assunto | Fase |
-| --- | --- | --- |
-| ADR-001 | Monólito modular | 0 |
-| ADR-002 | Monorepo e gerenciador de pacotes | 1 |
-| ADR-003 | Estratégia de autenticação | 2 |
-| ADR-004 | PostGIS e provedor de geocoding | 4 |
-| ADR-005 | Modelagem temporal da agenda | 6 |
-| ADR-006 | Provedor de pagamento | 9 |
-| ADR-007 | Compute e IaC na AWS | 18 |
+| ID | Assunto | Fase | Status |
+| --- | --- | --- | --- |
+| ADR-001 | Monólito modular | 0 | ✅ |
+| ADR-002 | Monorepo, gerenciador de pacotes e toolchain | 1 | ✅ |
+| ADR-003 | Identificadores e convenções de dados | 1 | ✅ |
+| ADR-004 | Estratégia de autenticação | 2 | ⬜ |
+| ADR-005 | PostGIS e provedor de geocoding | 12 | ⬜ |
+| ADR-006 | Modelagem temporal da agenda | 6 | ⬜ |
+| ADR-007 | Provedor de pagamento | 9 | ⬜ |
+| ADR-008 | Compute e IaC na AWS | 18 | ⬜ |
 
 ### Documentação de domínio — `docs/domain/`
 
@@ -1546,7 +1558,8 @@ Estrutura-alvo. **Criar cada diretório apenas quando ele tiver conteúdo real.*
 | ~~Nicho inicial e recorte do MVP~~ ✅ | 0 | `docs/product/mvp.md` |
 | ~~Idioma do código, tenancy, monetização (hipótese)~~ ✅ | 0 | `docs/product/mvp.md` |
 | **P1 — turmas entram no MVP?** | 0 → confirmar até o fim da Fase 1 | `docs/product/mvp.md` |
-| **P2 — aluno em web responsiva ou app nativo?** | 0 → confirmar até o fim da Fase 1 | `docs/product/mvp.md` |
+| ~~P2 — aluno em web responsiva ou app nativo?~~ ✅ app nativo | 1 | `docs/product/mvp.md` |
+| ~~Monorepo, gerenciador de pacotes, chave primária~~ ✅ | 1 | ADR-002, ADR-003 |
 | Monorepo, migrations e convenções de banco | 1 | ADR-002 |
 | Estratégia de autenticação e modelo de papéis | 2 | ADR-003 |
 | Usuário pode ser profissional e aluno ao mesmo tempo | 2 | `docs/domain/iam.md` |

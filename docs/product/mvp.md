@@ -126,20 +126,30 @@ matrícula e lista de espera são camadas sobre esses dois. Construir os três e
 concentra risco justamente na parte mais difícil do sistema. Melhor ter agenda e créditos
 sólidos e adicionar turmas sobre uma base testada.
 
-### P2 — O aluno acessa por web ou por app?
+### ~~P2 — O aluno acessa por web ou por app?~~ ✅ Resolvida em 2026-08-20
 
-**A tensão:** você escolheu que o aluno tem conta. Isso está mantido. A pergunta é apenas
-por onde ele entra no MVP.
+**Decisão: app nativo (Expo) desde o MVP.** A recomendação era web responsiva; a escolha foi
+o app, e ela vale.
 
-| Opção | Consequência |
-| --- | --- |
-| **Web responsiva** (recomendado) | Mesma base Next.js, sem implementação duplicada, sem ciclo de loja. Aluno entra por link, sem instalar nada. Perde push nativo — contornável com e-mail |
-| App nativo (Expo) | Push confiável e ícone na tela do celular, ao custo de duplicar a implementação e somar builds, revisão de loja e política de pagamento |
+**Consequências assumidas:**
 
-**Recomendação: web responsiva no MVP**, app nativo logo depois. Marina não instala um
-aplicativo para agendar duas aulas por semana (ver [personas.md](personas.md)) — o link tem
-menos atrito e converte mais. Isso preserva integralmente sua decisão de dar conta ao aluno,
-sem dobrar o escopo.
+- A **Fase 11 entra no MVP integralmente** — deixa de ser "área do aluno" e volta a ser
+  aplicativo do aluno.
+- O **Epic 1.4 permanece na Fase 1**: o Expo é inicializado junto com API e web.
+- **Push nativo passa a ser o canal principal** de notificação para o aluno, o que reforça a
+  parte de push da Fase 10.
+- **O ciclo de loja entra no caminho até o lançamento.** Revisão da App Store e do Google
+  Play leva dias e pode exigir rodadas de correção. Isso é prazo, não trabalho — precisa
+  entrar no planejamento do lançamento, não ser descoberto na véspera.
+- **Risco a verificar antes da Fase 11:** pagar aula dentro do app pode acionar as regras de
+  compra dentro do aplicativo. A leitura provável é de isenção, porque aula presencial é
+  serviço consumido no mundo real — mas isso precisa ser confirmado na política vigente
+  **antes** de implementar o fluxo de pagamento no app, não depois.
+
+**O que continua valendo da análise original:** Marina resiste a instalar aplicativo para
+agendar duas aulas por semana. O convite do aluno deve, por isso, funcionar por link no
+navegador até o momento em que instalar o app valha a pena para ela — o app não pode ser
+barreira de entrada.
 
 ---
 
@@ -173,7 +183,7 @@ ele está mantendo o WhatsApp em paralelo — e nesse caso o produto não substi
 | 8 — Turmas | **pendente P1** | recomendação: fora |
 | 9 — Financeiro | parcial | PIX e baixa manual; sem split, KYC ou NF |
 | 10 — Notificações | parcial | e-mail e push; sem WhatsApp |
-| 11 — Área do aluno | **pendente P2** | recomendação: web responsiva |
+| 11 — Aplicativo do aluno | integral | app nativo Expo (P2 resolvida) |
 | 12–17 | não | |
 | 18 — Produção | obrigatória | não se lança sem ela |
 | 19 — Escala | não | só com métricas reais |
