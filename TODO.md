@@ -37,9 +37,13 @@ Quando o comando for **"iniciar Fase X"**, seguir exatamente esta sequência:
 9. Indicar estratégia de testes.
 10. **Só então** iniciar a implementação.
 
-> **Antes do passo 10:** verificar se a fase exige alguma ferramenta ou MCP novo —
-> mapa em `AI-DEVELOPMENT.md` seção 6.9. Instalar e validar a ferramenta faz parte da
-> **preparação** da fase, nunca do meio da implementação.
+> **No passo 1, antes de qualquer outra coisa:** verificar se a fase exige alguma ferramenta
+> ou MCP novo — mapa em `AI-DEVELOPMENT.md` §6.9, junto com a divisão de quem instala o quê.
+>
+> O relatório de abertura da fase precisa dizer, sempre: **o que já está pronto**, **o que eu
+> instalei** e **o que depende de você**. Se algum item bloqueante depender de você, a
+> implementação daquele épico **não começa** — descobrir a falta no meio do trabalho é o que
+> produz código pela metade.
 
 ### Agentes por fase
 

@@ -676,6 +676,51 @@ manda conferir este mapa antes de começar a implementar. Não depende de ningu�
 **Ao final de cada fase**, revisar também o inverso: algum MCP instalado deixou de ser usado?
 Se sim, remover. A lista só cresce se ninguém a poda.
 
+### Quem instala o quê
+
+A verificação acontece **no início da fase**, no passo 1 do ritual — nunca no meio da
+implementação. O relatório de abertura de cada fase diz o que já está pronto, o que eu
+instalei e o que depende de você.
+
+**Eu instalo, sem perguntar:**
+
+- dependências do projeto (`pnpm add`) — é trabalho normal de implementação
+- binários que uma dependência precisa, como os navegadores do Playwright
+- registro de servidor MCP no `.mcp.json`
+- usuário de banco somente-leitura para o MCP de PostgreSQL
+
+**Eu aviso antes, e só faço se você mandar:**
+
+- qualquer coisa instalada fora do projeto, na sua máquina
+- qualquer coisa que gere custo, mesmo que pequeno
+- qualquer download muito grande, para você não ser pego de surpresa
+
+**Só você consegue fazer:**
+
+| Item | Por quê |
+| --- | --- |
+| **Aprovar MCP do projeto** | é um aviso de confiança, respondido dentro da sessão |
+| **Fluxo OAuth** | abre o navegador e exige sua conta |
+| **Instalar programa no sistema** (Docker Desktop) | instalador com interface, permissão de administrador e reinício |
+| **Criar conta e chave de API** | provedor de e-mail, gateway de pagamento, AWS |
+| **Configurar o GitHub** | proteção de branch, secrets do repositório |
+
+**A regra que evita retrabalho:** se algum item bloqueante depender de você, eu **não começo**
+a implementação daquele épico. Faço o que não depende dele, digo exatamente o que falta, e
+espero. Descobrir a falta no meio do trabalho é o que produz código pela metade.
+
+### O que a Fase 2 vai exigir
+
+Antecipado aqui para não virar surpresa:
+
+| Item | Quem |
+| --- | --- |
+| `@playwright/test` e os navegadores | eu |
+| Playwright MCP, se formos usar | eu registro · **você aprova** |
+| Conta em provedor de e-mail e chave de API (Epic 2.5) | **você** |
+| Conta AWS para o ambiente de staging (Epic 2.6) | **você** |
+| Proteção da branch `main` | **você** |
+
 ## 7. Segurança para agentes e MCPs
 
 Regras gerais, válidas para qualquer ferramenta:
