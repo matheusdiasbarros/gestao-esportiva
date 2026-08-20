@@ -37,6 +37,10 @@ Quando o comando for **"iniciar Fase X"**, seguir exatamente esta sequência:
 9. Indicar estratégia de testes.
 10. **Só então** iniciar a implementação.
 
+> **Antes do passo 10:** verificar se a fase exige alguma ferramenta ou MCP novo —
+> mapa em `AI-DEVELOPMENT.md` seção 6.9. Instalar e validar a ferramenta faz parte da
+> **preparação** da fase, nunca do meio da implementação.
+
 ### Ritual de fim de fase
 
 1. Checar os *Critérios de conclusão*.
@@ -365,6 +369,9 @@ recuperação de senha por e-mail funcionando; ambiente de *staging* publicado (
 
 **Dependências:** Fase 1.
 
+**Ferramentas a instalar nesta fase:** Playwright CLI (`@playwright/test`), obrigatório —
+primeiros fluxos de UI a proteger. Playwright MCP opcional. Ver `AI-DEVELOPMENT.md` §6.6.
+
 ### Épicos e tarefas
 
 - [ ] **Epic 2.1 — Modelo de identidade**
@@ -503,6 +510,10 @@ Cadastro de locais e área de atendimento; endpoint que responde "quais profissi
 atendem neste ponto" usando PostGIS, com índices e desempenho medido.
 
 **Dependências:** Fase 3.
+
+**Ferramentas a instalar nesta fase:** MCP de PostgreSQL, read-only, apontando **apenas**
+para o banco local — o schema fica grande aqui e as consultas PostGIS exigem inspeção de
+plano. Ver `AI-DEVELOPMENT.md` §6.7.
 
 ### Épicos e tarefas
 
@@ -1307,6 +1318,10 @@ Ambiente de produção estável, monitorado, com backup testado, deploy automati
 rollback e resposta a incidentes definida.
 
 **Dependências:** Epic 2.6 e MVP funcionalmente completo.
+
+**Ferramentas a instalar nesta fase:** MCP de documentação AWS e MCP de Terraform — ambos
+somente leitura. Operação real na conta exige role IAM dedicada e decisão à parte.
+Ver `AI-DEVELOPMENT.md` §6.8.
 
 ### Épicos e tarefas
 

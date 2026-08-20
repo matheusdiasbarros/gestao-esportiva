@@ -380,9 +380,16 @@ tools: Read, Write, Edit, Grep, Glob, Bash
 
 ### 5.5 Regra de portabilidade
 
-O conteúdo dos papéis vive em `agents/`. Os arquivos específicos de ferramenta contêm
-apenas o *frontmatter* e uma referência ou cópia do conteúdo. Se as cópias divergirem,
-`agents/` prevalece.
+**Estado atual:** as definições vivem em `.claude/agents/*.md` — o local que a ferramenta em
+uso realmente carrega. `agents/README.md` documenta o índice, a ativação por fase e como
+portar para outra ferramenta.
+
+Manter as nove definições em `agents/` **e** cópias em `.claude/agents/` significaria dois
+lugares divergindo na primeira alteração feita com pressa. Enquanto houver um único
+assistente, a fonte da verdade é o diretório que ele lê. Ao entrar um segundo assistente, o
+corpo dos arquivos é promovido para `agents/` e as pastas específicas passam a referenciá-lo.
+
+O corpo do arquivo é portátil; só o *frontmatter* muda entre ferramentas.
 
 ---
 
@@ -422,13 +429,30 @@ para produção** não devem existir neste projeto.
 
 **Uso:** repositório, issues, pull requests, revisão de código, GitHub Actions.
 
-**Instalação (Claude Code, servidor remoto — recomendado):**
+**Instalado: servidor remoto + PAT no header.**
 
-```bash
-claude mcp add --transport http github https://api.githubcopilot.com/mcp/
+> ⚠️ **O OAuth automático não funciona com o GitHub.** A tentativa retorna
+> `Incompatible auth server: does not support dynamic client registration` — o cliente MCP
+> tenta se registrar por Dynamic Client Registration (RFC 7591) e o servidor de autorização
+> do GitHub não implementa esse fluxo. Autenticar por PAT é a alternativa, não uma
+> preferência.
+
+Configuração em `.mcp.json`, com o token vindo de variável de ambiente:
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": { "Authorization": "Bearer ${GITHUB_TOKEN}" }
+    }
+  }
+}
 ```
 
-A autenticação ocorre por OAuth no primeiro uso (`/mcp` para autorizar).
+`GITHUB_TOKEN` é definida como variável de ambiente do usuário na máquina — **nunca** no
+repositório. O `.mcp.json` versionado contém apenas a referência `${GITHUB_TOKEN}`.
 
 **Alternativa local (Docker), com PAT:**
 
@@ -479,17 +503,21 @@ permissão de administração, ou permissão para gerenciar secrets e workflows.
 código baseado em APIs antigas — problema real para Next.js (App Router), NestJS, Expo SDK,
 TypeORM e BullMQ, que mudam com frequência.
 
-**Instalação (Claude Code, remoto):**
+**Instalado (stdio local, sem API key):**
+
+```bash
+claude mcp add --scope project context7 -- npx -y @upstash/context7-mcp
+```
+
+Funciona sem chave, com limite de requisições menor. Se o limite incomodar, criar conta em
+context7.com e acrescentar `--api-key ${CONTEXT7_API_KEY}` aos `args` do `.mcp.json`,
+mantendo a chave em variável de ambiente.
+
+**Alternativa remota (HTTP), exige chave:**
 
 ```bash
 claude mcp add --transport http context7 https://mcp.context7.com/mcp \
   --header "CONTEXT7_API_KEY: ${CONTEXT7_API_KEY}"
-```
-
-**Instalação local (stdio):**
-
-```bash
-claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key ${CONTEXT7_API_KEY}
 ```
 
 **Uso prático:** pedir explicitamente a consulta ao implementar algo que dependa de API de
@@ -594,6 +622,36 @@ configurado antes de qualquer agente ter acesso à conta.
 
 ---
 
+### 6.9 Mapa de ferramentas por fase
+
+Nenhuma destas é instalada antes da fase indicada. O gatilho está registrado na própria fase
+do `TODO.md`, na linha **"Ferramentas a instalar nesta fase"** — e o ritual de início de fase
+manda conferir este mapa antes de começar a implementar. Não depende de ninguém lembrar.
+
+| Fase | Ferramenta | Gatilho | Preparação necessária |
+| --- | --- | --- | --- |
+| 0 | — | — | nada além de Context7 e GitHub, já instalados |
+| 1 | **Docker Desktop** (não é MCP) | Epic 1.5: PostgreSQL e Redis locais | instalar antes do Epic 1.5 |
+| 2 | **Playwright CLI** (obrigatório) | primeiras telas a proteger contra regressão | `pnpm add -D @playwright/test`, incluir no CI |
+| 2 | **Playwright MCP** (opcional) | quando explorar UI e rascunhar teste virar rotina | apontar só para local/staging |
+| 4 | **PostgreSQL MCP** | schema grande e consultas PostGIS a inspecionar | criar usuário `mcp_readonly`, modo restrito, banco local |
+| 9 | — | — | doc do gateway de pagamento vem pelo Context7 |
+| 18 | **AWS docs MCP** | início do trabalho de infraestrutura | nenhuma credencial — é só documentação |
+| 18 | **Terraform MCP** | ao escrever IaC | nenhuma credencial |
+| 18 | **AWS operacional** | só com necessidade comprovada | role IAM dedicada, ambiente de dev, nunca produção |
+
+**Por que não instalar tudo agora**
+
+1. A configuração estaria errada: o MCP de Postgres precisa de uma conexão para um banco que
+   ainda não existe; o de AWS, de uma role numa conta que não foi criada.
+2. Custo de contexto em toda sessão: só o GitHub MCP expõe mais de 40 ferramentas — o
+   suficiente para o health check do `claude mcp list` estourar o tempo limite.
+3. Janela de risco: credencial configurada dezessete fases antes do primeiro uso fica
+   exposta esse tempo todo sem nenhum benefício.
+
+**Ao final de cada fase**, revisar também o inverso: algum MCP instalado deixou de ser usado?
+Se sim, remover. A lista só cresce se ninguém a poda.
+
 ## 7. Segurança para agentes e MCPs
 
 Regras gerais, válidas para qualquer ferramenta:
@@ -656,11 +714,17 @@ Humano: "iniciar Fase X"
 
 ## 9. Setup inicial (fases 0–1)
 
-- [ ] Criar `agents/` com: `orchestrator.md`, `product.md`, `architect.md`, `backend.md`
-- [ ] Adaptar os quatro para o assistente em uso (seção 5)
-- [ ] Instalar o MCP Context7
-- [ ] Instalar o MCP GitHub com PAT de escopo mínimo
-- [ ] Confirmar que `.env` está no `.gitignore` e que nenhum secret está versionado
-- [ ] Proteger a branch `main` no GitHub
-- [ ] Adicionar `agents/web.md`, `agents/qa.md`, `agents/security.md` e `agents/devops.md`
-      quando as fases 1–2 exigirem
+- [x] Criar as nove definições de agente em `.claude/agents/` (índice em `agents/README.md`)
+- [x] Restringir ferramentas de `orchestrator`, `product` e `architect` a leitura/escrita de
+      documentação (sem `Bash`)
+- [x] Instalar o MCP Context7 (`.mcp.json`, stdio via npx, sem chave)
+- [x] Instalar o MCP GitHub (`.mcp.json`, HTTP remoto com OAuth)
+- [x] Confirmar que `.env` está no `.gitignore` e que nenhum secret está versionado
+- [ ] **Aprovar os MCPs do projeto**: rodar `claude` e aceitar os servidores do `.mcp.json`
+- [ ] **Autorizar o GitHub MCP**: `/mcp` → `github` → OAuth
+- [ ] Proteger a branch `main` no GitHub (exigir PR, bloquear force-push)
+- [ ] Instalar o Playwright (CLI no CI + MCP opcional) quando a Fase 2 tiver telas
+- [ ] Reavaliar o MCP de PostgreSQL na Fase 4, quando o schema crescer
+
+**Ativação progressiva:** os nove arquivos existem, mas nas fases 0–1 o trabalho passa por
+`orchestrator`, `product`, `architect` e `backend`. Arquivo existir não é convite para usar.

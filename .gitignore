@@ -16,6 +16,9 @@ out/
 # Editores / SO
 .vscode/
 .idea/
+
+# Claude Code — agentes e MCPs são versionados; config local não
+.claude/settings.local.json
 .DS_Store
 Thumbs.db
 
