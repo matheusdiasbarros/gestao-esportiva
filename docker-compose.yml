@@ -12,7 +12,11 @@ services:
       # Locale pt-BR para ordenação e comparação de texto coerentes com o produto.
       POSTGRES_INITDB_ARGS: '--locale-provider=icu --icu-locale=pt-BR'
     ports:
-      - '5432:5432'
+      # 5433 no host, não 5432, de propósito: é comum haver um PostgreSQL nativo instalado
+      # na máquina ocupando a porta padrão. Quando isso acontece, a aplicação conecta no
+      # servidor errado e o sintoma é "autenticação falhou" — sem nenhuma pista de que o
+      # container não estava envolvido. A porta dentro do container segue sendo a 5432.
+      - '5433:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

@@ -323,13 +323,16 @@ CI verde com lint, typecheck, build e testes; um endpoint `/health` consumido pe
   - [x] `packages/config` (tsconfig base, eslint flat config, prettier)
   - [x] `packages/types` (ProblemDetails, HealthCheckResult, `API_PREFIX`)
   - [x] TypeScript fixado em 5.9.3 — **não** 7.x, ver ADR-002
-- [ ] **Epic 1.2 — API (NestJS)**
-  - [ ] Bootstrap do NestJS com estrutura modular
-  - [ ] Configuração e validação de variáveis de ambiente (falhar no boot se inválidas)
-  - [ ] Conexão TypeORM + estratégia de migrations
-  - [ ] Módulo de health check (banco + Redis)
-  - [ ] Logger estruturado e filtro global de exceções
-  - [ ] OpenAPI/Swagger
+- [x] **Epic 1.2 — API (NestJS)** ✅
+  - [x] Bootstrap do NestJS com estrutura modular e prefixo `/api/v1`
+  - [x] Validação de variáveis de ambiente que derruba o boot; módulos injetam o objeto
+        tipado `EnvironmentVariables`, nunca `ConfigService`
+  - [x] TypeORM com `synchronize: false` e CLI de migrations funcionando
+  - [x] Health check batendo em Postgres e Redis, com 503 quando degradado
+  - [x] Logger estruturado (pino) com redação de credenciais e PII
+  - [x] Filtro global devolvendo Problem Details (RFC 9457) em `application/problem+json`
+  - [x] OpenAPI/Swagger em `/api/v1/docs`, apenas fora de produção
+  - [x] 27 testes unitários
 - [ ] **Epic 1.3 — Web (Next.js)**
   - [ ] Bootstrap Next.js + Tailwind
   - [ ] Camada de acesso à API tipada

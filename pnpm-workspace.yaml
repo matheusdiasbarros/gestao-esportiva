@@ -1,3 +1,13 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# Scripts de instalação executam código arbitrário na sua máquina e no CI.
+# O pnpm exige aprovação explícita de cada um — aprove só o que precisa de fato.
+allowBuilds:
+  # Telemetria de terceiros. Não há motivo para o build deste projeto reportar
+  # instalações para um serviço externo.
+  '@scarf/scarf': false
+  # Resolvedor nativo usado pelo ESLint. Precisa compilar/baixar o binário da
+  # plataforma na instalação, senão o lint não roda.
+  unrs-resolver: true

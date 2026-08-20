@@ -1,0 +1,27 @@
+{
+  "extends": "@gestao/config/tsconfig.base.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node10",
+
+    // Obrigatórios para NestJS e TypeORM: é assim que a injeção de dependência e o
+    // mapeamento de entidades descobrem os tipos em tempo de execução.
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    // Propriedades de entidade e de DTO são preenchidas pelo framework, não pelo construtor.
+    // Sem isso, toda entidade exigiria `!` em cada campo, sem ganho de segurança real.
+    "strictPropertyInitialization": false,
+
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+
+    "declaration": false,
+    "declarationMap": false
+  },
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
