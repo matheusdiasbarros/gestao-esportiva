@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { DataSourceOptions } from 'typeorm';
+import { SnakeNamingStrategy } from '../database/snake-naming.strategy';
 import { EnvironmentVariables } from './env.validation';
 
 /**
@@ -21,6 +22,9 @@ export function buildDataSourceOptions(env: EnvironmentVariables): DataSourceOpt
     entities: [join(__dirname, '..', 'modules', '**', '*.entity.{ts,js}')],
     migrations: [join(__dirname, '..', 'database', 'migrations', '*.{ts,js}')],
     migrationsTableName: 'migrations',
+
+    // Sem isto o TypeORM cria colunas em camelCase, contra a convenção do glossário.
+    namingStrategy: new SnakeNamingStrategy(),
 
     // Nunca true, em nenhum ambiente. Schema muda apenas por migration revisada.
     // Ver ADR-003 e as decisões da Fase 1 no TODO.md.

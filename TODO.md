@@ -463,10 +463,8 @@ CI verde com lint, typecheck, build e testes; um endpoint `/health` consumido pe
 - [x] **CI obrigatório para merge em `main`** — branch protegida no GitHub em 2026-08-20
 - [x] Web consome `/health` por SSR, com Postgres e Redis reportando "disponível"
 - [x] App Expo consome `/health`; bundle verificado com 1236 módulos
-- [ ] ~~Migration inicial aplicada e reversível~~ → **adiado para a Fase 2, com motivo.**
-      O mecanismo está verificado (`migration:run` executa, tabela `migrations` criada),
-      mas não existe nada para migrar até a primeira entidade nascer. Criar uma migration
-      vazia só para marcar o item seria teatro
+- [x] ~~Migration inicial aplicada e reversível~~ → adiada para a Fase 2 com motivo, e
+      **cumprida lá** no Epic 2.1: `CriaIdentidade`, aplicada, revertida e reaplicada
 - [x] `README.md` com instruções de setup verificadas
 
 ---
@@ -498,17 +496,18 @@ ela ·
 
 ### Épicos e tarefas
 
-- [ ] **Epic 2.1 — Modelo de identidade**
-  - [ ] Módulo `iam` com a fronteira definida (nada fora dele importa entidade de identidade)
-  - [ ] `users`: e-mail único em minúsculas, `full_name`, `birth_date`, `is_platform_admin`, aceite dos termos com versão e data
-  - [ ] `user_identities`: uma linha por forma de entrar; hoje só `PASSWORD`
-  - [ ] `professionals`: esqueleto, com unicidade sobre `user_id`
-  - [ ] `students`: `professional_id` não nulo, `user_id` anulável, `status`, `access_holder`
-  - [ ] `student_invites` e o link público do profissional
-  - [ ] `refresh_tokens` por aparelho — **nunca** chamar de `sessions`
-  - [ ] **Primeira migration do projeto**, escrita à mão e revertível *(fecha a pendência da Fase 1)*
-  - [ ] Papéis derivados do dado, sem coluna de papel
-  - [ ] Seeds: admin por variável de ambiente, profissional com alunos com e sem conta, aluno em dois profissionais *(fecha DT-003)*
+- [x] **Epic 2.1 — Modelo de identidade** ✅ 2026-08-20
+  - [x] Módulo `iam` com a fronteira definida (nada fora dele importa entidade de identidade)
+  - [x] `users`: e-mail único em minúsculas, `full_name`, `birth_date`, `is_platform_admin`, aceite dos termos com versão e data
+  - [x] `user_identities`: uma linha por forma de entrar; hoje só `PASSWORD`
+  - [x] `professionals`: esqueleto, com unicidade sobre `user_id` e o slug do link público
+  - [x] `students`: `professional_id` não nulo, `user_id` anulável, `status`, `access_holder`
+  - [x] `student_invites` e o link público do profissional
+  - [x] `refresh_tokens` por aparelho — **nunca** chamar de `sessions`
+  - [x] **Primeira migration do projeto**, revisada à mão e revertível *(fecha a pendência da Fase 1)*
+  - [x] Papéis derivados do dado, sem coluna de papel
+  - [x] Seeds: admin por variável de ambiente, profissional com alunos com e sem conta, aluno em dois profissionais *(fecha DT-003)*
+  - [x] Serviço de hash argon2id, pronto para o Epic 2.2
 - [ ] **Epic 2.2 — Autenticação**
   - [ ] Hash argon2id com `@node-rs/argon2`, parâmetros calibrados na máquina de destino
   - [ ] Política de senha: mínimo 10 caracteres, lista local de senhas vazadas, sem regra de composição

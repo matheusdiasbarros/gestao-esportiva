@@ -44,13 +44,11 @@ separar em dois pacotes.
 
 ---
 
-### DT-003 — Seeds do banco não existem
+### ~~DT-003 — Seeds do banco não existem~~ ✅ resolvido em 2026-08-20
 
-**O que:** o Epic 1.5 previa seeds; não há nenhum.
-
-**Por quê:** não existem entidades ainda — só a tabela `migrations`.
-
-**Dispara correção:** Fase 2, junto com as primeiras entidades de usuário.
+Resolvido no Epic 2.1, como previsto: `pnpm --filter @gestao/api seed`. O cenário cobre conta
+de administrador, dois profissionais, aluno com ficha em ambos, ficha sem conta, ficha de menor
+com acesso pelo responsável e conta sem professor nenhum. É idempotente.
 
 ---
 
@@ -66,3 +64,6 @@ Não são débito — são erros que custaram tempo e que a documentação agora
 | PostgreSQL nativo na máquina ocupa a 5432 e sequestra a conexão | `docker-compose.yml`, `.env.example` |
 | `ts-node` procura o tsconfig a partir do arquivo de entrada `.js` | script `typeorm` em `apps/api/package.json` |
 | Jest precisa de `reflect-metadata` no `setupFiles` | `apps/api/jest.config.js` |
+| `typeorm-naming-strategies` não suporta TypeORM 1.x — a estratégia é escrita à mão | `apps/api/src/database/snake-naming.strategy.ts` |
+| `argon2` compila em C na instalação; `@node-rs/argon2` traz binário pronto | ADR-004 §5 |
+| Um erro em transação psql aborta todos os comandos seguintes — teste de constraint precisa de `ON_ERROR_ROLLBACK` | — |

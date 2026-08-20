@@ -6,9 +6,10 @@ de tênis, beach tennis, padel, futebol, corrida, natação, lutas, dança e out
 O produto organiza alunos, agenda e pagamentos em um lugar só, e deixa o aluno marcar,
 remarcar e pagar sozinho.
 
-> **Estado:** Fase 1 (fundação técnica) concluída. Ainda não há funcionalidade de produto —
-> o que existe é o esqueleto: monorepo, API, web, app e CI. O roadmap está no
-> [TODO.md](TODO.md); o escopo do MVP, em [docs/product/mvp.md](docs/product/mvp.md).
+> **Estado:** Fase 2 (usuários e autenticação) em andamento. A fundação está pronta e o modelo
+> de identidade já existe no banco; login e telas ainda não. O roadmap está no
+> [TODO.md](TODO.md); o escopo do MVP, em [docs/product/mvp.md](docs/product/mvp.md); quem pode
+> fazer o quê, em [docs/domain/iam.md](docs/domain/iam.md).
 
 ---
 
@@ -35,7 +36,10 @@ pnpm db:up
 # 4. Migrations
 pnpm --filter @gestao/api migration:run
 
-# 5. API e web
+# 5. Dados de desenvolvimento
+pnpm --filter @gestao/api seed
+
+# 6. API e web
 pnpm dev
 ```
 
@@ -66,6 +70,8 @@ pnpm --filter @gestao/mobile dev
 | `pnpm format` | aplica o Prettier |
 | `pnpm db:up` / `pnpm db:down` | sobe / derruba Postgres e Redis |
 | `pnpm db:reset` | derruba **apagando os dados** e sobe de novo |
+| `pnpm --filter @gestao/api migration:run` | aplica as migrations pendentes |
+| `pnpm --filter @gestao/api seed` | popula dados de desenvolvimento (idempotente) |
 
 Para rodar um teste específico:
 
