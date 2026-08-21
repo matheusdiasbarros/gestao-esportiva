@@ -89,7 +89,11 @@ jobs:
           --health-interval 5s --health-timeout 3s --health-retries 12
 
     env:
-      NODE_ENV: development
+      # NODE_ENV **não** entra aqui. Definido como `development` no nível do job, ele vale
+      # também durante o `next build`, que constrói para produção — e a mistura quebra a
+      # pré-renderização com "Cannot read properties of null (reading 'useContext')", sem
+      # nenhuma menção à variável. O `next build` define o valor certo sozinho, e a API cai no
+      # padrão `development` da própria validação de ambiente.
       API_PORT: 3333
       API_CORS_ORIGINS: http://localhost:3000
       DATABASE_HOST: localhost
