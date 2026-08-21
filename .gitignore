@@ -21,7 +21,12 @@ coverage/
 .env.*.local
 
 # Editores / SO
-.vscode/
+# O .vscode é versionado só no que vale para todo mundo: extensões recomendadas e as
+# configurações que fazem o editor concordar com o CI (versão do TypeScript, LF, flat config).
+# Preferência pessoal fica de fora.
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 .idea/
 
 # Claude Code — agentes e MCPs são versionados; config local não

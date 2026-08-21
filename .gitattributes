@@ -1,0 +1,26 @@
+# Fim de linha LF no repositório, em qualquer sistema operacional.
+#
+# Sem isto, cada commit feito no Windows imprime uma parede de "LF will be replaced by CRLF" —
+# aviso inofensivo, e justamente por isso perigoso: ele treina a pessoa a ignorar a saída do
+# git, que é onde os avisos que importam também aparecem.
+* text=auto eol=lf
+
+# Arquivos que precisam de CRLF para funcionar no Windows.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binários: nunca converter, nunca tentar diff de texto.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+
+# O lockfile é gerado. Marcar como tal remove o ruído de diff em revisão de PR.
+pnpm-lock.yaml linguist-generated=true -diff

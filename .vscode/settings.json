@@ -1,0 +1,56 @@
+{
+  // O Prettier já roda no pre-commit. Formatar ao salvar evita que o hook mude arquivos
+  // debaixo de você no meio do commit.
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+
+  // Fim de linha LF, como no repositório. Sem isto, o Windows grava CRLF e o git avisa em
+  // todo commit que vai converter — barulho que esconde aviso de verdade.
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+
+  // O TypeScript do repositório está fixado em 5.9.3 (ADR-002). Sem isto o editor usa a
+  // versão que vem embutida no VSCode, e você vê erros que o CI não vê — e vice-versa.
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "typescript.preferences.importModuleSpecifier": "non-relative",
+
+  // Flat config resolvido a partir da pasta do pacote, e não da raiz. É a mesma razão pela
+  // qual o pre-commit chama o ESLint pelo turbo em vez do lint-staged.
+  "eslint.useFlatConfig": true,
+  "eslint.workingDirectories": [{ "mode": "auto" }],
+
+  // Tailwind 4 declara o tema em CSS, não em tailwind.config.js. Sem apontar o arquivo, o
+  // autocompletar não conhece as cores do projeto.
+  "tailwindCSS.experimental.configFile": "apps/web/src/app/globals.css",
+  "css.lint.unknownAtRules": "ignore",
+
+  "search.exclude": {
+    "**/dist": true,
+    "**/.next": true,
+    "**/.turbo": true,
+    "**/.expo": true,
+    "**/playwright-report": true,
+    "**/test-results": true,
+    "**/pnpm-lock.yaml": true
+  },
+
+  // O produto é em português; o código é em inglês. O corretor precisa dos dois, senão
+  // sublinha metade do repositório.
+  "cSpell.language": "en,pt,pt-BR",
+  "cSpell.words": [
+    "argon",
+    "BullMQ",
+    "commitlint",
+    "expo",
+    "gestao",
+    "ioredis",
+    "nestjs",
+    "PostGIS",
+    "timestamptz",
+    "turborepo",
+    "typeorm",
+    "uuidv"
+  ]
+}
