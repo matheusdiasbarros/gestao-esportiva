@@ -129,11 +129,14 @@ jobs:
       - name: Instalar o Chromium do Playwright
         run: pnpm exec playwright install chromium --with-deps
 
-      - name: Migrations
-        run: pnpm --filter @gestao/api migration:run
-
+      # Build antes das migrations, não depois: a CLI do TypeORM compila as entidades, e elas
+      # importam `@gestao/types`, que só existe depois de gerado o `dist/`. Na ordem inversa a
+      # migration falha com "Cannot find module '@gestao/types'".
       - name: Build
         run: pnpm build
+
+      - name: Migrations
+        run: pnpm --filter @gestao/api migration:run
 
       - name: Testes de tela
         run: pnpm exec playwright test

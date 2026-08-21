@@ -33,13 +33,16 @@ cp .env.example .env        # no Windows: Copy-Item .env.example .env
 # 3. Banco e cache
 pnpm db:up
 
-# 4. Migrations
+# 4. Build — as migrations importam os tipos compartilhados, que precisam estar compilados
+pnpm build
+
+# 5. Migrations
 pnpm --filter @gestao/api migration:run
 
-# 5. Dados de desenvolvimento
+# 6. Dados de desenvolvimento
 pnpm --filter @gestao/api seed
 
-# 6. API e web
+# 7. API e web
 pnpm dev
 ```
 
