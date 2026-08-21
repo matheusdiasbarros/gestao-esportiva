@@ -543,7 +543,8 @@ ela ·
   - [ ] Aceite de convite e cadastro por link público — **no navegador, sem instalar app**
   - [ ] Telas mobile equivalentes, com token em `expo-secure-store`
   - [ ] Estado vazio do aluno sem professor
-  - [ ] Playwright: navegadores instalados e os fluxos de cadastro, login e aceite cobertos no CI
+  - [x] Playwright: Chromium instalado, cadastro/login/proteção de rota cobertos e rodando no CI
+  - [ ] Playwright: cobrir também recuperação de senha e aceite de convite, quando existirem
 - [ ] **Epic 2.5 — E-mail transacional mínimo 🔁** *(antecipado da Fase 10)*
   - [ ] Provedor de e-mail configurado
   - [ ] Fila BullMQ para envio assíncrono

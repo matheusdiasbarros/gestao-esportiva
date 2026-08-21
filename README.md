@@ -64,7 +64,9 @@ pnpm --filter @gestao/mobile dev
 | --- | --- |
 | `pnpm dev` | sobe API e web em modo de desenvolvimento |
 | `pnpm build` | constrói todos os pacotes |
-| `pnpm test` | roda os testes |
+| `pnpm test` | roda os testes de unidade |
+| `pnpm test:e2e` | testes de tela em navegador de verdade (sobe API e web sozinho) |
+| `pnpm test:e2e:ui` | os mesmos, no modo interativo do Playwright |
 | `pnpm lint` | ESLint em todos os pacotes |
 | `pnpm typecheck` | verificação de tipos |
 | `pnpm format` | aplica o Prettier |
@@ -77,7 +79,12 @@ Para rodar um teste específico:
 
 ```bash
 pnpm --filter @gestao/api test -- health.service
+pnpm exec playwright test cadastro          # só os testes de tela de cadastro
 ```
+
+Os testes de tela precisam do Chromium, baixado uma vez com
+`pnpm exec playwright install chromium`. São ~115 MB. Só o Chromium: os três navegadores
+triplicam o download e o tempo de cada execução sem cobrir risco que exista hoje.
 
 ## Estrutura
 

@@ -18,7 +18,9 @@
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && docker compose up -d",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:e2e": "pnpm build && playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.2",

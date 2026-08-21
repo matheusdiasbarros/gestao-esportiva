@@ -67,3 +67,4 @@ Não são débito — são erros que custaram tempo e que a documentação agora
 | `typeorm-naming-strategies` não suporta TypeORM 1.x — a estratégia é escrita à mão | `apps/api/src/database/snake-naming.strategy.ts` |
 | `argon2` compila em C na instalação; `@node-rs/argon2` traz binário pronto | ADR-004 §5 |
 | Um erro em transação psql aborta todos os comandos seguintes — teste de constraint precisa de `ON_ERROR_ROLLBACK` | — |
+| O Next injeta um `role="alert"` vazio (anunciador de rota), e `getByRole('alert')` acha dois elementos | `e2e/apoio.ts`, função `alerta` |

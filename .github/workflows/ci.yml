@@ -57,5 +57,91 @@ jobs:
       - name: Testes
         run: pnpm test
 
-  # Serviços de banco e cache entram aqui na Fase 2, quando existirem testes de integração.
-  # Subi-los agora só somaria tempo a cada execução, sem nada para testar contra eles.
+  e2e:
+    name: Testes de tela
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Job separado do `verificar` de propósito. Ele sobe banco, cache e dois servidores, e
+    # leva minutos; misturar os dois faria um erro de lint esperar toda essa infraestrutura
+    # para aparecer.
+    services:
+      postgres:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_USER: gestao
+          POSTGRES_PASSWORD: gestao_local
+          POSTGRES_DB: gestao_esportiva
+        # 5432 aqui, e não 5433 como no docker-compose: no CI não existe PostgreSQL nativo
+        # disputando a porta padrão, que é o motivo do desvio na máquina de desenvolvimento.
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gestao -d gestao_esportiva"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 12
+
+    env:
+      NODE_ENV: development
+      API_PORT: 3333
+      API_CORS_ORIGINS: http://localhost:3000
+      DATABASE_HOST: localhost
+      DATABASE_PORT: 5432
+      DATABASE_USER: gestao
+      DATABASE_PASSWORD: gestao_local
+      DATABASE_NAME: gestao_esportiva
+      DATABASE_SSL: 'false'
+      DATABASE_LOGGING: 'false'
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      # Segredo descartável, válido só dentro desta execução. Não é o de nenhum ambiente real.
+      JWT_SECRET: ci-somente-para-teste-nao-usar-em-lugar-nenhum-0123456789
+      JWT_ACCESS_TTL_SECONDS: 900
+      REFRESH_TTL_WEB_DAYS: 30
+      REFRESH_TTL_MOBILE_DAYS: 90
+      COOKIE_SECURE: 'false'
+      NEXT_PUBLIC_API_URL: http://localhost:3333/api/v1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+
+      # Só o Chromium: os três navegadores triplicam o download e o tempo, e o que estes
+      # testes protegem são fluxos de formulário e sessão, não diferenças entre motores.
+      - name: Instalar o Chromium do Playwright
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Migrations
+        run: pnpm --filter @gestao/api migration:run
+
+      - name: Build
+        run: pnpm build
+
+      - name: Testes de tela
+        run: pnpm exec playwright test
+
+      - name: Guardar o relatório quando falhar
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
