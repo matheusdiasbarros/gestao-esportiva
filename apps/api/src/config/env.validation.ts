@@ -7,6 +7,7 @@ import {
   IsString,
   Max,
   Min,
+  MinLength,
   validateSync,
 } from 'class-validator';
 
@@ -97,6 +98,43 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   REDIS_PASSWORD?: string;
+
+  /**
+   * Assina o token de acesso. Sem valor padrão de propósito: um segredo padrão que funciona em
+   * desenvolvimento é um segredo padrão que vai para produção junto com o resto.
+   *
+   * O mínimo de 32 caracteres não é enfeite — a assinatura HS256 é tão forte quanto a chave.
+   */
+  @IsString()
+  @MinLength(32, {
+    message: 'JWT_SECRET precisa de pelo menos 32 caracteres. Gere com: openssl rand -base64 48',
+  })
+  JWT_SECRET: string;
+
+  /** 15 minutos (ADR-004). Curto porque os papéis viajam dentro dele e podem envelhecer. */
+  @ToInt()
+  @IsInt()
+  @Min(60)
+  JWT_ACCESS_TTL_SECONDS: number = 900;
+
+  @ToInt()
+  @IsInt()
+  @Min(1)
+  REFRESH_TTL_WEB_DAYS: number = 30;
+
+  /** 90 dias: o app do aluno é aberto duas vezes por semana. Login mensal é atrito demais. */
+  @ToInt()
+  @IsInt()
+  @Min(1)
+  REFRESH_TTL_MOBILE_DAYS: number = 90;
+
+  /**
+   * `Secure` nos cookies. Falso em desenvolvimento porque `http://localhost` não é HTTPS e o
+   * navegador simplesmente descartaria o cookie, com sintoma de "login não persiste".
+   */
+  @ToBoolean()
+  @IsBoolean()
+  COOKIE_SECURE: boolean = false;
 }
 
 /**

@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { UnprocessableEntityException, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import { Logger } from 'nestjs-pino';
 import { API_PREFIX } from '@gestao/types';
 import { AppModule } from './app.module';
@@ -19,6 +20,9 @@ async function bootstrap(): Promise<void> {
   const ehProducao = env.NODE_ENV === NodeEnv.Production;
 
   app.setGlobalPrefix(API_PREFIX);
+
+  // Os tokens da web viajam em cookie httpOnly, então a strategy precisa conseguir lê-los.
+  app.use(cookieParser());
 
   // Necessário para o onApplicationShutdown do Redis e o fechamento do pool do TypeORM.
   app.enableShutdownHooks();

@@ -6,6 +6,7 @@ const ambienteMinimo = {
   DATABASE_PASSWORD: 'segredo',
   DATABASE_NAME: 'gestao_esportiva',
   REDIS_HOST: 'localhost',
+  JWT_SECRET: 'x'.repeat(32),
 };
 
 describe('validateEnv', () => {
@@ -81,6 +82,18 @@ describe('validateEnv', () => {
 
     it('recusa porta fora da faixa válida', () => {
       expect(() => validateEnv({ ...ambienteMinimo, API_PORT: '99999' })).toThrow(/API_PORT/);
+    });
+
+    // O segredo do token não tem valor padrão de propósito: um padrão que funciona em
+    // desenvolvimento é um padrão que vai para produção junto com o resto.
+    it('recusa ambiente sem JWT_SECRET', () => {
+      expect(() => validateEnv({ ...ambienteMinimo, JWT_SECRET: undefined })).toThrow(/JWT_SECRET/);
+    });
+
+    it('recusa JWT_SECRET curto — a assinatura vale o que a chave vale', () => {
+      expect(() => validateEnv({ ...ambienteMinimo, JWT_SECRET: 'curto-demais' })).toThrow(
+        /JWT_SECRET/,
+      );
     });
   });
 });

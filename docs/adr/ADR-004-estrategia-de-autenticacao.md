@@ -111,14 +111,34 @@ senha, reenvio de verificação e aceite de convite. Excedido, responde `429` co
 O limite por IP sozinho não protege: mil IPs atacando um único e-mail passariam. Por isso o
 limite é contado também por identificador alvo.
 
-### 9. Respostas indistinguíveis, para não vazar quem tem conta
+### 9. Respostas indistinguíveis — onde é possível, e onde não é
 
-Cadastro com e-mail já existente, login com senha errada, login com e-mail inexistente e
-"esqueci a senha" de e-mail inexistente devolvem **a mesma resposta do caso de sucesso**, com
-o mesmo código e tempo de resposta aproximado.
+**Login e recuperação de senha:** indistinguíveis. Senha errada, e-mail inexistente e conta
+suspensa devolvem exatamente o mesmo 401 com a mesma mensagem; "esqueci a senha" responde
+igual exista o e-mail ou não. O caminho de e-mail inexistente **calcula um hash de argon2
+mesmo assim** — sem isso, a diferença de tempo de resposta entregaria o que a mensagem
+esconde.
 
-Isso é coerente com a ADR-003, que escolheu UUID não enumerável pelo mesmo motivo: não confirmar
-a existência de um registro a quem não deveria saber.
+**Cadastro de profissional: não é indistinguível, e isso é decisão consciente.** E-mail já
+cadastrado responde `409` dizendo que a conta existe.
+
+A razão é que as duas garantias são incompatíveis. A decisão D5 determina que o profissional
+**entre na hora**, sem parede de "confira seu e-mail" — ele abandona ferramenta que exija mais
+de 15 minutos. Cadastro que já abre acesso precisa devolver uma sessão. Mas devolver sessão
+quando a conta já existe seria entregar a conta de outra pessoa a quem só sabe o e-mail dela:
+não é vazamento, é invasão. E devolver "sucesso sem sessão" só no caso duplicado é a mesma
+distinção, com outra roupa.
+
+Aceitar o `409` custa confirmar que aquele e-mail tem conta de profissional. Numa plataforma
+cujo próximo passo é um marketplace com perfis públicos, isso é informação que vai ficar
+pública de qualquer forma. A alternativa custaria a decisão de produto inteira.
+
+**Fica registrado como limite conhecido**, não como descuido: se o cadastro de profissional um
+dia precisar de resistência a enumeração, o preço é a parede de verificação por e-mail.
+
+O cadastro **de aluno** ainda não foi implementado e será reavaliado quando for: lá o e-mail é
+de terceiro, o valor de descobrir "esta pessoa treina com alguém" é maior, e o fluxo talvez
+suporte a parede que o do profissional não suporta.
 
 ## Alternativas consideradas
 

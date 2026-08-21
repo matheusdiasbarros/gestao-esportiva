@@ -508,18 +508,27 @@ ela ·
   - [x] Papéis derivados do dado, sem coluna de papel
   - [x] Seeds: admin por variável de ambiente, profissional com alunos com e sem conta, aluno em dois profissionais *(fecha DT-003)*
   - [x] Serviço de hash argon2id, pronto para o Epic 2.2
-- [ ] **Epic 2.2 — Autenticação**
-  - [ ] Hash argon2id com `@node-rs/argon2`, parâmetros calibrados na máquina de destino
-  - [ ] Política de senha: mínimo 10 caracteres, lista local de senhas vazadas, sem regra de composição
-  - [ ] Cadastro de profissional e cadastro aberto de aluno
+- [ ] **Epic 2.2 — Autenticação** 🟨 *fatia vertical entregue; ver o aviso abaixo*
+
+  > **Login funcionando não é login pronto.** Sem limite de tentativas e sem a revisão de
+  > segurança obrigatória, o que existe roda na máquina de desenvolvimento e **não pode ir
+  > para a internet**. Marcar o épico como concluído antes disso seria ilusão de progresso.
+
+  - [x] Hash argon2id com `@node-rs/argon2` — falta calibrar na máquina de destino
+  - [x] Política de senha: mínimo 10 caracteres, lista local de senhas vazadas, sem regra de composição
+  - [x] Cadastro de profissional
+  - [ ] Cadastro aberto de aluno
   - [ ] Convite endereçado, convite avulso e link público — os três com aceite pelo navegador
   - [ ] Verificação de e-mail: não bloqueia a entrada; exigida ao enviar o primeiro convite
-  - [ ] Login e logout
-  - [ ] Renovação com rotação e **detecção de reuso** (invalida a família do aparelho)
+  - [x] Login e logout
+  - [x] Renovação com rotação e **detecção de reuso** (invalida a família do aparelho)
+  - [x] Guard global: rota nasce protegida, pública só com `@Public()`
+  - [x] Cookie `httpOnly` na web, token no corpo no app
   - [ ] Recuperação e redefinição de senha
   - [ ] Troca de e-mail com confirmação no endereço novo e aviso no antigo
-  - [ ] Respostas indistinguíveis nas rotas que revelariam a existência de uma conta
+  - [x] Respostas indistinguíveis no login — **o cadastro de profissional é exceção consciente**, ver ADR-004 §9
   - [ ] Rate limiting por IP **e** por alvo, em Redis
+  - [ ] Lista completa de senhas vazadas (hoje é um subconjunto)
 - [ ] **Epic 2.3 — Autorização**
   - [ ] Guard global: rota é protegida por padrão, pública só com marcação explícita
   - [ ] Regra de propriedade (dono) e de participação, como decorators reutilizáveis

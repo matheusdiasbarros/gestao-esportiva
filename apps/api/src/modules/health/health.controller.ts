@@ -2,6 +2,7 @@ import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import type { HealthCheckResult } from '@gestao/types';
+import { Public } from '../iam/auth/public.decorator';
 import { HealthService } from './health.service';
 
 @ApiTags('health')
@@ -9,6 +10,9 @@ import { HealthService } from './health.service';
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 
+  // Sem isto o guard global exigiria token, e o orquestrador — que não tem conta — leria a
+  // API como fora do ar e a derrubaria em laço.
+  @Public()
   @Get()
   @ApiOperation({ summary: 'Verifica a saúde da API e de suas dependências' })
   @ApiResponse({ status: 200, description: 'API e dependências disponíveis' })
