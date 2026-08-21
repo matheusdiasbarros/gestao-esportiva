@@ -535,11 +535,13 @@ ela ·
   - [ ] Recurso de outro dono responde **404**, não 403
   - [ ] Matriz papel × recurso implementada conforme `docs/domain/iam.md` §6
   - [ ] Log estruturado de toda leitura de dado pessoal feita por administrador
-- [ ] **Epic 2.4 — Front-end de auth**
-  - [ ] Telas web: cadastro de profissional, login, esqueci a senha, redefinir
+- [ ] **Epic 2.4 — Front-end de auth** 🟨
+  - [x] Telas web de cadastro de profissional e login
+  - [x] Painel protegido no servidor: quem não tem sessão é redirecionado antes de o HTML sair
+  - [x] Sair
+  - [ ] Telas web de esqueci a senha e redefinir
   - [ ] Aceite de convite e cadastro por link público — **no navegador, sem instalar app**
   - [ ] Telas mobile equivalentes, com token em `expo-secure-store`
-  - [ ] Persistência de acesso e rotas protegidas em web e mobile
   - [ ] Estado vazio do aluno sem professor
   - [ ] Playwright: navegadores instalados e os fluxos de cadastro, login e aceite cobertos no CI
 - [ ] **Epic 2.5 — E-mail transacional mínimo 🔁** *(antecipado da Fase 10)*

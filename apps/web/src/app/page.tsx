@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import { getHealth } from '@/lib/api';
+import { getSessao } from '@/lib/session';
 
 // Sem isto, o Next tentaria pré-renderizar esta página durante o `next build` e o build
 // quebraria sempre que a API não estivesse rodando — inclusive no CI.
@@ -26,17 +28,43 @@ function Indicador({ rotulo, estado }: { rotulo: string; estado: 'up' | 'down' }
 }
 
 export default async function Home() {
-  const health = await getHealth();
+  const [health, sessao] = await Promise.all([getHealth(), getSessao()]);
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center gap-8 px-6 py-16">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">Gestão Esportiva</h1>
         <p className="mt-1 text-sm text-(--color-ink-muted)">
-          Fundação técnica — Fase 1. Esta página existe para provar que web, API, banco e cache
-          conversam entre si.
+          Organize alunos, agenda e pagamentos em um lugar só — e deixe o aluno marcar, remarcar e
+          pagar sozinho.
         </p>
       </header>
+
+      <nav className="flex flex-wrap gap-3">
+        {sessao ? (
+          <Link
+            href="/painel"
+            className="rounded-lg bg-(--color-ink) px-4 py-2.5 text-sm font-medium text-(--color-surface)"
+          >
+            Ir para o painel
+          </Link>
+        ) : (
+          <>
+            <Link
+              href="/criar-conta"
+              className="rounded-lg bg-(--color-ink) px-4 py-2.5 text-sm font-medium text-(--color-surface)"
+            >
+              Criar conta
+            </Link>
+            <Link
+              href="/entrar"
+              className="rounded-lg border border-(--color-border) px-4 py-2.5 text-sm font-medium"
+            >
+              Entrar
+            </Link>
+          </>
+        )}
+      </nav>
 
       <section
         aria-labelledby="titulo-status"

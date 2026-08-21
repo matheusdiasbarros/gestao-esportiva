@@ -28,6 +28,9 @@ async function lerProblema(response: Response): Promise<ProblemDetails> {
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${baseUrl}${path}`, {
     ...init,
+    // Sem isto o navegador não envia nem guarda os cookies de acesso, e o login "funciona"
+    // sem nunca persistir — o sintoma é voltar deslogado a cada navegação.
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json', ...init?.headers },
   });
 
@@ -35,7 +38,17 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     throw new ApiError(await lerProblema(response));
   }
 
+  // 204 não tem corpo, e `.json()` num corpo vazio lança. O logout cai exatamente aqui.
+  if (response.status === 204) return undefined as T;
+
   return (await response.json()) as T;
+}
+
+/** Extrai os erros por campo do Problem Details, para o formulário destacar cada um. */
+export function errosPorCampo(erro: unknown): Record<string, string> {
+  if (!(erro instanceof ApiError) || !erro.problem.errors) return {};
+
+  return Object.fromEntries(erro.problem.errors.map(({ field, message }) => [field, message]));
 }
 
 /**
