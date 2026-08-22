@@ -1,5 +1,6 @@
 import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import type { HealthCheckResult } from '@gestao/types';
 import { Public } from '../iam/auth/public.decorator';
@@ -13,6 +14,10 @@ export class HealthController {
   // Sem isto o guard global exigiria token, e o orquestrador — que não tem conta — leria a
   // API como fora do ar e a derrubaria em laço.
   @Public()
+  // Pelo mesmo motivo, sem limite de tentativas: o orquestrador chama de poucos em poucos
+  // segundos, sempre do mesmo IP, e estourar a cota faria a API parecer morta justamente para
+  // quem decide se ela continua viva.
+  @SkipThrottle()
   @Get()
   @ApiOperation({ summary: 'Verifica a saúde da API e de suas dependências' })
   @ApiResponse({ status: 200, description: 'API e dependências disponíveis' })

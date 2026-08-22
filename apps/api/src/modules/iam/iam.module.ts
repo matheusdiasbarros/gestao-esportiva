@@ -1,13 +1,25 @@
+import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { Redis } from 'ioredis';
 import { AppConfigModule } from '../../config/config.module';
 import { EnvironmentVariables } from '../../config/env.validation';
+import { REDIS_CLIENT } from '../../redis/redis.module';
 import { AuthController } from './auth.controller';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { JwtStrategy } from './auth/jwt.strategy';
+import { LimiteDeTentativasGuard } from './auth/rate-limit.guard';
+import {
+  alvoDaRequisicao,
+  LIMITE_ALVO,
+  LIMITE_IP,
+  semAlvo,
+  TETOS_GLOBAIS,
+} from './auth/rate-limit';
 import { Professional } from './entities/professional.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { StudentInvite } from './entities/student-invite.entity';
@@ -43,6 +55,29 @@ import { TokenService } from './services/token.service';
         signOptions: { expiresIn: env.JWT_ACCESS_TTL_SECONDS },
       }),
     }),
+    ThrottlerModule.forRootAsync({
+      inject: [REDIS_CLIENT],
+      useFactory: (redis: Redis) => ({
+        // A contagem vive no Redis, não na memória do processo. Em memória, cada instância da
+        // API teria a própria contagem — e com duas instâncias o atacante ganharia o dobro de
+        // tentativas só porque o balanceador alternou entre elas.
+        storage: new ThrottlerStorageRedisService(redis),
+        // A mensagem padrão é "ThrottlerException: Too Many Requests" — em inglês e com o nome
+        // da classe dentro. Igual para os dois limites de propósito: mensagens diferentes
+        // diriam ao atacante qual das duas contagens ele estourou.
+        errorMessage: 'Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente de novo.',
+        throttlers: [
+          { name: LIMITE_IP, ...TETOS_GLOBAIS.ip },
+          {
+            name: LIMITE_ALVO,
+            ...TETOS_GLOBAIS.alvo,
+            getTracker: alvoDaRequisicao,
+            skipIf: semAlvo,
+          },
+        ],
+      }),
+    }),
+
     TypeOrmModule.forFeature([
       User,
       UserIdentity,
@@ -59,6 +94,10 @@ import { TokenService } from './services/token.service';
     TokenService,
     AuthService,
     JwtStrategy,
+    // A ordem importa: o limite de tentativas roda **antes** da autenticação. Conferir uma
+    // senha com argon2 custa centenas de milissegundos de CPU por tentativa — deixar isso
+    // depois do guard de token transformaria o próprio mecanismo de defesa em alvo.
+    { provide: APP_GUARD, useClass: LimiteDeTentativasGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
   exports: [PasswordService, RolesService, TokenService],

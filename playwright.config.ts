@@ -46,7 +46,9 @@ export default defineConfig({
       url: `${API}/health`,
       reuseExistingServer: !ehCI,
       timeout: 90_000,
-      stdout: 'pipe',
+      // O log da API é estruturado e sai uma linha por requisição; encanado para o terminal,
+      // ele afoga o resultado dos testes. O erro continua visível.
+      stdout: 'ignore',
       stderr: 'pipe',
     },
     {
@@ -54,7 +56,9 @@ export default defineConfig({
       url: WEB,
       reuseExistingServer: !ehCI,
       timeout: 90_000,
-      stdout: 'pipe',
+      // O log da API é estruturado e sai uma linha por requisição; encanado para o terminal,
+      // ele afoga o resultado dos testes. O erro continua visível.
+      stdout: 'ignore',
       stderr: 'pipe',
     },
   ],

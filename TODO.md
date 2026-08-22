@@ -527,10 +527,10 @@ ela ·
   - [ ] Recuperação e redefinição de senha
   - [ ] Troca de e-mail com confirmação no endereço novo e aviso no antigo
   - [x] Respostas indistinguíveis no login — **o cadastro de profissional é exceção consciente**, ver ADR-004 §9
-  - [ ] Rate limiting por IP **e** por alvo, em Redis
+  - [x] Rate limiting por IP **e** por alvo, em Redis — 5 tentativas por e-mail a cada 15 min
   - [ ] Lista completa de senhas vazadas (hoje é um subconjunto)
 - [ ] **Epic 2.3 — Autorização**
-  - [ ] Guard global: rota é protegida por padrão, pública só com marcação explícita
+  - [x] Guard global: rota é protegida por padrão, pública só com marcação explícita *(entregue junto do Epic 2.2)*
   - [ ] Regra de propriedade (dono) e de participação, como decorators reutilizáveis
   - [ ] Recurso de outro dono responde **404**, não 403
   - [ ] Matriz papel × recurso implementada conforme `docs/domain/iam.md` §6

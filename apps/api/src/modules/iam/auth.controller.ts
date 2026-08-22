@@ -6,6 +6,7 @@ import { EnvironmentVariables } from '../../config/env.validation';
 import { ACCESS_COOKIE, REFRESH_COOKIE } from './auth/cookies';
 import { CurrentUser } from './auth/current-user.decorator';
 import { Public } from './auth/public.decorator';
+import { LimitarCadastro, LimitarLogin, LimitarRenovacao } from './auth/rate-limit';
 import { LoginDto, SignupProfessionalDto } from './dto/auth.dto';
 import { AuthService, SessaoAberta } from './services/auth.service';
 import { ClientType } from './services/token.service';
@@ -19,6 +20,7 @@ export class AuthController {
   ) {}
 
   @Public()
+  @LimitarCadastro()
   @Post('signup/professional')
   @ApiOperation({ summary: 'Cria uma conta de profissional e já abre o acesso' })
   async signupProfessional(
@@ -35,6 +37,7 @@ export class AuthController {
   }
 
   @Public()
+  @LimitarLogin()
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Entra com e-mail e senha' })
@@ -48,6 +51,7 @@ export class AuthController {
   }
 
   @Public()
+  @LimitarRenovacao()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Troca o token de renovação por um par novo' })
