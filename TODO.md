@@ -95,8 +95,39 @@ O `orchestrator` fica de fora da tabela porque é acionado no passo 1 de **toda*
 1. Checar os *Critérios de conclusão*.
 2. Marcar os checkboxes da fase.
 3. Registrar ADRs e documentação de domínio criadas.
-4. Atualizar o *Registro de fases* (seção 12) e o `README.md`.
-5. Registrar débitos técnicos conscientes em `docs/tech-debt.md`.
+4. **Escrever o manual de manutenção da fase** em `docs/sistema/` — ver abaixo.
+5. Atualizar o *Registro de fases* (seção 12), o `README.md` e o `CLAUDE.md`.
+6. Registrar débitos técnicos conscientes em `docs/tech-debt.md`.
+
+### Manual de manutenção por fase
+
+Toda fase produz um arquivo em [`docs/sistema/`](docs/sistema/) **antes de ser dada como
+concluída**. O leitor previsto é quem chega sem contexto nenhum — pessoa nova ou **uma IA numa
+sessão futura**, que não viu nada do que foi conversado aqui.
+
+Não é tutorial nem repetição do código. São sempre as mesmas seções, na mesma ordem:
+
+| Seção | Responde |
+| --- | --- |
+| O que a fase entregou | o resumo, em cinco linhas |
+| Mapa dos arquivos | onde cada coisa mora, para ninguém procurar às cegas |
+| Invariantes | o que **precisa continuar verdadeiro**. Quebrou um? está resolvendo o problema errado |
+| Armadilhas | o que parece errado no código e é **de propósito** |
+| Como verificar que funciona | os comandos exatos, e o que esperar deles |
+| **O que NÃO existe** | módulos, rotas e conceitos não construídos |
+| Se você for mexer aqui | o que checar antes, e o que costuma quebrar junto |
+
+Duas dessas seções são o motivo de o manual existir, e são as que faltam na documentação da
+maioria dos projetos:
+
+- **Invariantes** transformam decisão em regra verificável. Sem elas, a próxima pessoa desfaz
+  uma escolha sem saber que era uma escolha.
+- **O que não existe** é o que impede quem escreve código a partir de documentação de inventar
+  referência a módulo inexistente — o erro mais comum e mais caro de diagnosticar.
+
+**Fase posterior que mude algo de fase anterior atualiza o arquivo da anterior, no mesmo
+commit.** Documentação por fase envelhece se ninguém fizer isso, e documentação envelhecida é
+pior que nenhuma: ainda parece confiável.
 
 ### Legenda de status
 
@@ -466,6 +497,8 @@ CI verde com lint, typecheck, build e testes; um endpoint `/health` consumido pe
 - [x] ~~Migration inicial aplicada e reversível~~ → adiada para a Fase 2 com motivo, e
       **cumprida lá** no Epic 2.1: `CriaIdentidade`, aplicada, revertida e reaplicada
 - [x] `README.md` com instruções de setup verificadas
+- [x] Manual de manutenção em `docs/sistema/fase-01-fundacao-tecnica.md` — escrito
+      retroativamente em 2026-08-21, quando a regra passou a valer
 
 ---
 
@@ -611,6 +644,7 @@ Todas resolvidas em 2026-08-20. Registro completo em [`docs/domain/iam.md`](docs
 - [x] Matriz de permissões documentada em `docs/domain/iam.md`
 - [ ] *Staging* publicado e atualizado automaticamente a partir da `main`
 - [ ] Revisão de segurança do fluxo de auth registrada
+- [x] Manual de manutenção em `docs/sistema/fase-02-identidade-e-acesso.md`
 
 ---
 

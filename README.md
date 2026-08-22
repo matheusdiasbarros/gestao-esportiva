@@ -103,6 +103,7 @@ docs/
   product/       visão, personas, jornadas, MVP
   domain/        regras de negócio e glossário
   adr/           decisões técnicas
+  sistema/       manual de manutenção, um por fase — escrito para quem chega sem contexto
   tech-debt.md   compromissos assumidos conscientemente
 ```
 
@@ -111,9 +112,11 @@ docs/
 Leia, nesta ordem:
 
 1. [TODO.md](TODO.md) — o roadmap e a fase corrente
-2. [docs/domain/glossary.md](docs/domain/glossary.md) — o vocabulário é obrigatório
-3. [docs/adr/](docs/adr/) — as decisões já tomadas e por quê
-4. [docs/tech-debt.md](docs/tech-debt.md) — armadilhas já descobertas, para não repetir
+2. [docs/sistema/](docs/sistema/) — **como o sistema funciona hoje**: mapa dos arquivos,
+   invariantes, armadilhas e o que ainda não existe. Um manual por fase
+3. [docs/domain/glossary.md](docs/domain/glossary.md) — o vocabulário é obrigatório
+4. [docs/adr/](docs/adr/) — as decisões já tomadas e por quê
+5. [docs/tech-debt.md](docs/tech-debt.md) — armadilhas já descobertas, para não repetir
 
 Commits seguem Conventional Commits com **tipo em inglês e descrição em pt-BR**:
 
