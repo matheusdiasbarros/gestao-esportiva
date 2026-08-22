@@ -1,6 +1,7 @@
 import { API_PREFIX } from '@gestao/types';
 import Link from 'next/link';
-import { FormCadastroAluno } from '@/components/form-cadastro-aluno';
+import { EntrarComProfessor } from '@/components/entrar-com-professor';
+import { getSessao } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +29,9 @@ async function buscarDono(slug: string): Promise<string | null> {
 
 export default async function TreineCom({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const professor = await buscarDono(slug);
+  // A sessão é lida no servidor: se a pessoa já está logada, a tela nem chega a oferecer o
+  // formulário de cadastro — ela só precisa confirmar que quer treinar com este profissional.
+  const [professor, sessao] = await Promise.all([buscarDono(slug), getSessao()]);
 
   if (!professor) {
     return (
@@ -62,12 +65,16 @@ export default async function TreineCom({ params }: { params: Promise<{ slug: st
         <p className="text-sm font-medium text-(--color-ok)">Convite de {professor}</p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">Treine com {professor}</h1>
         <p className="mt-2 text-sm text-(--color-ink-muted)">
-          Crie sua conta para ver suas aulas, marcar horário e acompanhar seus pagamentos. Você já
-          entra ligado a {professor}.
+          Veja suas aulas, marque horário e acompanhe seus pagamentos. Você já entra ligado a{' '}
+          {professor}.
         </p>
       </header>
 
-      <FormCadastroAluno signupSlug={slug} />
+      <EntrarComProfessor
+        slug={slug}
+        professor={professor}
+        jaLogadoComo={sessao?.fullName ?? null}
+      />
     </main>
   );
 }

@@ -3,6 +3,7 @@ import { AccessHolder, AuthenticatedUser, MINIMUM_SIGNUP_AGE, StudentStatus } fr
 import {
   ConflictException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -60,6 +61,7 @@ export class AuthService {
     @InjectRepository(User) private readonly users: Repository<User>,
     @InjectRepository(UserIdentity) private readonly identities: Repository<UserIdentity>,
     @InjectRepository(Professional) private readonly professionals: Repository<Professional>,
+    @InjectRepository(Student) private readonly students: Repository<Student>,
   ) {}
 
   /**
@@ -243,6 +245,56 @@ export class AuthService {
 
     const user = await this.users.findOneByOrFail({ id: userId });
     return this.abrirSessao(user, client, deviceLabel);
+  }
+
+  /**
+   * Quem já tem conta entra pelo link público e vira aluno do dono do link.
+   *
+   * **Sempre cria uma ficha nova, mesmo que o profissional já tenha uma com este e-mail.**
+   * Parece desperdício e não é: ligar a ficha existente exigiria confiar num e-mail que o
+   * profissional digitou e ninguém provou. Se ele errou uma letra, o dono daquele endereço
+   * receberia a agenda e as dívidas de um desconhecido — o caso descrito em `iam.md` §9.4.
+   *
+   * A duplicata que isso pode gerar é visível para o profissional, e é ele quem sabe se são a
+   * mesma pessoa. Mesclar fichas é tarefa dele, na Fase 5.
+   */
+  async entrarPeloLinkPublico(userId: string, slug: string): Promise<void> {
+    const professional = await this.professionals.findOne({
+      where: { signupSlug: slug, signupLinkEnabled: true },
+      select: { id: true, userId: true },
+    });
+
+    if (!professional) {
+      throw new NotFoundException('Este link de cadastro não é mais válido.');
+    }
+
+    if (professional.userId === userId) {
+      // Conflito de estado, e não erro de formulário: não existe campo na tela para apontar.
+      // Como erro de validação, a mensagem se perde atrás do "um ou mais campos estão
+      // inválidos" e a pessoa não descobre o que aconteceu.
+      throw new ConflictException('Este link é o seu. Compartilhe com seus alunos.');
+    }
+
+    // Clicar duas vezes não pode virar duas fichas. Diferente do caso acima, aqui a ficha já
+    // aponta para esta conta — não há dúvida sobre de quem ela é.
+    const jaVinculado = await this.students.exists({
+      where: { professionalId: professional.id, userId },
+    });
+    if (jaVinculado) return;
+
+    const user = await this.users.findOneByOrFail({ id: userId });
+
+    await this.students.insert({
+      id: uuidv7(),
+      professionalId: professional.id,
+      userId,
+      fullName: user.fullName,
+      email: user.email,
+      phone: null,
+      birthDate: user.birthDate,
+      status: StudentStatus.Active,
+      accessHolder: AccessHolder.Self,
+    });
   }
 
   /**

@@ -58,6 +58,50 @@ test.describe('Link público do profissional', () => {
     await expect(page.getByRole('heading', { name: /ainda não tem professor/i })).toHaveCount(0);
   });
 
+  test('quem já tem conta entra pelo link e vira aluno sem criar conta nova', async ({
+    page,
+    context,
+  }) => {
+    const professor = await cadastrar(page);
+    const caminho = ((await page.getByText(/^\/treine-com\//).textContent()) ?? '').trim();
+    await context.clearCookies();
+
+    // Uma conta que já existe, sem professor nenhum.
+    const aluna = contaNova();
+    await page.goto('/criar-conta/aluno');
+    await preencher(page, aluna);
+    await expect(page.getByRole('heading', { name: /ainda não tem professor/i })).toBeVisible();
+    await context.clearCookies();
+
+    // Agora ela abre o link do professor. Antes desta funcionalidade não havia saída: criar
+    // conta de novo dava erro de e-mail repetido e a tela não oferecia mais nada.
+    await page.goto(caminho);
+    await page.getByRole('tab', { name: /já tenho conta/i }).click();
+    await page.getByLabel('E-mail').fill(aluna.email);
+    await page.getByLabel('Senha').fill(aluna.senha);
+    await page.getByRole('button', { name: new RegExp(`entrar e treinar com`, 'i') }).click();
+
+    await expect(page).toHaveURL('/painel');
+    await expect(page.getByRole('heading', { name: `Olá, ${aluna.nome}` })).toBeVisible();
+    // O estado vazio some: agora ela tem professor.
+    await expect(page.getByRole('heading', { name: /ainda não tem professor/i })).toHaveCount(0);
+    expect(professor.nome).toBeTruthy();
+  });
+
+  test('quem já está logado só confirma, sem digitar senha de novo', async ({ page }) => {
+    const professor = await cadastrar(page);
+    const caminho = ((await page.getByText(/^\/treine-com\//).textContent()) ?? '').trim();
+
+    // Continua logado como o próprio professor — que não pode ser aluno de si mesmo.
+    await page.goto(caminho);
+    await expect(page.getByText(new RegExp(`conectado como`, 'i'))).toBeVisible();
+
+    await page
+      .getByRole('button', { name: new RegExp(`treinar com ${professor.nome}`, 'i') })
+      .click();
+    await expect(page.getByRole('main').getByRole('alert')).toContainText(/este link é o seu/i);
+  });
+
   test('link inexistente explica em vez de quebrar', async ({ page }) => {
     await page.goto(`/treine-com/${randomUUID()}`);
 

@@ -519,6 +519,7 @@ ela ·
   - [x] Cadastro de profissional
   - [x] Cadastro aberto de aluno
   - [x] Link público do profissional ("treine comigo") — cadastro já ligado a ele
+  - [x] Quem **já tem conta** entra pelo link público e vira aluno, sem criar conta nova
   - [ ] Convite endereçado e convite avulso — dependem do Epic 2.5
   - [x] Verificação de e-mail: não bloqueia a entrada; reenvio pelo painel
   - [x] Login e logout

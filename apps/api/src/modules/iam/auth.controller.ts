@@ -80,6 +80,16 @@ export class AuthController {
     return { professionalName: dono.fullName };
   }
 
+  @Post('signup-link/:slug/join')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Quem já tem conta vira aluno do dono do link' })
+  async entrarPeloLink(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('slug') slug: string,
+  ): Promise<void> {
+    await this.auth.entrarPeloLinkPublico(user.id, slug);
+  }
+
   @Public()
   @LimitarLogin()
   @Post('login')
