@@ -173,7 +173,7 @@ Direção inicial. Mudanças exigem ADR **antes** da implementação.
 | Banco | PostgreSQL + PostGIS |
 | ORM | TypeORM |
 | Cache / filas | Redis, BullMQ |
-| Infra | Docker, AWS, GitHub Actions |
+| Infra | Docker, GitHub Actions. **Hospedagem não decidida** — ver seção 11 |
 | Testes | unitários, integração, Playwright (E2E web) |
 
 **Não adotar sem necessidade concreta e ADR:** microsserviços, Kubernetes, Kafka, GraphQL,
@@ -552,11 +552,16 @@ ela ·
   - [ ] Provedor de e-mail configurado
   - [ ] Fila BullMQ para envio assíncrono
   - [ ] Templates de verificação e recuperação
-- [ ] **Epic 2.6 — Deploy mínimo 🔁** *(antecipado da Fase 18)*
-  - [ ] Dockerfiles de produção para API e web
-  - [ ] Ambiente de *staging* na AWS (compute + banco gerenciado + Redis)
-  - [ ] Pipeline de deploy automático da `main` para *staging*
-  - [ ] Secrets fora do repositório
+- [ ] ~~**Epic 2.6 — Deploy mínimo**~~ → **adiado para depois da Fase 5**, em 2026-08-21
+
+  > A antecipação vinha de uma boa intenção — publicar cedo em vez de deixar tudo para o fim.
+  > Mas o que ela destrava hoje é pouco: o e-mail do Epic 2.5 **é testável da máquina de
+  > desenvolvimento**, porque o provedor envia de verdade a partir do localhost. O que só o
+  > staging entrega é o comportamento sob HTTPS (o cookie `Secure`, ainda não exercitado) e um
+  > endereço para mostrar a alguém — e não há a quem mostrar antes de existir cadastro de
+  > alunos. Subir quatro serviços para hospedar uma tela de login é custo sem contrapartida.
+  >
+  > **A hospedagem continua sem provedor definido.** Ver a decisão em aberto na seção 11.
 
 ### Decisões da fase
 
@@ -582,7 +587,7 @@ Todas resolvidas em 2026-08-20. Registro completo em [`docs/domain/iam.md`](docs
 
 ### Tecnologias
 
-- NestJS (Passport/Guards), TypeORM, PostgreSQL, Redis, BullMQ, Next.js, Expo, AWS.
+- NestJS (Passport/Guards), TypeORM, PostgreSQL, Redis, BullMQ, Next.js, Expo.
 
 ### Aprendizados
 
@@ -1601,11 +1606,12 @@ Evolui o *staging* criado no Epic 2.6.
 Ambiente de produção estável, monitorado, com backup testado, deploy automatizado com
 rollback e resposta a incidentes definida.
 
-**Dependências:** Epic 2.6 e MVP funcionalmente completo.
+**Dependências:** staging publicado (ex-Epic 2.6, adiado) e MVP funcionalmente completo.
 
-**Ferramentas a instalar nesta fase:** MCP de documentação AWS e MCP de Terraform — ambos
-somente leitura. Operação real na conta exige role IAM dedicada e decisão à parte.
-Ver `AI-DEVELOPMENT.md` §6.8.
+**Ferramentas a instalar nesta fase:** dependem do provedor escolhido, e por isso **não estão
+definidas**. Se a escolha for AWS, entram os MCPs de documentação AWS e de Terraform, ambos
+somente leitura — ver `AI-DEVELOPMENT.md` §6.8. Numa máquina virtual simples, nenhum MCP é
+necessário.
 
 **Agentes desta fase:**
 `devops` ⬤ conduz a fase ·
@@ -1646,17 +1652,27 @@ Ver `AI-DEVELOPMENT.md` §6.8.
 
 ### Decisões da fase
 
-- [ ] Modelo de compute na AWS (ECS Fargate recomendado; EC2? App Runner? Lambda?) — **sem Kubernetes**
-- [ ] IaC: Terraform, CDK ou configuração manual documentada
-- [ ] Região AWS e implicações de latência/LGPD
-- [ ] Stack de observabilidade (CloudWatch, Grafana, Sentry, Datadog) e custo
+- [ ] **Onde hospedar** — máquina virtual única, plataforma gerenciada ou nuvem grande. Decidir
+      com o número de usuários reais na mão, não antes. **Sem Kubernetes** em nenhum cenário
+- [ ] Banco: no mesmo servidor ou gerenciado à parte
+- [ ] IaC: Terraform, CDK ou configuração manual documentada — para uma máquina só, manual
+      documentado pode ser o certo
+- [ ] Região do servidor e implicações de latência e de LGPD
+- [ ] Stack de observabilidade e custo
 - [ ] RTO/RPO aceitáveis
 - [ ] Janela de manutenção e política de deploy
-- [ ] Orçamento mensal de infraestrutura
+- [ ] **Orçamento mensal, decidido antes de escolher o provedor** — e não descoberto depois
+
+> **Uma nota sobre custo, escrita na Fase 2.** A métrica de sucesso do MVP são 10 profissionais
+> usando semanalmente. Isso cabe folgado numa única máquina virtual rodando o mesmo
+> `docker-compose` do desenvolvimento, na faixa de US$ 5 a 10 por mês com valor fixo. Nuvem
+> grande nesse tamanho custa mais e cobra por peça — e o risco não é o preço, é a conta
+> surpresa de uma configuração errada que rodou a noite toda. Isso é recomendação, não decisão.
 
 ### Tecnologias
 
-- AWS, Docker, GitHub Actions, Terraform/CDK, ferramentas de observabilidade.
+- Docker, GitHub Actions, ferramentas de observabilidade. O provedor de hospedagem e a
+  ferramenta de IaC dependem da decisão acima.
 
 ### Aprendizados
 
@@ -1709,7 +1725,8 @@ Gargalos identificados por medição, corrigidos e comprovados com dados antes/d
 
 ### Tecnologias
 
-- Ferramentas de profiling e APM, PostgreSQL (tuning), Redis, AWS (autoscaling), k6/Artillery.
+- Ferramentas de profiling e APM, PostgreSQL (tuning), Redis, k6/Artillery. Escalonamento
+  automático depende do provedor escolhido na Fase 18.
 
 ### Aprendizados
 
@@ -1760,7 +1777,7 @@ ADRs previstas (não escritas ainda):
 | ADR-005 | PostGIS e provedor de geocoding | 12 | ⬜ |
 | ADR-006 | Modelagem temporal da agenda | 6 | ⬜ |
 | ADR-007 | Provedor de pagamento | 9 | ⬜ |
-| ADR-008 | Compute e IaC na AWS | 18 | ⬜ |
+| ADR-008 | Hospedagem e deploy | 18 | ⬜ |
 
 ### Documentação de domínio — `docs/domain/`
 
@@ -1819,6 +1836,7 @@ Estrutura-alvo. **Criar cada diretório apenas quando ele tiver conteúdo real.*
 | ~~Estratégia de autenticação e modelo de papéis~~ ✅ | 2 | ADR-004 |
 | ~~Usuário pode ser profissional e aluno ao mesmo tempo~~ ✅ sim | 2 | `docs/domain/iam.md` |
 | **Painel administrativo: em que fase entra?** — está no MVP e não tem épico em lugar nenhum | a definir | `docs/domain/iam.md` §11 |
+| **Onde publicar o staging** — adiado para depois da Fase 5; provedor em aberto | 5+ | ADR-008 |
 | **Termos de Uso e Política de Privacidade** — não existem, são pré-requisito do lançamento | antes do lançamento | trabalho jurídico, sem dono |
 | Catálogo de modalidades aberto ou curado | 3 | `docs/domain/professional-profile.md` |
 | Provedor de geocoding e precisão pública de localização | 12 | ADR-005 |
@@ -1835,7 +1853,7 @@ Estrutura-alvo. **Criar cada diretório apenas quando ele tiver conteúdo real.*
 | Critérios de ranking do marketplace | 12 | `docs/domain/marketplace.md` |
 | Elegibilidade e moderação de avaliações | 13 | `docs/domain/reviews.md` |
 | Arquitetura do feed social | 14 | ADR (a criar) |
-| Compute AWS e IaC | 18 | ADR-008 |
+| **Onde hospedar** — máquina virtual, plataforma gerenciada ou nuvem grande | 18 | ADR-008 |
 
 ---
 

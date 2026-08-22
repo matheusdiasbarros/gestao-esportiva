@@ -297,7 +297,7 @@ fixtures, configuração de teste no CI.
 **Responsabilidades**
 - Docker (dev e produção) e Docker Compose local.
 - GitHub Actions: CI e CD.
-- Infraestrutura AWS e IaC.
+- Hospedagem e IaC. **O provedor não está decidido** — ver a decisão em aberto no TODO §11.
 - Observabilidade: logs, métricas, alertas.
 - Backup, restauração e gestão de secrets.
 
@@ -432,7 +432,7 @@ O corpo do arquivo é portátil; só o *frontmatter* muda entre ferramentas.
 | --- | --- | --- |
 | **Playwright** | Fase 2+, quando existirem fluxos de UI para testar | QA, Web |
 | **PostgreSQL (read-only, local)** | Fase 4+, quando o schema ficar grande | Backend |
-| **AWS (docs + Terraform)** | Fase 18 | DevOps, Architect |
+| **Nuvem (docs + IaC)** | Fase 18, e **só se** o provedor escolhido for uma nuvem grande | DevOps, Architect |
 
 ### 6.3 Não instalar sem necessidade concreta
 
@@ -616,9 +616,12 @@ banco; escrita acidental se o modo restrito não estiver ativo; credencial vazad
 
 ---
 
-### 6.8 AWS MCP
+### 6.8 MCP de nuvem
 
-**Adicionar apenas na Fase 18.** Antes disso não há infraestrutura para operar.
+**Adicionar apenas na Fase 18, e só se a hospedagem escolhida for uma nuvem grande.** Antes
+disso não há infraestrutura para operar — e numa máquina virtual única, que é a recomendação
+atual para o tamanho do MVP, nenhum destes MCPs tem função. O exemplo abaixo usa AWS porque é
+o caso mais complexo; o raciocínio vale para qualquer provedor.
 
 **Ordem de adoção — começar pelo que só lê:**
 
@@ -660,9 +663,9 @@ manda conferir este mapa antes de começar a implementar. Não depende de ningu�
 | 2 | **Playwright MCP** (opcional) | quando explorar UI e rascunhar teste virar rotina | apontar só para local/staging |
 | 4 | **PostgreSQL MCP** | schema grande e consultas PostGIS a inspecionar | criar usuário `mcp_readonly`, modo restrito, banco local |
 | 9 | — | — | doc do gateway de pagamento vem pelo Context7 |
-| 18 | **AWS docs MCP** | início do trabalho de infraestrutura | nenhuma credencial — é só documentação |
+| 18 | **MCP de documentação da nuvem** | só se a hospedagem for uma nuvem grande | nenhuma credencial — é só documentação |
 | 18 | **Terraform MCP** | ao escrever IaC | nenhuma credencial |
-| 18 | **AWS operacional** | só com necessidade comprovada | role IAM dedicada, ambiente de dev, nunca produção |
+| 18 | **MCP operacional da nuvem** | só com necessidade comprovada | credencial dedicada e restrita, ambiente de dev, nunca produção |
 
 **Por que não instalar tudo agora**
 
@@ -702,7 +705,7 @@ instalei e o que depende de você.
 | **Aprovar MCP do projeto** | é um aviso de confiança, respondido dentro da sessão |
 | **Fluxo OAuth** | abre o navegador e exige sua conta |
 | **Instalar programa no sistema** (Docker Desktop) | instalador com interface, permissão de administrador e reinício |
-| **Criar conta e chave de API** | provedor de e-mail, gateway de pagamento, AWS |
+| **Criar conta e chave de API** | provedor de e-mail, gateway de pagamento, hospedagem |
 | **Configurar o GitHub** | proteção de branch, secrets do repositório |
 
 **A regra que evita retrabalho:** se algum item bloqueante depender de você, eu **não começo**
@@ -715,11 +718,15 @@ Antecipado aqui para não virar surpresa:
 
 | Item | Quem |
 | --- | --- |
-| `@playwright/test` e os navegadores | eu |
+| ~~`@playwright/test` e os navegadores~~ ✅ | eu |
 | Playwright MCP, se formos usar | eu registro · **você aprova** |
-| Conta em provedor de e-mail e chave de API (Epic 2.5) | **você** |
-| Conta AWS para o ambiente de staging (Epic 2.6) | **você** |
-| Proteção da branch `main` | **você** |
+| Chave de API do provedor de e-mail (Epic 2.5) | **você** |
+| ~~Conta para o staging (Epic 2.6)~~ | adiado para depois da Fase 5 — nada a fazer agora |
+| ~~Proteção da branch `main`~~ ✅ | **você** |
+
+**A chave de e-mail não se cola no chat.** Ela vai direto para o `.env` da raiz, que não é
+versionado. Chave colada numa conversa fica registrada no histórico dela — foi o que aconteceu
+com um token do GitHub neste projeto, e ele precisou ser revogado.
 
 ## 7. Segurança para agentes e MCPs
 
