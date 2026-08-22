@@ -794,6 +794,11 @@ profissional cadastra aluno que não consentiu ·
   - [ ] Convite por link/e-mail e aceite
   - [ ] Estados do vínculo (ativo, pausado, encerrado)
   - [ ] Um aluno com múltiplos profissionais
+  - [ ] **A lista de alunos marca as fichas cujo e-mail já tem conta**, com botão de convidar —
+        sem isso, o aluno que se cadastrou sozinho fica esperando indefinidamente por um convite
+        que o profissional não sabe que deveria mandar
+  - [ ] Decidir se o aluno pode **reivindicar** fichas existentes, com e-mail confirmado e
+        aprovação do profissional — o porquê de nada ser automático está em `iam.md` §9.4
 - [ ] **Epic 5.3 — Ficha do aluno**
   - [ ] Dados de contato e informações básicas
   - [ ] Observações privadas do profissional
@@ -1844,6 +1849,7 @@ Estrutura-alvo. **Criar cada diretório apenas quando ele tiver conteúdo real.*
 | Catálogo de modalidades aberto ou curado | 3 | `docs/domain/professional-profile.md` |
 | Provedor de geocoding e precisão pública de localização | 12 | ADR-005 |
 | Propriedade e privacidade dos dados do aluno | 5 | `docs/domain/students.md` |
+| **Aluno reivindicar fichas que já existem** — com e-mail confirmado e o profissional aprovando | 5 | `docs/domain/iam.md` §9.4 |
 | Política de conflitos de agenda | 6 | `docs/domain/scheduling.md` |
 | Timezone e modelagem temporal | 6 | ADR-006 |
 | Política de cancelamento | 6 / 7 | `docs/domain/scheduling.md` |

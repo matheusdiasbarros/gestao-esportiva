@@ -220,6 +220,7 @@ contas com o mesmo e-mail. Ao final: uma conta, duas fichas.
 | Convite expirado | Tela explica e oferece pedir novo ao professor. O token antigo nunca revive |
 | Convite reenviado | O anterior é invalidado. No máximo um convite válido por ficha |
 | Dois profissionais convidam o mesmo e-mail | Duas fichas, uma conta. Sem tratamento especial |
+| **O aluno cria a conta antes de ser convidado, e já existem fichas dele** | **Nada é ligado automaticamente.** Ver §9.4 — é decisão consciente, não esquecimento |
 | Aluno só tem WhatsApp, sem e-mail | O profissional usa o convite avulso; o aluno informa o e-mail dele no aceite. **Risco medido:** se a ativação ficar abaixo de 50%, esta é a primeira suspeita |
 | Link avulso repassado para a pessoa errada | 48 h, uso único, e o profissional é notificado no aceite. É detecção, não blindagem |
 | Rodrigo apaga a ficha depois do aceite | A conta de Marina sobrevive. Ela só deixa de ter aquele professor |
@@ -227,6 +228,49 @@ contas com o mesmo e-mail. Ao final: uma conta, duas fichas.
 | Troca de e-mail da conta | Só vale depois de confirmada no endereço novo, e o endereço antigo recebe aviso — é a defesa contra sequestro de conta |
 | Responsável com dois filhos no mesmo professor | Duas fichas apontando para a conta dele. Sem tabela nova |
 | Fim do vínculo | Mudança de estado, nunca exclusão. O profissional continua vendo o histórico; o aluno deixa de ver a agenda e o saldo daquele professor. Regra fina é da Fase 5 |
+
+### 9.4 Por que nada é ligado automaticamente
+
+**A situação.** A Marina cria a conta sozinha, pelo cadastro aberto. O Rodrigo e a Ana já têm,
+cada um, uma ficha dela — criadas antes, sem conta nenhuma. Ninguém convidou ninguém. Como as
+três coisas se encontram?
+
+A resposta é: **não se encontram sozinhas.** Só o convite liga uma ficha a uma conta.
+
+**Por que não casar por telefone ou documento.** A tentação é óbvia: bastaria comparar um
+campo. O problema não é qual campo escolher — é que **todo dado da ficha foi digitado pelo
+profissional e nunca provado pelo aluno**.
+
+Com casamento automático por telefone, o ataque é este:
+
+1. O Rodrigo cadastra a ficha da Marina com o telefone que ele anotou.
+2. Alguém cria uma conta informando **esse mesmo telefone**.
+3. O sistema entrega a ficha: agenda, histórico de aulas, valores pagos, dívida em aberto.
+
+Nada impediu, porque telefone não é segredo e ninguém precisou provar que é seu. Com CPF é o
+mesmo, e pior: obrigaria a pedir documento de todo mundo no cadastro — dado sensível sob LGPD
+e desproporcional para um aplicativo de aula.
+
+O caso não-malicioso é mais provável ainda: **o profissional digita um dígito errado**, e a
+ficha de um aluno vai parar na conta de um desconhecido.
+
+**Por que o e-mail confirmado é diferente.** Não por ser um identificador melhor — é pior que
+CPF, inclusive. Mas é o único que conseguimos **provar que pertence à pessoa**: mandamos um
+link e ela clica. Telefone só teria a mesma força com verificação por SMS, que custa por
+mensagem e depende de um provedor que o projeto adiou para a Fase 10.
+
+Resíduo assumido: e-mail digitado errado pelo profissional permitiria ao dono daquele endereço
+reivindicar a ficha. A defesa é avisar o profissional quando alguém se vincula — detecção, não
+prevenção.
+
+**O que fica decidido para o MVP**
+
+| | |
+| --- | --- |
+| Ligação automática por telefone, documento ou e-mail não verificado | **não existe** |
+| Único caminho | o convite: o profissional decide, o aluno clica, os dois consentem |
+| Fechar o buraco pelo lado do profissional | a lista de alunos marca as fichas cujo e-mail já tem conta, com um botão de convidar — **Fase 5** |
+| Reivindicação pelo aluno, com e-mail confirmado e o profissional aprovando | **Fase 5**, se ainda fizer sentido |
 
 ## 10. Em que contexto a pessoa está
 
