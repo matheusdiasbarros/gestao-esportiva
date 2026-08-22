@@ -135,6 +135,29 @@ export class EnvironmentVariables {
   @ToBoolean()
   @IsBoolean()
   COOKIE_SECURE: boolean = false;
+
+  /**
+   * Endereço público da web, usado para montar os links que vão dentro dos e-mails.
+   *
+   * Não dá para deduzir da requisição: o e-mail é enviado por um trabalhador em segundo plano,
+   * que não tem requisição nenhuma. Um valor errado aqui produz e-mails com link quebrado, e
+   * isso só aparece quando alguém tenta usar o link.
+   */
+  @IsString()
+  APP_WEB_URL: string = 'http://localhost:3000';
+
+  /**
+   * Chave do Resend. Opcional de propósito: sem ela a API sobe e o envio de e-mail fica
+   * desligado, com aviso no log. Exigir a chave impediria qualquer pessoa de rodar o projeto
+   * localmente só para mexer numa tela.
+   */
+  @IsOptional()
+  @IsString()
+  RESEND_API_KEY?: string;
+
+  /** Remetente no formato `Nome <endereco@dominio>`. */
+  @IsString()
+  RESEND_FROM: string = 'Gestao Esportiva <onboarding@resend.dev>';
 }
 
 /**

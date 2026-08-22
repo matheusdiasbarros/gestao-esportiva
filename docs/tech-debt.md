@@ -68,3 +68,6 @@ Não são débito — são erros que custaram tempo e que a documentação agora
 | `argon2` compila em C na instalação; `@node-rs/argon2` traz binário pronto | ADR-004 §5 |
 | Um erro em transação psql aborta todos os comandos seguintes — teste de constraint precisa de `ON_ERROR_ROLLBACK` | — |
 | O Next injeta um `role="alert"` vazio (anunciador de rota), e `getByRole('alert')` acha dois elementos | `e2e/apoio.ts`, função `alerta` |
+| **`migration:generate` apaga o que foi escrito à mão.** Ele compara o banco com o modelo de entidades, e índices parciais e `CHECK` não existem no modelo — então parecem sobra. Toda migration gerada precisa ser podada antes de entrar | comentário no topo de `1787412012053-CriaTokensDeUsuario.ts` |
+| `.returning()` do TypeORM devolve a linha crua do PostgreSQL, fora do mapeamento de nomes — `userId` vem indefinido | `user-token.service.ts`, função `consumir` |
+| `response.json()` num corpo vazio lança, e o erro chega na tela como falha de rede. Checar o tipo de conteúdo, não a lista de códigos | `apps/web/src/lib/api.ts` |

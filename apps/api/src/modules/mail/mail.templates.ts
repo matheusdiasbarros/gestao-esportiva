@@ -1,0 +1,95 @@
+import { MailJob, MailKind } from './mail.types';
+
+export interface MensagemPronta {
+  subject: string;
+  html: string;
+  /** Versão em texto puro. Ver o comentário abaixo — não é enfeite. */
+  text: string;
+}
+
+/**
+ * Os textos dos e-mails.
+ *
+ * **Toda mensagem sai em HTML e em texto puro.** Não é capricho: filtro de spam pontua pior um
+ * e-mail só-HTML, e há gente que lê e-mail em cliente que não renderiza HTML. Como o corpo é
+ * curto, manter as duas versões custa pouco e evita que a mensagem mais importante do produto
+ * — a de recuperar a senha — caia na caixa de spam.
+ *
+ * O HTML é deliberadamente pobre: tabela nenhuma, imagem nenhuma, estilo mínimo em atributo.
+ * Cliente de e-mail não é navegador; metade deles ignora folha de estilo, e o que sobrevive em
+ * todos é parágrafo, negrito e link.
+ */
+export function montarMensagem(job: MailJob): MensagemPronta {
+  switch (job.kind) {
+    case MailKind.VerifyEmail:
+      return {
+        subject: 'Confirme seu e-mail',
+        text: [
+          `Olá, ${job.name}.`,
+          '',
+          'Para enviar convites aos seus alunos, confirme que este endereço é seu:',
+          job.link,
+          '',
+          'Se não foi você que criou a conta, ignore esta mensagem.',
+        ].join('\n'),
+        html: envelope(`
+          <p>Olá, ${escapar(job.name)}.</p>
+          <p>Para enviar convites aos seus alunos, confirme que este endereço é seu.</p>
+          ${botao(job.link, 'Confirmar meu e-mail')}
+          <p style="color:#666">Se não foi você que criou a conta, ignore esta mensagem.</p>
+        `),
+      };
+
+    case MailKind.ResetPassword:
+      return {
+        subject: 'Redefinir sua senha',
+        text: [
+          `Olá, ${job.name}.`,
+          '',
+          `Use o link abaixo para criar uma senha nova. Ele vale por ${job.minutosDeValidade} minutos:`,
+          job.link,
+          '',
+          'Se não foi você que pediu, ignore esta mensagem — sua senha continua a mesma.',
+        ].join('\n'),
+        html: envelope(`
+          <p>Olá, ${escapar(job.name)}.</p>
+          <p>Use o botão abaixo para criar uma senha nova. Ele vale por
+             <strong>${job.minutosDeValidade} minutos</strong>.</p>
+          ${botao(job.link, 'Criar senha nova')}
+          <p style="color:#666">Se não foi você que pediu, ignore esta mensagem — sua senha
+             continua a mesma.</p>
+        `),
+      };
+  }
+}
+
+function envelope(conteudo: string): string {
+  return `<div style="font-family:system-ui,-apple-system,'Segoe UI',Arial,sans-serif;font-size:15px;line-height:1.6;color:#17211e;max-width:520px">
+${conteudo.trim()}
+<p style="color:#888;font-size:13px;margin-top:28px">Gestão Esportiva</p>
+</div>`;
+}
+
+/**
+ * Botão e link em claro, um debaixo do outro.
+ *
+ * Muitos clientes de e-mail escondem o endereço por trás do texto do botão, e a pessoa não tem
+ * como conferir para onde vai antes de clicar — que é exatamente o comportamento que golpe de
+ * phishing explora. Mostrar o endereço embaixo ensina o hábito de olhar.
+ */
+function botao(link: string, rotulo: string): string {
+  const seguro = escapar(link);
+  return `<p style="margin:24px 0">
+  <a href="${seguro}" style="background:#0e6b58;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;display:inline-block">${rotulo}</a>
+</p>
+<p style="color:#666;font-size:13px">Ou copie este endereço:<br><a href="${seguro}" style="color:#0e6b58">${seguro}</a></p>`;
+}
+
+/** O nome vem do cadastro, então é texto de usuário indo para dentro de HTML. */
+function escapar(valor: string): string {
+  return valor
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}

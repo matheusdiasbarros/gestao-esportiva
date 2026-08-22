@@ -8,6 +8,11 @@ allowBuilds:
   # Telemetria de terceiros. Não há motivo para o build deste projeto reportar
   # instalações para um serviço externo.
   '@scarf/scarf': false
+  # Acelerador nativo do msgpackr, que a BullMQ usa para serializar o conteúdo dos jobs.
+  # É opcional: sem ele o msgpackr cai numa implementação em JavaScript puro e tudo funciona.
+  # Não vale compilar código nativo em três sistemas operacionais para ganhar microssegundos
+  # numa fila que hoje manda alguns e-mails por dia.
+  msgpackr-extract: false
   # Resolvedor nativo usado pelo ESLint. Precisa compilar/baixar o binário da
   # plataforma na instalação, senão o lint não roda.
   unrs-resolver: true

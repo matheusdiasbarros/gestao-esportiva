@@ -18,7 +18,14 @@ import { ACCESS_COOKIE, REFRESH_COOKIE } from './auth/cookies';
 import { CurrentUser } from './auth/current-user.decorator';
 import { Public } from './auth/public.decorator';
 import { LimitarCadastro, LimitarLogin, LimitarRenovacao } from './auth/rate-limit';
-import { LoginDto, SignupProfessionalDto, SignupStudentDto } from './dto/auth.dto';
+import {
+  ForgotPasswordDto,
+  LoginDto,
+  ResetPasswordDto,
+  SignupProfessionalDto,
+  SignupStudentDto,
+  TokenDto,
+} from './dto/auth.dto';
 import { AuthService, SessaoAberta } from './services/auth.service';
 import { ClientType } from './services/token.service';
 
@@ -117,6 +124,42 @@ export class AuthController {
     // Limpa sempre, mesmo sem token: sair tem que funcionar em qualquer estado.
     res.clearCookie(ACCESS_COOKIE, this.opcoesDeCookie());
     res.clearCookie(REFRESH_COOKIE, this.opcoesDeCookie());
+  }
+
+  @Public()
+  @LimitarLogin()
+  @Post('password/forgot')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({ summary: 'Pede o link de redefinição de senha' })
+  async esqueciASenha(@Body() dto: ForgotPasswordDto): Promise<void> {
+    // Responde 202 sem esperar o envio, e responde igual exista a conta ou não. Quem chama não
+    // consegue distinguir os dois casos nem pelo corpo, nem pelo código, nem pelo tempo.
+    await this.auth.solicitarRedefinicao(dto.email);
+  }
+
+  @Public()
+  @LimitarCadastro()
+  @Post('password/reset')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Define uma senha nova a partir do link recebido' })
+  async redefinirSenha(@Body() dto: ResetPasswordDto): Promise<void> {
+    await this.auth.redefinirSenha(dto.token, dto.password);
+  }
+
+  @Post('email/verify/request')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({ summary: 'Reenvia o link de confirmação para o próprio endereço' })
+  async pedirVerificacao(@CurrentUser() user: AuthenticatedUser): Promise<void> {
+    await this.auth.solicitarVerificacaoDeEmail(user.id);
+  }
+
+  @Public()
+  @LimitarCadastro()
+  @Post('email/verify')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Confirma o endereço a partir do link recebido' })
+  async verificarEmail(@Body() dto: TokenDto): Promise<void> {
+    await this.auth.verificarEmail(dto.token);
   }
 
   @Get('me')

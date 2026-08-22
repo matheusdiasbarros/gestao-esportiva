@@ -9,14 +9,18 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, QueryFailedError, Repository } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
+import { MailService } from '../../mail/mail.service';
+import { MailKind } from '../../mail/mail.types';
 import { Professional } from '../entities/professional.entity';
 import { Student } from '../entities/student.entity';
+import { TokenPurpose } from '../entities/user-token.entity';
 import { IdentityProvider, UserIdentity } from '../entities/user-identity.entity';
 import { User, UserStatus } from '../entities/user.entity';
 import { avaliarSenha } from './password-policy';
 import { PasswordService } from './password.service';
 import { RolesService } from './roles.service';
 import { AccessTokenPayload, ClientType, ParDeTokens, TokenService } from './token.service';
+import { UserTokenService } from './user-token.service';
 
 /** Versão dos Termos aceita no cadastro. Os documentos ainda não existem — ver `iam.md` §11. */
 export const TERMS_VERSION = 'v0-desenvolvimento';
@@ -51,6 +55,8 @@ export class AuthService {
     private readonly passwords: PasswordService,
     private readonly tokens: TokenService,
     private readonly roles: RolesService,
+    private readonly userTokens: UserTokenService,
+    private readonly mail: MailService,
     @InjectRepository(User) private readonly users: Repository<User>,
     @InjectRepository(UserIdentity) private readonly identities: Repository<UserIdentity>,
     @InjectRepository(Professional) private readonly professionals: Repository<Professional>,
@@ -308,6 +314,120 @@ export class AuthService {
     return { user: descricao, tokens };
   }
 
+  /**
+   * "Esqueci a senha".
+   *
+   * **Sempre responde a mesma coisa**, exista a conta ou não. É a mesma razão do login: dizer
+   * "não encontramos este e-mail" transforma o formulário numa ferramenta para descobrir quem
+   * tem conta, testando endereços um a um.
+   *
+   * Conta anonimizada ou suspensa também não recebe link, e também não avisa.
+   */
+  async solicitarRedefinicao(emailInformado: string): Promise<void> {
+    const email = normalizarEmail(emailInformado);
+    const user = await this.users.findOneBy({ email });
+
+    if (!user || user.status !== UserStatus.Active) return;
+
+    const { tokenEmClaro, minutos } = await this.userTokens.emitir(
+      user.id,
+      TokenPurpose.ResetPassword,
+    );
+
+    await this.mail.enfileirar({
+      kind: MailKind.ResetPassword,
+      to: user.email,
+      name: primeiroNome(user.fullName),
+      link: this.mail.link(`/redefinir-senha?token=${encodeURIComponent(tokenEmClaro)}`),
+      minutosDeValidade: minutos,
+    });
+  }
+
+  /**
+   * Redefinição propriamente dita.
+   *
+   * Trocar a senha **derruba todos os aparelhos**. Se o pedido veio de um sequestro de conta em
+   * andamento, deixar as sessões antigas vivas manteria o invasor dentro mesmo depois da troca
+   * — que é exatamente o que a vítima acabou de tentar impedir.
+   */
+  async redefinirSenha(tokenEmClaro: string, novaSenha: string): Promise<void> {
+    const consumido = await this.userTokens.consumir(tokenEmClaro, TokenPurpose.ResetPassword);
+    if (!consumido) {
+      throw new UnprocessableEntityException({
+        validationErrors: [
+          {
+            field: 'token',
+            message: 'Este link expirou ou já foi usado. Peça um novo em "Esqueci a senha".',
+          },
+        ],
+      });
+    }
+
+    const user = await this.users.findOneBy({ id: consumido.userId });
+    if (!user || user.status !== UserStatus.Active) {
+      throw new UnprocessableEntityException({
+        validationErrors: [{ field: 'token', message: 'Este link não é mais válido.' }],
+      });
+    }
+
+    const avaliacao = avaliarSenha(novaSenha, user.email);
+    if (!avaliacao.ok) {
+      // O token já foi consumido aqui. É proposital: um link de redefinição que sobrevive a
+      // tentativas de senha vira um oráculo para descobrir a política em cima de conta alheia.
+      // O custo é pedir um link novo — e a tela diz isso.
+      throw new UnprocessableEntityException({
+        validationErrors: [
+          { field: 'password', message: avaliacao.mensagem ?? 'Senha inválida.' },
+          {
+            field: 'token',
+            message: 'Por segurança, este link foi encerrado. Peça um novo e escolha outra senha.',
+          },
+        ],
+      });
+    }
+
+    const hash = await this.passwords.hash(novaSenha);
+    await this.identities.update(
+      { userId: user.id, provider: IdentityProvider.Password },
+      { passwordHash: hash, passwordChangedAt: new Date() },
+    );
+
+    await this.tokens.revogarTudoDoUsuario(user.id);
+  }
+
+  /** Envia (ou reenvia) o link de confirmação do endereço. */
+  async solicitarVerificacaoDeEmail(userId: string): Promise<void> {
+    const user = await this.users.findOneBy({ id: userId });
+    if (!user || user.status !== UserStatus.Active) return;
+    if (user.emailVerifiedAt !== null) return;
+
+    const { tokenEmClaro } = await this.userTokens.emitir(user.id, TokenPurpose.VerifyEmail);
+
+    await this.mail.enfileirar({
+      kind: MailKind.VerifyEmail,
+      to: user.email,
+      name: primeiroNome(user.fullName),
+      link: this.mail.link(`/verificar-email?token=${encodeURIComponent(tokenEmClaro)}`),
+    });
+  }
+
+  /** Confirma o endereço. Repetir com o mesmo link falha — é de uso único. */
+  async verificarEmail(tokenEmClaro: string): Promise<void> {
+    const consumido = await this.userTokens.consumir(tokenEmClaro, TokenPurpose.VerifyEmail);
+    if (!consumido) {
+      throw new UnprocessableEntityException({
+        validationErrors: [
+          {
+            field: 'token',
+            message: 'Este link expirou ou já foi usado. Peça um novo dentro da sua conta.',
+          },
+        ],
+      });
+    }
+
+    await this.users.update({ id: consumido.userId }, { emailVerifiedAt: new Date() });
+  }
+
   /** Quem é esta conta, com os dados frescos do banco em vez dos que vieram no token. */
   async descrever(userId: string): Promise<AuthenticatedUser> {
     const user = await this.users.findOneBy({ id: userId });
@@ -385,6 +505,11 @@ function montarPayload(user: AuthenticatedUser): AccessTokenPayload {
 
 export function normalizarEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+/** "Rodrigo Almeida" → "Rodrigo". E-mail que chama pelo nome completo soa como cobrança. */
+function primeiroNome(nomeCompleto: string): string {
+  return nomeCompleto.trim().split(/\s+/)[0] ?? nomeCompleto;
 }
 
 /** `23505` é o código do PostgreSQL para violação de restrição única. */

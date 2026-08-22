@@ -38,8 +38,14 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     throw new ApiError(await lerProblema(response));
   }
 
-  // 204 não tem corpo, e `.json()` num corpo vazio lança. O logout cai exatamente aqui.
-  if (response.status === 204) return undefined as T;
+  // Resposta sem corpo: `.json()` num corpo vazio lança, e o erro chega na tela como "não foi
+  // possível falar com o servidor" — apontando para a rede quando a chamada deu certo.
+  //
+  // Checar pelo tipo de conteúdo, e não pela lista de códigos: `204` era o único tratado, e
+  // `202` do "esqueci a senha" quebrou justamente por isso. Toda rota que responde "aceito, vou
+  // cuidar disso" cai aqui, e não faz sentido colecionar códigos um a um.
+  const tipo = response.headers.get('content-type') ?? '';
+  if (!tipo.includes('json')) return undefined as T;
 
   return (await response.json()) as T;
 }

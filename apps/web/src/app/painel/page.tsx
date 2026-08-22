@@ -1,6 +1,7 @@
 import { Role } from '@gestao/types';
 import { redirect } from 'next/navigation';
 import { LinkPublico } from '@/components/link-publico';
+import { ReenviarVerificacao } from '@/components/reenviar-verificacao';
 import { Sair } from '@/components/sair';
 import { getSessao } from '@/lib/session';
 
@@ -54,10 +55,13 @@ export default async function Painel() {
         </dl>
 
         {!sessao.emailVerified ? (
-          <p className="mt-4 border-t border-(--color-border) pt-4 text-xs text-(--color-ink-muted)">
-            Você pode usar o sistema normalmente. A confirmação do e-mail só será pedida quando você
-            for enviar o primeiro convite para um aluno.
-          </p>
+          <div className="mt-4 border-t border-(--color-border) pt-4">
+            <p className="text-xs text-(--color-ink-muted)">
+              Você pode usar o sistema normalmente. A confirmação do e-mail só será pedida quando
+              você for enviar o primeiro convite para um aluno.
+            </p>
+            <ReenviarVerificacao />
+          </div>
         ) : null}
       </section>
 

@@ -520,12 +520,12 @@ ela ·
   - [x] Cadastro aberto de aluno
   - [x] Link público do profissional ("treine comigo") — cadastro já ligado a ele
   - [ ] Convite endereçado e convite avulso — dependem do Epic 2.5
-  - [ ] Verificação de e-mail: não bloqueia a entrada; exigida ao enviar o primeiro convite
+  - [x] Verificação de e-mail: não bloqueia a entrada; reenvio pelo painel
   - [x] Login e logout
   - [x] Renovação com rotação e **detecção de reuso** (invalida a família do aparelho)
   - [x] Guard global: rota nasce protegida, pública só com `@Public()`
   - [x] Cookie `httpOnly` na web, token no corpo no app
-  - [ ] Recuperação e redefinição de senha
+  - [x] Recuperação e redefinição de senha — redefinir derruba todos os aparelhos
   - [ ] Troca de e-mail com confirmação no endereço novo e aviso no antigo
   - [x] Respostas indistinguíveis no login — **o cadastro de profissional é exceção consciente**, ver ADR-004 §9
   - [x] Rate limiting por IP **e** por alvo, em Redis — 5 tentativas por e-mail a cada 15 min
@@ -543,15 +543,17 @@ ela ·
   - [x] Cadastro de aluno pelo link público — **no navegador, sem instalar app**
   - [x] Estado vazio do aluno sem professor
   - [x] O profissional vê e copia o próprio link de captação
-  - [ ] Telas web de esqueci a senha e redefinir
+  - [x] Telas web de esqueci a senha, redefinir e confirmar e-mail
   - [ ] Aceite de convite pelo navegador
   - [ ] Telas mobile equivalentes, com token em `expo-secure-store`
   - [x] Playwright: Chromium instalado, cadastro/login/proteção de rota cobertos e rodando no CI
   - [ ] Playwright: cobrir também recuperação de senha e aceite de convite, quando existirem
-- [ ] **Epic 2.5 — E-mail transacional mínimo 🔁** *(antecipado da Fase 10)*
-  - [ ] Provedor de e-mail configurado
-  - [ ] Fila BullMQ para envio assíncrono
-  - [ ] Templates de verificação e recuperação
+- [x] **Epic 2.5 — E-mail transacional mínimo 🔁** ✅ 2026-08-21 *(antecipado da Fase 10)*
+  - [x] Provedor de e-mail configurado (Resend), com a chave fora do repositório
+  - [x] Fila BullMQ para envio assíncrono, com espera crescente entre tentativas
+  - [x] Templates de verificação e recuperação, em HTML **e** texto puro
+  - [x] Sem chave configurada, o e-mail vai para o log com o link — dá para desenvolver sem provedor
+  - [x] Recusa por domínio não verificado é tratada como erro permanente, com instrução no log
 - [ ] ~~**Epic 2.6 — Deploy mínimo**~~ → **adiado para depois da Fase 5**, em 2026-08-21
 
   > A antecipação vinha de uma boa intenção — publicar cedo em vez de deixar tudo para o fim.
@@ -603,7 +605,8 @@ Todas resolvidas em 2026-08-20. Registro completo em [`docs/domain/iam.md`](docs
 - [ ] Rotas protegidas retornam 401/403/404 conforme `iam.md` §7, com testes de integração
 - [ ] **Cada célula "não pode" da matriz tem um teste** — célula sem teste é lacuna
 - [ ] Reutilizar token de renovação já rotacionado invalida a família, com teste explícito
-- [ ] Recuperação de senha entregue por e-mail real em *staging*
+- [x] Recuperação de senha entregue por e-mail real — verificada à mão em 2026-08-21, com
+      entrega confirmada pelo Resend. O *staging* saiu do escopo da fase
 - [x] Matriz de permissões documentada em `docs/domain/iam.md`
 - [ ] *Staging* publicado e atualizado automaticamente a partir da `main`
 - [ ] Revisão de segurança do fluxo de auth registrada

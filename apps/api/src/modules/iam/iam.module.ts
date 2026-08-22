@@ -9,6 +9,7 @@ import { Redis } from 'ioredis';
 import { AppConfigModule } from '../../config/config.module';
 import { EnvironmentVariables } from '../../config/env.validation';
 import { REDIS_CLIENT } from '../../redis/redis.module';
+import { MailModule } from '../mail/mail.module';
 import { AuthController } from './auth.controller';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { JwtStrategy } from './auth/jwt.strategy';
@@ -24,12 +25,14 @@ import { Professional } from './entities/professional.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { StudentInvite } from './entities/student-invite.entity';
 import { Student } from './entities/student.entity';
+import { UserToken } from './entities/user-token.entity';
 import { UserIdentity } from './entities/user-identity.entity';
 import { User } from './entities/user.entity';
 import { AuthService } from './services/auth.service';
 import { PasswordService } from './services/password.service';
 import { RolesService } from './services/roles.service';
 import { TokenService } from './services/token.service';
+import { UserTokenService } from './services/user-token.service';
 
 /**
  * Identidade da plataforma: contas, papéis e permissões.
@@ -78,6 +81,8 @@ import { TokenService } from './services/token.service';
       }),
     }),
 
+    MailModule,
+
     TypeOrmModule.forFeature([
       User,
       UserIdentity,
@@ -85,6 +90,7 @@ import { TokenService } from './services/token.service';
       Student,
       StudentInvite,
       RefreshToken,
+      UserToken,
     ]),
   ],
   controllers: [AuthController],
@@ -92,6 +98,7 @@ import { TokenService } from './services/token.service';
     PasswordService,
     RolesService,
     TokenService,
+    UserTokenService,
     AuthService,
     JwtStrategy,
     // A ordem importa: o limite de tentativas roda **antes** da autenticação. Conferir uma

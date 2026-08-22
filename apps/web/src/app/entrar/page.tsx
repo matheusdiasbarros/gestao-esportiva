@@ -62,6 +62,13 @@ export default function Entrar() {
         <Botao carregando={carregando}>Entrar</Botao>
       </form>
 
+      <Link
+        href="/esqueci-a-senha"
+        className="text-sm font-medium text-(--color-ink-muted) underline"
+      >
+        Esqueci a senha
+      </Link>
+
       <p className="text-sm text-(--color-ink-muted)">
         Ainda não tem conta?{' '}
         <Link href="/criar-conta" className="font-medium text-(--color-ink) underline">

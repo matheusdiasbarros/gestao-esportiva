@@ -61,6 +61,33 @@ export class SignupStudentDto extends SignupProfessionalDto {
   signupSlug?: string;
 }
 
+export class ForgotPasswordDto {
+  @ApiProperty({ example: 'rodrigo@exemplo.com' })
+  @Trim()
+  @IsString()
+  @Length(1, 254)
+  email: string;
+}
+
+export class ResetPasswordDto {
+  @ApiProperty({ description: 'O token que veio no link do e-mail.' })
+  @IsString()
+  @Length(1, 200)
+  token: string;
+
+  @ApiProperty({ minLength: MINIMUM_PASSWORD_LENGTH })
+  @IsString()
+  @Length(MINIMUM_PASSWORD_LENGTH, 200)
+  password: string;
+}
+
+export class TokenDto {
+  @ApiProperty({ description: 'O token que veio no link do e-mail.' })
+  @IsString()
+  @Length(1, 200)
+  token: string;
+}
+
 export class LoginDto {
   @ApiProperty({ example: 'rodrigo@exemplo.com' })
   @Trim()
