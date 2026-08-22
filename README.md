@@ -21,7 +21,13 @@ remarcar e pagar sozinho.
 | pnpm | 11 — instale com `corepack enable pnpm` |
 | Docker Desktop | para PostgreSQL e Redis locais |
 
-## Como rodar
+## Como rodar — o caminho curto
+
+No Windows, **dois cliques em [`iniciar.bat`](iniciar.bat)**. Ele confere as ferramentas, sobe
+o banco, aplica as migrations, popula os dados de exemplo, liga API e web, e abre o navegador
+quando estiver pronto. Para derrubar tudo depois, [`parar.bat`](parar.bat).
+
+## Como rodar — passo a passo
 
 ```bash
 # 1. Dependências
@@ -65,6 +71,8 @@ pnpm --filter @gestao/mobile dev
 
 | Comando | O que faz |
 | --- | --- |
+| `iniciar.bat` | sobe o ambiente inteiro e abre o navegador (Windows) |
+| `parar.bat` | derruba servidores e containers, **preservando os dados** |
 | `pnpm dev` | sobe API e web em modo de desenvolvimento |
 | `pnpm build` | constrói todos os pacotes |
 | `pnpm test` | roda os testes de unidade |
