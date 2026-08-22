@@ -7,6 +7,8 @@ dist/
 build/
 out/
 .next/
+# Saída do `next dev`, separada da de produção — ver o comentário em apps/web/next.config.ts
+.next-dev/
 .expo/
 *.log
 *.tsbuildinfo
