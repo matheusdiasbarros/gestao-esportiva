@@ -49,6 +49,19 @@ export interface AuthenticatedUser {
   emailVerified: boolean;
   /** Presente quando a conta tem perfil de profissional. */
   professionalId?: string;
+  /**
+   * A parte final do link "treine comigo". Só vem em `GET /auth/me`, que consulta o banco —
+   * não viaja dentro do token, porque pode ser desligada e o token não saberia.
+   */
+  signupSlug?: string;
+  /**
+   * Esta conta acompanha algum profissional como aluna?
+   *
+   * Falso é estado válido e permanente: o cadastro aberto (D10) cria conta sem professor, e
+   * ela fica assim até alguém convidá-la. A tela precisa saber disso para mostrar um estado
+   * vazio explicativo em vez de um painel em branco.
+   */
+  hasProfessional?: boolean;
 }
 
 /** Idade mínima para ter conta na plataforma (decisão D9). */

@@ -1,5 +1,16 @@
 import { AuthenticatedUser } from '@gestao/types';
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  NotFoundException,
+  Param,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { EnvironmentVariables } from '../../config/env.validation';
@@ -7,7 +18,7 @@ import { ACCESS_COOKIE, REFRESH_COOKIE } from './auth/cookies';
 import { CurrentUser } from './auth/current-user.decorator';
 import { Public } from './auth/public.decorator';
 import { LimitarCadastro, LimitarLogin, LimitarRenovacao } from './auth/rate-limit';
-import { LoginDto, SignupProfessionalDto } from './dto/auth.dto';
+import { LoginDto, SignupProfessionalDto, SignupStudentDto } from './dto/auth.dto';
 import { AuthService, SessaoAberta } from './services/auth.service';
 import { ClientType } from './services/token.service';
 
@@ -34,6 +45,32 @@ export class AuthController {
       etiquetaDeAparelho(req),
     );
     return this.responder(sessao, req, res);
+  }
+
+  @Public()
+  @LimitarCadastro()
+  @Post('signup/student')
+  @ApiOperation({
+    summary: 'Cria uma conta de aluno, com ou sem o link público de um profissional',
+  })
+  async signupStudent(
+    @Body() dto: SignupStudentDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{ user: AuthenticatedUser; accessToken?: string; refreshToken?: string }> {
+    const sessao = await this.auth.cadastrarAluno(dto, clienteDe(req), etiquetaDeAparelho(req));
+    return this.responder(sessao, req, res);
+  }
+
+  @Public()
+  @Get('signup-link/:slug')
+  @ApiOperation({ summary: 'Quem é o dono de um link público, para a tela dizer o nome dele' })
+  async donoDoLink(@Param('slug') slug: string): Promise<{ professionalName: string }> {
+    const dono = await this.auth.donoDoLinkPublico(slug);
+    // 404 e não 200 com nulo: link que não vale é recurso que não existe, e a tela já sabe
+    // tratar "não encontrado" sem precisar inspecionar o corpo.
+    if (!dono) throw new NotFoundException('Este link de cadastro não é mais válido.');
+    return { professionalName: dono.fullName };
   }
 
   @Public()
@@ -83,9 +120,13 @@ export class AuthController {
   }
 
   @Get('me')
-  @ApiOperation({ summary: 'Quem está autenticado. Rota protegida — prova que o token vale' })
-  quemSouEu(@CurrentUser() user: AuthenticatedUser): AuthenticatedUser {
-    return user;
+  @ApiOperation({ summary: 'Quem está autenticado, com os dados frescos do banco' })
+  async quemSouEu(@CurrentUser() user: AuthenticatedUser): Promise<AuthenticatedUser> {
+    // Consulta o banco em vez de devolver o que veio no token. Custa uma ida a mais, e paga:
+    // é esta a rota que as telas usam para montar a área logada, e o token pode estar até 15
+    // minutos atrasado — tempo suficiente para alguém aceitar um convite e o painel continuar
+    // dizendo que ela não tem professor.
+    return this.auth.descrever(user.id);
   }
 
   /**

@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { AuthenticatedUser, MINIMUM_SIGNUP_AGE } from '@gestao/types';
+import { AccessHolder, AuthenticatedUser, MINIMUM_SIGNUP_AGE, StudentStatus } from '@gestao/types';
 import {
   ConflictException,
   Injectable,
@@ -10,6 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, QueryFailedError, Repository } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
 import { Professional } from '../entities/professional.entity';
+import { Student } from '../entities/student.entity';
 import { IdentityProvider, UserIdentity } from '../entities/user-identity.entity';
 import { User, UserStatus } from '../entities/user.entity';
 import { avaliarSenha } from './password-policy';
@@ -26,6 +27,11 @@ export interface DadosDeCadastro {
   birthDate: string;
   password: string;
   acceptedTerms: boolean;
+}
+
+export interface DadosDeCadastroDeAluno extends DadosDeCadastro {
+  /** Ausente no cadastro aberto: a conta nasce sem professor, e isso é estado válido. */
+  signupSlug?: string;
 }
 
 export interface Credenciais {
@@ -47,6 +53,7 @@ export class AuthService {
     private readonly roles: RolesService,
     @InjectRepository(User) private readonly users: Repository<User>,
     @InjectRepository(UserIdentity) private readonly identities: Repository<UserIdentity>,
+    @InjectRepository(Professional) private readonly professionals: Repository<Professional>,
   ) {}
 
   /**
@@ -106,6 +113,123 @@ export class AuthService {
       if (ehViolacaoDeUnicidade(erro, 'uq_users_email')) {
         throw new ConflictException(
           'Já existe uma conta com este e-mail. Entre na sua conta ou recupere a senha.',
+        );
+      }
+      throw erro;
+    }
+
+    const user = await this.users.findOneByOrFail({ id: userId });
+    return this.abrirSessao(user, client, deviceLabel);
+  }
+
+  /**
+   * Nome do profissional dono de um link público, para a tela poder dizer "Treine com Rodrigo".
+   *
+   * Devolve `null` em vez de erro quando o link não vale — a tela precisa distinguir "link
+   * inválido, mostre uma explicação" de "deu ruim no servidor", e as duas coisas não podem
+   * chegar do mesmo jeito.
+   */
+  async donoDoLinkPublico(slug: string): Promise<{ fullName: string } | null> {
+    const professional = await this.professionals.findOne({
+      where: { signupSlug: slug, signupLinkEnabled: true },
+      relations: { user: true },
+      select: { id: true, user: { fullName: true, status: true } },
+    });
+
+    if (!professional || professional.user.status !== UserStatus.Active) return null;
+    return { fullName: professional.user.fullName };
+  }
+
+  /**
+   * Cadastro de aluno.
+   *
+   * Duas portas na mesma função. **Com** o link público do profissional, a conta já nasce com
+   * ficha na carteira dele — resolve o aluno indicado, que hoje o Rodrigo digita à mão.
+   * **Sem** o link, nasce uma conta sem professor, que é o cadastro aberto da decisão D10.
+   *
+   * A conta sem professor não tem o que fazer no produto até alguém convidá-la, e isso é
+   * esperado: é um estado vazio, não um erro. A tela precisa dizer isso com todas as letras.
+   */
+  async cadastrarAluno(
+    dados: DadosDeCadastroDeAluno,
+    client: ClientType,
+    deviceLabel: string | null,
+  ): Promise<SessaoAberta> {
+    const email = normalizarEmail(dados.email);
+    this.validarCadastro(dados, email);
+
+    // O link é resolvido **antes** de criar qualquer coisa. Criar a conta e só então descobrir
+    // que o link morreu deixaria a pessoa com uma conta órfã e a impressão de que o cadastro
+    // falhou — quando na verdade metade dele funcionou.
+    let professionalId: string | null = null;
+    if (dados.signupSlug) {
+      const professional = await this.professionals.findOne({
+        where: { signupSlug: dados.signupSlug, signupLinkEnabled: true },
+        select: { id: true },
+      });
+
+      if (!professional) {
+        throw new UnprocessableEntityException({
+          validationErrors: [
+            {
+              field: 'signupSlug',
+              message: 'Este link de cadastro não é mais válido. Peça um novo ao seu professor.',
+            },
+          ],
+        });
+      }
+      professionalId = professional.id;
+    }
+
+    const senhaHash = await this.passwords.hash(dados.password);
+    const userId = uuidv7();
+    const agora = new Date();
+    const nome = dados.fullName.trim();
+
+    try {
+      await this.dataSource.transaction(async (manager) => {
+        await manager.insert(User, {
+          id: userId,
+          email,
+          fullName: nome,
+          birthDate: dados.birthDate,
+          isPlatformAdmin: false,
+          status: UserStatus.Active,
+          emailVerifiedAt: null,
+          pendingEmail: null,
+          termsVersion: TERMS_VERSION,
+          termsAcceptedAt: agora,
+        });
+
+        await manager.insert(UserIdentity, {
+          id: uuidv7(),
+          userId,
+          provider: IdentityProvider.Password,
+          providerUid: null,
+          passwordHash: senhaHash,
+          passwordChangedAt: agora,
+        });
+
+        if (professionalId) {
+          // A ficha nasce com o nome e o e-mail que a própria pessoa informou. O professor
+          // pode editar depois: a ficha é dele, e o que ele conhece pode ser outra coisa.
+          await manager.insert(Student, {
+            id: uuidv7(),
+            professionalId,
+            userId,
+            fullName: nome,
+            email,
+            phone: null,
+            birthDate: dados.birthDate,
+            status: StudentStatus.Active,
+            accessHolder: AccessHolder.Self,
+          });
+        }
+      });
+    } catch (erro) {
+      if (ehViolacaoDeUnicidade(erro, 'uq_users_email')) {
+        throw new ConflictException(
+          'Já existe uma conta com este e-mail. Entre na sua conta para continuar.',
         );
       }
       throw erro;
@@ -182,6 +306,15 @@ export class AuthService {
     const descricao = await this.roles.describe(user);
     const tokens = await this.tokens.rotacionar(guardado, montarPayload(descricao), client);
     return { user: descricao, tokens };
+  }
+
+  /** Quem é esta conta, com os dados frescos do banco em vez dos que vieram no token. */
+  async descrever(userId: string): Promise<AuthenticatedUser> {
+    const user = await this.users.findOneBy({ id: userId });
+    if (!user || user.status !== UserStatus.Active) {
+      throw new UnauthorizedException('Sessão inválida. Entre novamente.');
+    }
+    return this.roles.describe(user);
   }
 
   /** Sai deste aparelho e mantém os outros. Sem token, não há o que fazer — e isso não é erro. */

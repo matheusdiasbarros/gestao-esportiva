@@ -517,8 +517,9 @@ ela ·
   - [x] Hash argon2id com `@node-rs/argon2` — falta calibrar na máquina de destino
   - [x] Política de senha: mínimo 10 caracteres, lista local de senhas vazadas, sem regra de composição
   - [x] Cadastro de profissional
-  - [ ] Cadastro aberto de aluno
-  - [ ] Convite endereçado, convite avulso e link público — os três com aceite pelo navegador
+  - [x] Cadastro aberto de aluno
+  - [x] Link público do profissional ("treine comigo") — cadastro já ligado a ele
+  - [ ] Convite endereçado e convite avulso — dependem do Epic 2.5
   - [ ] Verificação de e-mail: não bloqueia a entrada; exigida ao enviar o primeiro convite
   - [x] Login e logout
   - [x] Renovação com rotação e **detecção de reuso** (invalida a família do aparelho)
@@ -539,10 +540,12 @@ ela ·
   - [x] Telas web de cadastro de profissional e login
   - [x] Painel protegido no servidor: quem não tem sessão é redirecionado antes de o HTML sair
   - [x] Sair
+  - [x] Cadastro de aluno pelo link público — **no navegador, sem instalar app**
+  - [x] Estado vazio do aluno sem professor
+  - [x] O profissional vê e copia o próprio link de captação
   - [ ] Telas web de esqueci a senha e redefinir
-  - [ ] Aceite de convite e cadastro por link público — **no navegador, sem instalar app**
+  - [ ] Aceite de convite pelo navegador
   - [ ] Telas mobile equivalentes, com token em `expo-secure-store`
-  - [ ] Estado vazio do aluno sem professor
   - [x] Playwright: Chromium instalado, cadastro/login/proteção de rota cobertos e rodando no CI
   - [ ] Playwright: cobrir também recuperação de senha e aceite de convite, quando existirem
 - [ ] **Epic 2.5 — E-mail transacional mínimo 🔁** *(antecipado da Fase 10)*

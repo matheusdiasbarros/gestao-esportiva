@@ -55,7 +55,10 @@ export class RolesService {
   /** Monta o que a API devolve sobre quem está autenticado, após login e após renovação. */
   async describe(user: User): Promise<AuthenticatedUser> {
     const [professional, temFicha] = await Promise.all([
-      this.professionals.findOne({ where: { userId: user.id }, select: { id: true } }),
+      this.professionals.findOne({
+        where: { userId: user.id },
+        select: { id: true, signupSlug: true, signupLinkEnabled: true },
+      }),
       this.students.exists({ where: { userId: user.id } }),
     ]);
 
@@ -69,7 +72,11 @@ export class RolesService {
         temFicha,
       }),
       emailVerified: user.emailVerifiedAt !== null,
+      hasProfessional: temFicha,
       ...(professional ? { professionalId: professional.id } : {}),
+      // O slug só sai quando o link está ligado: entregá-lo desligado faria a tela oferecer
+      // para copiar um endereço que não funciona.
+      ...(professional?.signupLinkEnabled ? { signupSlug: professional.signupSlug } : {}),
     };
   }
 }

@@ -1,5 +1,6 @@
 import { Role } from '@gestao/types';
 import { redirect } from 'next/navigation';
+import { LinkPublico } from '@/components/link-publico';
 import { Sair } from '@/components/sair';
 import { getSessao } from '@/lib/session';
 
@@ -17,6 +18,11 @@ export default async function Painel() {
   // A checagem acontece no servidor, antes de qualquer HTML sair. Não há instante em que o
   // conteúdo do painel exista no navegador de quem não está autenticado.
   if (!sessao) redirect('/entrar');
+
+  // Conta de aluno sem nenhum professor: resultado esperado do cadastro aberto, não erro.
+  // Quem tem perfil de profissional não cai aqui mesmo sem alunos — o painel dele tem outro
+  // assunto.
+  const ehAlunoSemProfessor = !sessao.professionalId && sessao.hasProfessional === false;
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center gap-8 px-6 py-16">
@@ -54,6 +60,27 @@ export default async function Painel() {
           </p>
         ) : null}
       </section>
+
+      {sessao.signupSlug ? (
+        <section className="rounded-xl border border-(--color-border) bg-(--color-surface-muted) p-6">
+          <h2 className="mb-3 text-sm font-medium">Seu link para captar alunos</h2>
+          <LinkPublico slug={sessao.signupSlug} />
+        </section>
+      ) : null}
+
+      {ehAlunoSemProfessor ? (
+        <section className="rounded-xl border border-(--color-border) bg-(--color-surface-muted) p-6">
+          <h2 className="text-sm font-medium">Você ainda não tem professor</h2>
+          <p className="mt-2 text-sm text-(--color-ink-muted)">
+            Sua conta está criada, mas ainda não está ligada a nenhum profissional — então não há
+            aulas nem pagamentos para mostrar.
+          </p>
+          <p className="mt-3 text-sm text-(--color-ink-muted)">
+            Peça ao seu professor o link <strong>&ldquo;treine comigo&rdquo;</strong> dele, ou um
+            convite. Ao abrir esse link já estando com a conta criada, é só entrar.
+          </p>
+        </section>
+      ) : null}
 
       <p className="text-xs text-(--color-ink-muted)">
         Esta tela existe para provar que cadastro, login e rota protegida funcionam ponta a ponta. O

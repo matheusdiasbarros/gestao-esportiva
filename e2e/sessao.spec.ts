@@ -94,7 +94,7 @@ test.describe('Proteção de rota', () => {
 
   test('a home troca os botões conforme o estado da sessão', async ({ page, context }) => {
     await page.goto('/');
-    await expect(page.getByRole('link', { name: 'Criar conta' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Sou profissional' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Ir para o painel' })).toHaveCount(0);
 
     const conta = contaNova();
@@ -112,6 +112,6 @@ test.describe('Proteção de rota', () => {
 
     await context.clearCookies();
     await page.goto('/');
-    await expect(page.getByRole('link', { name: 'Criar conta' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Sou profissional' })).toBeVisible();
   });
 });

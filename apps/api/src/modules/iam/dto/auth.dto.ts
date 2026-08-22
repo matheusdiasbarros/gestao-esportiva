@@ -1,7 +1,15 @@
 import { MINIMUM_PASSWORD_LENGTH } from '@gestao/types';
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { Equals, IsBoolean, IsDateString, IsEmail, IsString, Length } from 'class-validator';
+import {
+  Equals,
+  IsBoolean,
+  IsDateString,
+  IsEmail,
+  IsOptional,
+  IsString,
+  Length,
+} from 'class-validator';
 
 /** Espaço nas pontas de e-mail digitado no celular é regra, não exceção. */
 const Trim = (): PropertyDecorator =>
@@ -36,6 +44,21 @@ export class SignupProfessionalDto {
   @IsBoolean()
   @Equals(true, { message: 'É preciso aceitar os Termos de Uso e a Política de Privacidade.' })
   acceptedTerms: boolean;
+}
+
+export class SignupStudentDto extends SignupProfessionalDto {
+  /**
+   * A parte final do link "treine comigo" do profissional, quando o cadastro veio por ele.
+   *
+   * Ausente no cadastro aberto (decisão D10): a conta nasce sem professor e cai num estado
+   * vazio até alguém convidá-la. É estado válido, não erro.
+   */
+  @ApiProperty({ required: false, description: 'Slug do link público do profissional.' })
+  @IsOptional()
+  @Trim()
+  @IsString()
+  @Length(1, 40)
+  signupSlug?: string;
 }
 
 export class LoginDto {

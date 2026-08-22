@@ -54,7 +54,13 @@ export default async function Home() {
               href="/criar-conta"
               className="rounded-lg bg-(--color-ink) px-4 py-2.5 text-sm font-medium text-(--color-surface)"
             >
-              Criar conta
+              Sou profissional
+            </Link>
+            <Link
+              href="/criar-conta/aluno"
+              className="rounded-lg border border-(--color-border) px-4 py-2.5 text-sm font-medium"
+            >
+              Sou aluno
             </Link>
             <Link
               href="/entrar"
