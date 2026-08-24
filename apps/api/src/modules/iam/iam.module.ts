@@ -10,9 +10,12 @@ import { AppConfigModule } from '../../config/config.module';
 import { EnvironmentVariables } from '../../config/env.validation';
 import { REDIS_CLIENT } from '../../redis/redis.module';
 import { MailModule } from '../mail/mail.module';
+import { AdminController } from './admin.controller';
 import { AuthController } from './auth.controller';
+import { AuditoriaDeLeitura } from './auth/auditoria';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { JwtStrategy } from './auth/jwt.strategy';
+import { PapeisGuard } from './auth/papeis.guard';
 import { LimiteDeTentativasGuard } from './auth/rate-limit.guard';
 import { SessaoHttp } from './auth/sessao-http';
 import {
@@ -30,6 +33,8 @@ import { UserToken } from './entities/user-token.entity';
 import { UserIdentity } from './entities/user-identity.entity';
 import { User } from './entities/user.entity';
 import { InvitesController } from './invites.controller';
+import { AccessService } from './services/access.service';
+import { AdminService } from './services/admin.service';
 import { AuthService } from './services/auth.service';
 import { InviteService } from './services/invite.service';
 import { PasswordService } from './services/password.service';
@@ -96,22 +101,29 @@ import { UserTokenService } from './services/user-token.service';
       UserToken,
     ]),
   ],
-  controllers: [AuthController, InvitesController],
+  controllers: [AuthController, InvitesController, AdminController],
   providers: [
     PasswordService,
     RolesService,
     TokenService,
     UserTokenService,
     SessaoHttp,
+    AccessService,
     AuthService,
     InviteService,
+    AdminService,
+    AuditoriaDeLeitura,
     JwtStrategy,
     // A ordem importa: o limite de tentativas roda **antes** da autenticação. Conferir uma
     // senha com argon2 custa centenas de milissegundos de CPU por tentativa — deixar isso
     // depois do guard de token transformaria o próprio mecanismo de defesa em alvo.
     { provide: APP_GUARD, useClass: LimiteDeTentativasGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    // Depois do JwtAuthGuard, e a ordem é a regra inteira: o guard de papéis lê
+    // `request.user`, que só existe depois de a autenticação ter acontecido. Invertido, ele
+    // recusaria toda rota marcada — inclusive para quem tem o papel.
+    { provide: APP_GUARD, useClass: PapeisGuard },
   ],
-  exports: [PasswordService, RolesService, TokenService],
+  exports: [PasswordService, RolesService, TokenService, AccessService],
 })
 export class IamModule {}

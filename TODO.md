@@ -564,12 +564,24 @@ ela ·
   - [x] Respostas indistinguíveis no login — **o cadastro de profissional é exceção consciente**, ver ADR-004 §9
   - [x] Rate limiting por IP **e** por alvo, em Redis — 5 tentativas por e-mail a cada 15 min
   - [ ] Lista completa de senhas vazadas (hoje é um subconjunto)
-- [ ] **Epic 2.3 — Autorização**
+- [x] **Epic 2.3 — Autorização** ✅ 2026-08-24
   - [x] Guard global: rota é protegida por padrão, pública só com marcação explícita *(entregue junto do Epic 2.2)*
-  - [ ] Regra de propriedade (dono) e de participação, como decorators reutilizáveis
-  - [ ] Recurso de outro dono responde **404**, não 403
-  - [ ] Matriz papel × recurso implementada conforme `docs/domain/iam.md` §6
-  - [ ] Log estruturado de toda leitura de dado pessoal feita por administrador
+  - [x] `@Papeis()` e o `PapeisGuard` — a camada de papel, com **administrador reconferido no banco**
+  - [x] Regra de propriedade (dono) e de participação — no `AccessService`, **não** em decorator
+
+    > O TODO pedia decorators. Não dá, e a razão é do problema, não da biblioteca: guard roda
+    > antes de o controller existir e **não conhece recurso**. "Você é profissional?" cabe num
+    > decorator; "esta ficha é sua?" exige o identificador e uma ida ao banco. Forçar em
+    > decorator exigiria um registro de carregadores por tipo de recurso — arquitetura para um
+    > tipo de recurso só. Quem chama pede explicitamente, e a regra continua num lugar só.
+
+  - [x] Recurso de outro dono responde **404**, não 403
+  - [x] Matriz papel × recurso implementada conforme `docs/domain/iam.md` §6 — nas células dos
+        recursos que existem hoje: conta e convite
+  - [x] Log estruturado de toda leitura de dado pessoal feita por administrador — com o
+        identificador do alvo e **sem** o conteúdo
+  - [x] Rotas de administração: listar contas, suspender/reativar, reenviar confirmação.
+        **Sem tela** — o painel do administrador não tem épico em fase nenhuma
 - [ ] **Epic 2.4 — Front-end de auth** 🟨
   - [x] Telas web de cadastro de profissional e login
   - [x] Painel protegido no servidor: quem não tem sessão é redirecionado antes de o HTML sair
@@ -639,9 +651,13 @@ Todas resolvidas em 2026-08-20. Registro completo em [`docs/domain/iam.md`](docs
 - [x] Aceite de convite funciona **inteiramente no navegador** — verificado à mão e pela API em
       2026-08-24. O teste Playwright do aceite fica para a Fase 5: aceitar consome a única ficha
       sem conta que existe, e criar ficha pela interface é da Fase 5. Ver DT-005
-- [ ] Rotas protegidas retornam 401/403/404 conforme `iam.md` §7, com testes de integração
-- [ ] **Cada célula "não pode" da matriz tem um teste** — célula sem teste é lacuna
-- [ ] Reutilizar token de renovação já rotacionado invalida a família, com teste explícito
+- [x] Rotas protegidas retornam 401/403/404 conforme `iam.md` §7, com testes de integração —
+      `e2e/autorizacao.spec.ts`
+- [x] **Cada célula "não pode" da matriz tem um teste** — para os recursos que existem: conta
+      e convite. Perfil, agenda, pacote, turma e cobrança entram junto com as fases que os
+      criarem, e cada uma herda esta obrigação
+- [x] Reutilizar token de renovação já rotacionado invalida a família, com teste explícito —
+      `e2e/renovacao.spec.ts`
 - [x] Recuperação de senha entregue por e-mail real — verificada à mão em 2026-08-21, com
       entrega confirmada pelo Resend. O *staging* saiu do escopo da fase
 - [x] Matriz de permissões documentada em `docs/domain/iam.md`

@@ -1,17 +1,13 @@
+import { UserStatus } from '@gestao/types';
 import { Column, Entity, Index, OneToMany, OneToOne } from 'typeorm';
 import { BaseEntity } from '../../../database/base.entity';
 import type { Professional } from './professional.entity';
 import type { Student } from './student.entity';
 import type { UserIdentity } from './user-identity.entity';
 
-export enum UserStatus {
-  /** Uso normal. */
-  Active = 'ACTIVE',
-  /** Bloqueada por um administrador. Não entra, e os dados continuam intactos. */
-  Suspended = 'SUSPENDED',
-  /** Pediu exclusão. Login não existe mais e os dados pessoais foram apagados (decisão D8b). */
-  Anonymized = 'ANONYMIZED',
-}
+// Reexportado porque metade do módulo importa `UserStatus` daqui junto com `User`, e separar as
+// duas origens só produziria uma linha de import a mais em cada arquivo.
+export { UserStatus };
 
 /**
  * A conta: a chave da porta.

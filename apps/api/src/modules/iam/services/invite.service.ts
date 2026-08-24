@@ -31,6 +31,7 @@ import {
   normalizarEmail,
   primeiroNome,
 } from './auth.service';
+import { AccessService } from './access.service';
 import { ClientType, hashDe } from './token.service';
 
 /**
@@ -77,6 +78,7 @@ interface ConviteResolvido {
 export class InviteService {
   constructor(
     private readonly dataSource: DataSource,
+    private readonly access: AccessService,
     private readonly auth: AuthService,
     private readonly mail: MailService,
     @InjectRepository(StudentInvite) private readonly invites: Repository<StudentInvite>,
@@ -93,14 +95,13 @@ export class InviteService {
    * lista de pendências que ele precise zerar.
    */
   async listar(userId: string): Promise<InviteRow[]> {
-    const professional = await this.professionals.findOne({
-      where: { userId },
-      select: { id: true },
-    });
-    if (!professional) return [];
+    const professionalId = await this.access.carteiraDe(userId);
+    // Lista vazia, não erro: quem não é profissional simplesmente não tem carteira, e a tela
+    // já não mostra a seção. Recusar aqui transformaria um estado normal em falha.
+    if (!professionalId) return [];
 
     const fichas = await this.students.find({
-      where: { professionalId: professional.id, userId: IsNull() },
+      where: { professionalId, userId: IsNull() },
       order: { fullName: 'ASC' },
     });
     if (fichas.length === 0) return [];
@@ -340,29 +341,24 @@ export class InviteService {
     return { invite, student, professional, dono };
   }
 
-  /** A ficha existe, é desta carteira e ainda não tem conta? */
+  /**
+   * A ficha existe, é desta carteira e ainda não tem conta?
+   *
+   * A pergunta "é desta carteira" é do `AccessService`, e não daqui: ela vai reaparecer em toda
+   * rota de aluno, agenda e cobrança da Fase 5 em diante. Respondida em cada serviço, uma delas
+   * um dia responde diferente — e a que responder diferente será a que vaza.
+   */
   private async fichaConvidavel(
     userId: string,
     studentId: string,
   ): Promise<{ student: Student; dono: User }> {
-    const dono = await this.users.findOneBy({ id: userId });
-    const professional = await this.professionals.findOne({
-      where: { userId },
-      select: { id: true },
-    });
-
-    // Ficha de outra carteira responde 404, não 403 — um 403 confirmaria que aquele
-    // identificador existe. Regra transversal 1 de `docs/domain/iam.md` §7.
-    const student = professional
-      ? await this.students.findOneBy({ id: studentId, professionalId: professional.id })
-      : null;
-
-    if (!dono || !student) throw new NotFoundException('Esta ficha não existe na sua carteira.');
+    const student = await this.access.fichaComoDono(userId, studentId);
 
     if (student.userId !== null) {
       throw new ConflictException('Esta ficha já está ligada a uma conta.');
     }
 
+    const dono = await this.users.findOneByOrFail({ id: userId });
     return { student, dono };
   }
 

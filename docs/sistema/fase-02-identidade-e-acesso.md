@@ -14,23 +14,29 @@ Contas, login e as duas portas de entrada do aluno.
 - Cadastro de profissional e de aluno, login, logout, renovação de acesso
 - Link público do profissional — "treine comigo"
 - **Convite**, nas duas modalidades, ligando uma ficha existente a uma conta
+- **Autorização**: papel por rota, propriedade por recurso, e o 404 que não confirma existência
+- Rotas de administração (sem tela), com auditoria de toda leitura de dado pessoal
 - Recuperação de senha e confirmação de e-mail, com envio real
 - Limite de tentativas por IP **e** por e-mail alvo
 - Telas web para tudo isso, com o painel protegido no servidor
 
-**Não entregou ainda:** troca de e-mail, telas no aplicativo, e a autorização por recurso.
+**Não entregou ainda:** troca de e-mail e as telas no aplicativo.
 
 ## 2. Mapa dos arquivos
 
 ```text
 apps/api/src/modules/iam/
   auth.controller.ts               as 12 rotas de autenticação
-  invites.controller.ts            as 4 rotas de convite
+  invites.controller.ts            as 5 rotas de convite
+  admin.controller.ts              as 3 rotas de administração — sem tela
   iam.module.ts                    fronteira do módulo e os dois guards globais
   auth/
     jwt.strategy.ts                lê o token do cookie ou do cabeçalho
     jwt-auth.guard.ts              rota nasce protegida; @Public() abre
     public.decorator.ts
+    papeis.decorator.ts            @Papeis(Role.Admin) — a camada grossa
+    papeis.guard.ts                confere o papel; admin é reconferido no banco
+    auditoria.ts                   registra leitura de dado pessoal por administrador
     current-user.decorator.ts      injeta quem está autenticado no controller
     cookies.ts                     nomes dos cookies, num lugar só
     sessao-http.ts                 sessão -> resposta HTTP; a política de cookie mora aqui
@@ -43,6 +49,8 @@ apps/api/src/modules/iam/
   services/
     auth.service.ts                **as regras** — o arquivo mais importante da fase
     invite.service.ts              emitir, descrever e aceitar convite
+    access.service.ts              dono e participante — **a regra de propriedade**
+    admin.service.ts               listar contas, suspender e reativar
     password.service.ts            hash argon2id
     password-policy.ts             comprimento e lista de senhas vazadas
     token.service.ts               emissão, rotação e revogação de tokens
@@ -86,7 +94,20 @@ apps/web/src/
 | `GET /invites/:token` | sim | quem convidou e para quem, para a tela de aceite |
 | `POST /invites/:token/accept` | sim | aceita criando conta |
 | `POST /invites/:token/join` | **não** | aceita com a conta que já está logada |
+| `GET /admin/users` | **admin** | lista contas, com busca. Auditada |
+| `PATCH /admin/users/:id/status` | **admin** | suspende ou reativa. Auditada |
+| `POST /admin/users/:id/email/verify/request` | **admin** | reenvia a confirmação |
 | `GET /health` | sim | fora do limite de tentativas |
+
+### Qual código sai em qual situação
+
+Confundir os três é o erro mais comum aqui, e cada um protege uma coisa diferente:
+
+| Código | Quando | Por quê |
+| --- | --- | --- |
+| **401** | ninguém está autenticado | a rota existe e exige sessão |
+| **403** | o papel não alcança a área | não há identificador em jogo; `/admin/users` existe para todos, e esconder isso não protege nada |
+| **404** | o recurso é de outro dono | um 403 confirmaria que aquele identificador existe, e transformaria a rota num verificador |
 
 ## 4. Invariantes — o que não pode ser quebrado
 
@@ -106,6 +127,9 @@ apps/web/src/
 | **No máximo um convite válido por ficha** | garantido por índice parcial, não por checagem na aplicação, que perderia sob concorrência |
 | **Só o convite endereçado nasce com o e-mail verificado** | é o único canal que prova controle da caixa. Qualquer outro caminho marcando `emailVerifiedAt` é bug |
 | **A URL do convite endereçado nunca é devolvida a quem o emitiu** | poder repassá-la por outro canal dissolveria a prova acima |
+| **Propriedade se resolve numa consulta só, com os dois critérios juntos** | buscar e comparar depois dá o mesmo resultado hoje e vaza no dia em que alguém puser um `return` no meio |
+| **Administrador é reconferido no banco a cada requisição** | os outros papéis vêm do token e podem atrasar 15 min; para admin essa janela é o cenário que a revogação existe para impedir |
+| **A auditoria registra o identificador, nunca o conteúdo** | copiar dado pessoal para o log cria uma segunda cópia dele, com outra retenção e outro controle de acesso |
 
 ## 4.1 O que muda no banco a cada passo do convite
 
@@ -189,8 +213,8 @@ primeira confirmação e torna a gravação segura contra dois pedidos simultân
 ## 6. Como verificar que continua funcionando
 
 ```bash
-pnpm lint && pnpm typecheck && pnpm test    # 68 testes de unidade
-pnpm test:e2e                               # 42 testes em navegador
+pnpm lint && pnpm typecheck && pnpm test    # 74 testes de unidade
+pnpm test:e2e                               # 59 testes contra o sistema inteiro
 ```
 
 **A suíte não pode ser rodada duas vezes seguidas.** Ela mesma gasta o teto de login por IP —
@@ -221,7 +245,12 @@ Contas de exemplo depois de `pnpm --filter @gestao/api seed`, todas com senha
 | `marina@exemplo.local` | aluna com ficha em **dois** profissionais |
 | `beatriz@exemplo.local` | conta de aluna **sem professor** — o estado vazio |
 | `carlos@exemplo.local` | responsável que acessa a ficha de uma menor |
-| `admin@gestao.local` | administrador |
+| `admin@gestao.local` | administrador — senha `trocar-esta-senha`, de `SEED_ADMIN_PASSWORD` |
+
+`autorizacao.spec.ts` e `renovacao.spec.ts` são testes de **API**, não de tela, e é deliberado:
+a regra que eles protegem mora no servidor. Cobrir só a interface provaria que o botão está
+escondido — e botão escondido não é autorização. O token de renovação da web, então, vive num
+cookie `httpOnly` que o JavaScript da página não alcança: não há como exercitá-lo pela tela.
 
 **O e-mail só chega no endereço da conta Resend** enquanto o remetente for `resend.dev`.
 Qualquer outro destinatário volta 403, e o log explica.

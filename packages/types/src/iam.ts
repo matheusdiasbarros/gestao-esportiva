@@ -20,6 +20,23 @@ export const Role = {
 
 export type Role = (typeof Role)[keyof typeof Role];
 
+/**
+ * Estado da conta.
+ *
+ * Estava só na API até a Fase 2 abrir as rotas de administração, que precisam mostrar e mudar
+ * esse valor — a partir daí ele cruza a fronteira e o lugar dele é aqui.
+ */
+export const UserStatus = {
+  /** Uso normal. */
+  Active: 'ACTIVE',
+  /** Bloqueada por um administrador. Não entra, e os dados continuam intactos. */
+  Suspended: 'SUSPENDED',
+  /** Pediu exclusão. Login não existe mais e os dados pessoais foram apagados (decisão D8b). */
+  Anonymized: 'ANONYMIZED',
+} as const;
+
+export type UserStatus = (typeof UserStatus)[keyof typeof UserStatus];
+
 /** Estado do vínculo entre um aluno e o profissional dono da ficha. */
 export const StudentStatus = {
   Active: 'ACTIVE',
@@ -107,6 +124,31 @@ export interface InviteIssued {
   kind: InviteKind;
   expiresAt: string;
   url?: string;
+}
+
+/**
+ * Uma conta vista pelo administrador.
+ *
+ * O que **não** está aqui é tão deliberado quanto o que está: nada de telefone, data de
+ * nascimento, fichas ou histórico. O administrador do MVP resolve suporte — "esta conta
+ * consegue entrar?", "este e-mail foi confirmado?" — e para isso não precisa do resto. Ver
+ * `docs/domain/iam.md` §7, regra 2.
+ */
+export interface AdminUserRow {
+  id: string;
+  email: string;
+  fullName: string;
+  roles: Role[];
+  status: UserStatus;
+  emailVerified: boolean;
+  createdAt: string;
+}
+
+export interface AdminUserPage {
+  rows: AdminUserRow[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 /**
