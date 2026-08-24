@@ -20,7 +20,9 @@ Contas, login e as duas portas de entrada do aluno.
 - Limite de tentativas por IP **e** por e-mail alvo
 - Telas web para tudo isso, com o painel protegido no servidor
 
-**Não entregou ainda:** troca de e-mail e as telas no aplicativo.
+- Telas no aplicativo do aluno, com a sessão guardada no cofre do aparelho
+
+**Não entregou ainda:** troca de e-mail.
 
 ## 2. Mapa dos arquivos
 
@@ -62,6 +64,14 @@ apps/api/src/modules/mail/
   mail.processor.ts                consome a fila e chama o Resend
   mail.templates.ts                os textos, em HTML e em texto puro
   mail.types.ts                    um tipo por assunto de e-mail
+
+apps/mobile/
+  app/index.tsx                    decide entre painel e entrar; nao pisca
+  app/entrar, criar-conta, esqueci-a-senha, painel, diagnostico
+  src/lib/guarda.ts                tokens no Keychain/Keystore, via expo-secure-store
+  src/lib/api.ts                   x-client-type: mobile, e a renovacao automatica
+  src/contexto/sessao.tsx          quem esta logado, para o app inteiro
+  src/componentes/campos.tsx       campos, botao, aviso e a moldura de teclado
 
 apps/web/src/
   app/entrar, criar-conta, criar-conta/aluno, esqueci-a-senha,
@@ -130,6 +140,8 @@ Confundir os três é o erro mais comum aqui, e cada um protege uma coisa difere
 | **Propriedade se resolve numa consulta só, com os dois critérios juntos** | buscar e comparar depois dá o mesmo resultado hoje e vaza no dia em que alguém puser um `return` no meio |
 | **Administrador é reconferido no banco a cada requisição** | os outros papéis vêm do token e podem atrasar 15 min; para admin essa janela é o cenário que a revogação existe para impedir |
 | **A auditoria registra o identificador, nunca o conteúdo** | copiar dado pessoal para o log cria uma segunda cópia dele, com outra retenção e outro controle de acesso |
+| **No aplicativo os tokens vão para `expo-secure-store`, nunca `AsyncStorage`** | o AsyncStorage grava em arquivo comum: em aparelho com root e em backup não criptografado, o token sai em texto puro |
+| **Toda chamada do aplicativo manda `x-client-type: mobile`** | sem isso a API responde com cookie, que em React Native não existe — o login "dá certo" e nada depois fica autenticado |
 
 ## 4.1 O que muda no banco a cada passo do convite
 
@@ -194,6 +206,20 @@ o resto do sistema confia nessa marca para deixar a conta agir para fora.
 repetir leva ao mesmo estado. Nunca use em redefinição de senha nem em convite: ali a segunda
 vez é uma ação de verdade.
 
+**A renovação do aplicativo é compartilhada entre chamadas simultâneas.** Três telas carregando
+juntas com o token vencido disparariam três renovações; a primeira rotaciona, e as outras duas
+chegam com um token **já rotacionado** — que é exatamente o sinal de roubo que a API procura.
+Ela derrubaria a família inteira, o app deslogaria sozinho, e o log registraria um ataque que
+não houve.
+
+**A troca de senha não existe no aplicativo, de propósito.** A tela de recuperar pede o e-mail;
+o link abre no navegador, na tela que a web já tem. Duplicá-la manteria dois caminhos para a
+operação mais delicada da conta.
+
+**O cadastro do aplicativo só cria conta de aluno.** Este é o app do aluno. Quem dá aula precisa
+de carteira, agenda e financeiro, que não cabem bem numa tela de celular — e a tela de entrar
+diz isso com todas as letras, em vez de deixar o profissional criar uma conta que não vai usar.
+
 **Confirmar o e-mail é idempotente; redefinir senha não é.** Reapresentar o link de confirmação
 responde 204 em silêncio, porque confirmar duas vezes leva ao mesmo estado. O caminho é
 `consumir` e, se falhar, `consumidoAntes` — que **só serve para operação idempotente** e nunca
@@ -254,6 +280,21 @@ cookie `httpOnly` que o JavaScript da página não alcança: não há como exerc
 
 **O e-mail só chega no endereço da conta Resend** enquanto o remetente for `resend.dev`.
 Qualquer outro destinatário volta 403, e o log explica.
+
+### O aplicativo
+
+```bash
+pnpm --filter @gestao/mobile dev     # abre o servidor do Expo; leia o QR com o Expo Go
+```
+
+**Não há teste automatizado do aplicativo.** O Playwright é navegador, e as telas do app só
+rodam em aparelho ou emulador. O que o CI garante é tipo e lint. Verificar o app é abrir e usar:
+criar conta, fechar o aplicativo **de verdade** (não só minimizar), reabrir e conferir que
+continua logado — é isso que prova o `expo-secure-store`.
+
+`localhost` no celular aponta para o próprio aparelho, não para a sua máquina. O app resolve o
+IP a partir do servidor do Expo; quando falhar, a tela **Diagnóstico**, no rodapé do login,
+mostra o endereço que ele está usando de fato.
 
 ## 7. O que NÃO existe
 

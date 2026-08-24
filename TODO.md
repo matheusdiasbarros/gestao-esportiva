@@ -591,7 +591,8 @@ ela ·
   - [x] O profissional vê e copia o próprio link de captação
   - [x] Telas web de esqueci a senha, redefinir e confirmar e-mail
   - [x] Aceite de convite pelo navegador — três estados: já logado, tem conta, sem conta
-  - [ ] Telas mobile equivalentes, com token em `expo-secure-store`
+  - [x] Telas mobile: entrar, criar conta de aluno, recuperar acesso, painel e sair —
+        sessão em `expo-secure-store`, com renovação automática e compartilhada
   - [x] Playwright: Chromium instalado, cadastro/login/proteção de rota cobertos e rodando no CI
   - [x] Playwright: recuperação de senha e emissão de convite cobertas
   - [ ] Playwright: **o aceite** do convite — bloqueado até a Fase 5, ver DT-005
