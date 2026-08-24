@@ -1,7 +1,7 @@
 import type { AuthenticatedUser } from '@gestao/types';
 import { createContext, use, useCallback, useEffect, useMemo, useState } from 'react';
 import { apiFetch, apiPublico } from '@/lib/api';
-import { apagarTokens, guardarTokens } from '@/lib/guarda';
+import { apagarTokens, guardarTokens, lerTokens } from '@/lib/guarda';
 
 interface RespostaDeSessao {
   user: AuthenticatedUser;
@@ -40,6 +40,14 @@ export function SessaoProvider({ children }: { children: React.ReactNode }) {
   const [usuario, setUsuario] = useState<AuthenticatedUser | null | undefined>(undefined);
 
   const recarregar = useCallback(async () => {
+    // Sem token guardado não há o que perguntar. Sem esta saída, toda abertura do app faz uma
+    // requisição que só pode dar 401 — round trip desperdiçado na tela mais sensível a demora,
+    // e um erro vermelho no console que parece defeito e não é.
+    if (!(await lerTokens())) {
+      setUsuario(null);
+      return;
+    }
+
     try {
       // `/auth/me` consulta o banco em vez de decodificar o token: papéis e confirmação de
       // e-mail podem ter mudado desde a emissão, e é esta rota que a área logada usa.

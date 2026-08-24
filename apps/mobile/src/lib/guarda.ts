@@ -21,13 +21,19 @@ export interface Tokens {
 }
 
 /**
- * O SecureStore não existe em todo lugar — na web do Expo, por exemplo.
+ * O SecureStore não existe em todo lugar — no alvo navegador, por exemplo, que existe só para
+ * conferir as telas durante o desenvolvimento.
  *
- * Quando não existe, esta camada devolve `null` em vez de explodir, e o efeito é a pessoa
- * precisar entrar de novo a cada abertura. Degradar assim é melhor do que travar o app; e
- * guardar em memória seria pior que as duas coisas, porque parece funcionar.
+ * Onde ele falta, os tokens ficam **em memória**: funcionam enquanto a aba estiver aberta e
+ * somem ao recarregar. Não é `localStorage` de propósito. Memória é estritamente mais segura
+ * que disco, e escrever token em `localStorage` — legível por qualquer script da página —
+ * ensinaria o padrão errado num arquivo cujo assunto inteiro é onde guardar segredo. O preço é
+ * entrar de novo a cada recarga do navegador, e no alvo que importa, o celular, isso não
+ * acontece.
  */
-async function disponivel(): Promise<boolean> {
+let emMemoria: Tokens | null = null;
+
+async function temCofre(): Promise<boolean> {
   try {
     return await SecureStore.isAvailableAsync();
   } catch {
@@ -35,16 +41,20 @@ async function disponivel(): Promise<boolean> {
   }
 }
 
-export async function guardarTokens({ accessToken, refreshToken }: Tokens): Promise<void> {
-  if (!(await disponivel())) return;
+export async function guardarTokens(tokens: Tokens): Promise<void> {
+  if (!(await temCofre())) {
+    emMemoria = tokens;
+    return;
+  }
+
   await Promise.all([
-    SecureStore.setItemAsync(CHAVE_ACESSO, accessToken),
-    SecureStore.setItemAsync(CHAVE_RENOVACAO, refreshToken),
+    SecureStore.setItemAsync(CHAVE_ACESSO, tokens.accessToken),
+    SecureStore.setItemAsync(CHAVE_RENOVACAO, tokens.refreshToken),
   ]);
 }
 
 export async function lerTokens(): Promise<Tokens | null> {
-  if (!(await disponivel())) return null;
+  if (!(await temCofre())) return emMemoria;
 
   const [accessToken, refreshToken] = await Promise.all([
     SecureStore.getItemAsync(CHAVE_ACESSO),
@@ -58,7 +68,9 @@ export async function lerTokens(): Promise<Tokens | null> {
 }
 
 export async function apagarTokens(): Promise<void> {
-  if (!(await disponivel())) return;
+  emMemoria = null;
+  if (!(await temCofre())) return;
+
   await Promise.all([
     SecureStore.deleteItemAsync(CHAVE_ACESSO),
     SecureStore.deleteItemAsync(CHAVE_RENOVACAO),

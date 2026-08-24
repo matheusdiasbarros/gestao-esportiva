@@ -284,13 +284,27 @@ Qualquer outro destinatário volta 403, e o log explica.
 ### O aplicativo
 
 ```bash
-pnpm --filter @gestao/mobile dev     # abre o servidor do Expo; leia o QR com o Expo Go
+pnpm --filter @gestao/mobile dev            # servidor do Expo: QR para o celular, tecla w para o navegador
+pnpm --filter @gestao/mobile dev -- --web   # direto no navegador, em http://localhost:8081
 ```
 
-**Não há teste automatizado do aplicativo.** O Playwright é navegador, e as telas do app só
-rodam em aparelho ou emulador. O que o CI garante é tipo e lint. Verificar o app é abrir e usar:
-criar conta, fechar o aplicativo **de verdade** (não só minimizar), reabrir e conferir que
-continua logado — é isso que prova o `expo-secure-store`.
+**O navegador é alvo de conferência, não de entrega.** Serve para ver as telas sem celular, e
+foi acrescentado porque o Expo Go da Play Store recusa o SDK 57 em aparelho com Android mais
+antigo — a loja entrega a versão compatível com o aparelho, não a mais nova. O que sai nas
+lojas é iOS e Android.
+
+Duas coisas mudam de comportamento no navegador, e as duas são esperadas:
+
+| No navegador | Por quê |
+| --- | --- |
+| A sessão some ao recarregar | não existe cofre do sistema; os tokens ficam em memória |
+| A API precisa liberar a porta 8081 | está em `API_CORS_ORIGINS`, junto com a 3000 |
+
+**Não há teste automatizado do aplicativo.** O CI garante tipo e lint. O alvo navegador agora
+tornaria possível cobrir as telas com Playwright — não está feito, e é decisão em aberto.
+
+O que só o celular prova: criar conta, fechar o aplicativo **de verdade** (não só minimizar),
+reabrir e conferir que continua logado. É isso que exercita o `expo-secure-store`.
 
 `localhost` no celular aponta para o próprio aparelho, não para a sua máquina. O app resolve o
 IP a partir do servidor do Expo; quando falhar, a tela **Diagnóstico**, no rodapé do login,

@@ -62,6 +62,11 @@ O app mobile sobe à parte, porque abre o servidor de desenvolvimento do Expo:
 pnpm --filter @gestao/mobile dev
 ```
 
+Leia o QR com o **Expo Go** para ver no celular, ou tecle `w` para abrir no navegador, em
+http://localhost:8081. O navegador é só para conferir as telas: lá não existe o cofre do
+sistema, então recarregar a página desloga. O Expo Go da loja **recusa o projeto** em aparelho
+com Android mais antigo — a loja entrega a versão compatível com o aparelho, não a mais nova.
+
 > **A porta do Postgres é 5433, não 5432.** É comum haver um PostgreSQL nativo instalado na
 > máquina ocupando a porta padrão — e quando isso acontece a aplicação conecta no servidor
 > errado, com sintoma de falha de autenticação e nenhuma pista de que o container não estava
