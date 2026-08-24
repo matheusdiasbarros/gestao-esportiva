@@ -65,8 +65,8 @@ export default function Entrar() {
           Criar conta de aluno
         </Botao>
         <Text style={estilos.nota}>
-          Dá aula? O painel do profissional fica no site — ele tem carteira de alunos, agenda e
-          financeiro, que não cabem bem numa tela de celular.
+          Dá aula? Entre com a mesma conta do site — o aplicativo mostra o que você precisa fora de
+          casa. A conta de profissional se cria no site.
         </Text>
       </View>
 

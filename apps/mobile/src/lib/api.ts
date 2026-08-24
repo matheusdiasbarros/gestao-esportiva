@@ -22,6 +22,31 @@ function resolverBaseUrl(): string {
 export const baseUrl = resolverBaseUrl();
 
 /**
+ * Onde o **site** está — que não é onde a API está.
+ *
+ * O aplicativo precisa disso para montar o link "treine comigo", que aponta para uma página da
+ * web. Não dá para reaproveitar `baseUrl`: a API responde na 3333 e o site na 3000.
+ *
+ * Também não dá para o servidor mandar pronto. Ele conhece o `APP_WEB_URL` configurado, que em
+ * desenvolvimento é `http://localhost:3000` — e `localhost`, no celular, é o próprio celular.
+ * O link chegaria quebrado justamente em quem fosse testar.
+ *
+ * Então: `EXPO_PUBLIC_WEB_URL` quando existir, e senão o mesmo host da API na porta do site.
+ * Em produção a variável é obrigatória; a dedução abaixo é só a ponte do desenvolvimento.
+ */
+const PORTA_DO_SITE = 3000;
+
+function resolverWebUrl(): string {
+  const configurada = process.env.EXPO_PUBLIC_WEB_URL;
+  if (configurada) return configurada.replace(/\/+$/, '');
+
+  const hostDoExpo = Constants.expoConfig?.hostUri?.split(':')[0];
+  return `http://${hostDoExpo ?? 'localhost'}:${PORTA_DO_SITE}`;
+}
+
+export const webUrl = resolverWebUrl();
+
+/**
  * Diz à API que quem chama é o aplicativo.
  *
  * Sem este cabeçalho a API responde como responde para a web: tokens em cookie `httpOnly`, que

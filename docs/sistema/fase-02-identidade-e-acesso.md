@@ -20,7 +20,7 @@ Contas, login e as duas portas de entrada do aluno.
 - Limite de tentativas por IP **e** por e-mail alvo
 - Telas web para tudo isso, com o painel protegido no servidor
 
-- Telas no aplicativo do aluno, com a sessão guardada no cofre do aparelho
+- Telas no aplicativo — **aluno e profissional** —, com a sessão no cofre do aparelho
 
 **Não entregou ainda:** troca de e-mail.
 
@@ -72,6 +72,7 @@ apps/mobile/
   src/lib/api.ts                   x-client-type: mobile, e a renovacao automatica
   src/contexto/sessao.tsx          quem esta logado, para o app inteiro
   src/componentes/campos.tsx       campos, botao, aviso e a moldura de teclado
+  src/componentes/convidar.tsx     convite pelo celular, via folha de compartilhamento
 
 apps/web/src/
   app/entrar, criar-conta, criar-conta/aluno, esqueci-a-senha,
@@ -216,9 +217,27 @@ não houve.
 o link abre no navegador, na tela que a web já tem. Duplicá-la manteria dois caminhos para a
 operação mais delicada da conta.
 
-**O cadastro do aplicativo só cria conta de aluno.** Este é o app do aluno. Quem dá aula precisa
-de carteira, agenda e financeiro, que não cabem bem numa tela de celular — e a tela de entrar
-diz isso com todas as letras, em vez de deixar o profissional criar uma conta que não vai usar.
+**O aplicativo serve os dois papéis, e o painel se adapta a quem entrou.** O profissional vê o
+link "treine comigo" e a lista de quem falta convidar; o aluno vê o estado da conta dele.
+
+Isto começou errado: as telas nasceram dizendo "o painel do profissional fica no site, não cabe
+no celular". Era confundir *a superfície completa de gestão* com *o que ele precisa na quadra* —
+e ele trabalha em pé, longe de um computador. A pergunta estava em aberto no `TODO.md` desde o
+início, na Fase 11, e foi respondida em 2026-08-24: **o aplicativo serve os dois.**
+
+**O cadastro do aplicativo ainda só cria conta de aluno.** Não é a mesma decisão: conta de
+profissional se cria no site, onde o perfil da Fase 3 vai morar. O profissional entra no
+aplicativo com a conta que já tem, e a tela de entrar diz isso.
+
+**No aplicativo o convite abre a folha de compartilhamento**, em vez de copiar para a área de
+transferência. Copiar exige lembrar de colar em algum lugar; compartilhar já oferece o WhatsApp,
+que é para onde o link vai de fato. Onde não houver compartilhamento — no navegador, por
+exemplo — o endereço fica na tela para selecionar à mão, porque ele **não volta**.
+
+**O endereço do site é deduzido, não recebido do servidor.** A API conhece o `APP_WEB_URL`
+configurado, que em desenvolvimento é `http://localhost:3000` — e `localhost`, no celular, é o
+próprio celular. O link chegaria quebrado justamente em quem fosse testar. Ver `webUrl` em
+`apps/mobile/src/lib/api.ts`.
 
 **Confirmar o e-mail é idempotente; redefinir senha não é.** Reapresentar o link de confirmação
 responde 204 em silêncio, porque confirmar duas vezes leva ao mesmo estado. O caminho é

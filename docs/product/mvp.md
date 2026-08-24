@@ -206,7 +206,7 @@ ele está mantendo o WhatsApp em paralelo — e nesse caso o produto não substi
 | 8 — Turmas | reduzida | **P1 resolvida: entram.** Sem lista de espera (Epic 8.3) |
 | 9 — Financeiro | parcial | PIX e baixa manual; sem split, KYC ou NF |
 | 10 — Notificações | parcial | e-mail e push; sem WhatsApp |
-| 11 — Aplicativo do aluno | integral | app nativo Expo (P2 resolvida) |
+| 11 — Aplicativo | integral | app nativo Expo, aluno e profissional (P2 resolvida) |
 | 12–17 | não | |
 | 18 — Produção | obrigatória | não se lança sem ela |
 | 19 — Escala | não | só com métricas reais |

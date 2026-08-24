@@ -1,9 +1,11 @@
 import { Role } from '@gestao/types';
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { Botao, cores } from '@/componentes/campos';
+import { ConvidarAlunos } from '@/componentes/convidar';
 import { useSessao } from '@/contexto/sessao';
+import { webUrl } from '@/lib/api';
 
 const NOME_DO_PAPEL: Record<Role, string> = {
   [Role.Professional]: 'Profissional',
@@ -29,6 +31,7 @@ export default function Painel() {
   if (usuario === null) return <Redirect href="/entrar" />;
 
   const semProfessor = !usuario.professionalId && usuario.hasProfessional === false;
+  const ehProfissional = Boolean(usuario.professionalId);
 
   async function encerrar() {
     setSaindo(true);
@@ -58,6 +61,17 @@ export default function Painel() {
         ) : null}
       </View>
 
+      {ehProfissional ? (
+        <View style={estilos.cartao}>
+          <Text style={estilos.tituloCartao}>Chamar alunos</Text>
+          <Text style={estilos.texto}>
+            Aluno novo aparece na aula, não em casa. Convide daqui mesmo, com o telefone na mão.
+          </Text>
+          {usuario.signupSlug ? <LinkPublico slug={usuario.signupSlug} /> : null}
+          <ConvidarAlunos emailVerificado={usuario.emailVerified} />
+        </View>
+      ) : null}
+
       {semProfessor ? (
         <View style={estilos.cartao}>
           <Text style={estilos.tituloCartao}>Você ainda não tem professor</Text>
@@ -77,14 +91,40 @@ export default function Painel() {
       ) : null}
 
       <Text style={estilos.aviso}>
-        Esta tela existe para provar que entrar, guardar a sessão no aparelho e sair funcionam ponta
-        a ponta. As aulas, a agenda e os pagamentos nascem nas fases seguintes.
+        {ehProfissional
+          ? 'Presença, agenda e cobrança chegam ao aplicativo nas fases que as criarem. Por enquanto o que dá para fazer daqui é chamar aluno.'
+          : 'Esta tela existe para provar que entrar, guardar a sessão no aparelho e sair funcionam ponta a ponta. As aulas, a agenda e os pagamentos nascem nas fases seguintes.'}
       </Text>
 
       <Botao aoTocar={encerrar} carregando={saindo} variante="secundario">
         Sair
       </Botao>
     </ScrollView>
+  );
+}
+
+/** O link "treine comigo", pronto para mandar. Ver `webUrl` em `lib/api.ts`. */
+function LinkPublico({ slug }: { slug: string }) {
+  const endereco = `${webUrl}/treine-com/${slug}`;
+  const [erro, setErro] = useState<string | null>(null);
+
+  return (
+    <View style={estilos.link}>
+      <Text style={estilos.enderecoTexto} numberOfLines={1} selectable>
+        {endereco}
+      </Text>
+      <Botao
+        variante="secundario"
+        aoTocar={() => {
+          Share.share({ message: `Treine comigo: ${endereco}`, url: endereco }).catch(() =>
+            setErro('Compartilhamento indisponível aqui. O endereço acima dá para selecionar.'),
+          );
+        }}
+      >
+        Compartilhar meu link
+      </Botao>
+      {erro ? <Text style={estilos.avisoLink}>{erro}</Text> : null}
+    </View>
   );
 }
 
@@ -118,4 +158,16 @@ const estilos = StyleSheet.create({
   texto: { fontSize: 14, color: cores.suave, lineHeight: 20 },
   nota: { fontSize: 12, color: cores.tenue, lineHeight: 18 },
   aviso: { fontSize: 12, color: cores.tenue, lineHeight: 18 },
+  link: { gap: 8, paddingBottom: 4 },
+  enderecoTexto: {
+    fontSize: 12,
+    color: cores.suave,
+    borderWidth: 1,
+    borderColor: cores.borda,
+    backgroundColor: cores.branco,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  avisoLink: { fontSize: 12, color: cores.perigo, lineHeight: 18 },
 });

@@ -111,7 +111,11 @@ export default function CriarConta() {
       </Botao>
 
       <Text style={estilos.nota}>
-        Sua conta nasce sem professor, e isso é normal. Para ligá-la a alguém, peça o link
+        Esta tela cria conta de <Text style={estilos.forte}>aluno</Text>. Se você dá aula, crie a
+        sua no site e depois entre por aqui com ela.
+      </Text>
+      <Text style={estilos.nota}>
+        A conta de aluno nasce sem professor, e isso é normal. Para ligá-la a alguém, peça o link
         &ldquo;treine comigo&rdquo; ou um convite ao seu professor.
       </Text>
     </Moldura>
@@ -136,4 +140,5 @@ const estilos = StyleSheet.create({
   aceiteRecusado: { color: cores.perigo },
   erro: { fontSize: 12, color: cores.perigo, marginTop: -8 },
   nota: { fontSize: 12, color: cores.tenue, lineHeight: 18, textAlign: 'center' },
+  forte: { fontWeight: '600', color: cores.suave },
 });

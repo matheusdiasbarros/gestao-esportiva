@@ -90,25 +90,28 @@ export function Botao({
   children,
   aoTocar,
   carregando = false,
+  desabilitado = false,
   variante = 'primario',
 }: {
   children: string;
   aoTocar: () => void;
   carregando?: boolean;
+  desabilitado?: boolean;
   variante?: 'primario' | 'secundario';
 }) {
   const primario = variante === 'primario';
+  const inerte = carregando || desabilitado;
 
   return (
     <Pressable
       onPress={aoTocar}
-      disabled={carregando}
+      disabled={inerte}
       accessibilityRole="button"
-      accessibilityState={{ busy: carregando, disabled: carregando }}
+      accessibilityState={{ busy: carregando, disabled: inerte }}
       style={({ pressed }) => [
         estilos.botao,
         primario ? estilos.botaoPrimario : estilos.botaoSecundario,
-        (pressed || carregando) && estilos.botaoApagado,
+        (pressed || inerte) && estilos.botaoApagado,
       ]}
     >
       {carregando ? (

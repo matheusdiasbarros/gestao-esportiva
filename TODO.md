@@ -284,7 +284,7 @@ Composição do MVP definida na Fase 0 — ver [`docs/product/mvp.md`](docs/prod
 | 8 | Turmas | ⬜ | reduzida | 6, 7 |
 | 9 | Financeiro | ⬜ | parcial | 7 |
 | 10 | Notificações | ⬜ | parcial | 6, 9 |
-| 11 | Aplicativo do aluno | ⬜ | sim | 6, 7, 9, 10 |
+| 11 | Aplicativo (aluno e profissional) | ⬜ | sim | 6, 7, 9, 10 |
 | 12 | Marketplace | ⬜ | não | 3, 4, 6 |
 | 13 | Avaliações e reputação | ⬜ | não | 6, 12 |
 | 14 | Recursos sociais | ⬜ | não | 12, 13 |
@@ -1255,15 +1255,26 @@ e centro de preferências do usuário.
 
 ---
 
-## Fase 11 — Aplicativo do aluno ⬜
+## Fase 11 — Aplicativo ⬜
 
 **Objetivo:**
-Entregar ao aluno a experiência mobile completa: agenda, reservas, cancelamentos,
-créditos, pagamentos e notificações.
+Entregar a experiência mobile completa: ao **aluno**, agenda, reservas, cancelamentos, créditos,
+pagamentos e notificações; ao **profissional**, o que ele precisa fora de casa.
+
+> **O aplicativo serve os dois papéis** — decidido em 2026-08-24, e o motivo é do trabalho, não
+> da tecnologia: **o profissional trabalha em pé, na quadra, longe de um computador.** Dar
+> presença, convidar o aluno que acabou de aparecer, corrigir um telefone errado — tudo isso
+> acontece com o celular na mão, e nada disso pode exigir voltar para casa.
+>
+> Não é o painel inteiro no celular. Relatório, financeiro e configuração continuam sendo do
+> site, onde há tela para eles. O que vai para o aplicativo é **o que se faz durante a aula**.
+>
+> Cada fase que criar uma capacidade do profissional decide se ela é de quadra: se for, entrega
+> a tela mobile junto, e não empurra para cá. A Fase 2 já fez isso com o convite.
 
 **Entregável esperado:**
 App Expo publicado em canal de teste (TestFlight / Google Play internal) com os fluxos
-principais do aluno funcionando.
+principais do aluno **e as ações de quadra do profissional** funcionando.
 
 **Dependências:** Fases 6, 7, 9 e 10.
 
@@ -1293,7 +1304,12 @@ principais do aluno funcionando.
 - [ ] **Epic 11.4 — Notificações**
   - [ ] Registro de push token
   - [ ] Preferências e deep links
-- [ ] **Epic 11.5 — Publicação**
+- [ ] **Epic 11.5 — O profissional em quadra**
+  - [ ] Agenda do dia, em tela de celular
+  - [ ] Presença, falta e aula realizada — a ação mais frequente, no menor número de toques
+  - [ ] Editar contato da ficha
+  - [ ] Convite *(já entregue na Fase 2)*
+- [ ] **Epic 11.6 — Publicação**
   - [ ] Build EAS, ícones, splash, políticas de loja
   - [ ] Distribuição interna
 
@@ -1301,7 +1317,8 @@ principais do aluno funcionando.
 
 - [ ] O aluno pode reservar sozinho ou toda reserva precisa de confirmação do profissional?
 - [ ] O aluno pode cancelar diretamente? Dentro de qual janela?
-- [ ] Existe app para o profissional também, ou ele fica só na web nesta etapa?
+- [x] Existe app para o profissional também? → **Sim**, decidido em 2026-08-24. Ver a nota no
+      objetivo desta fase
 - [ ] Estratégia de atualização (EAS Update / OTA) e política de versão mínima suportada
 - [ ] Nível de suporte offline
 
@@ -1359,7 +1376,7 @@ e páginas indexáveis por buscadores.
   - [ ] Solicitação de contato / aula experimental
   - [ ] Fluxo do lead até virar aluno (liga com a Fase 5)
 - [ ] **Epic 12.5 — Descoberta no app**
-  - [ ] Busca no app do aluno com mapa/lista
+  - [ ] Busca no aplicativo com mapa/lista
 
 ### Decisões da fase
 

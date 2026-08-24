@@ -33,7 +33,7 @@ pnpm 11 + Turborepo · TypeScript **fixado em 5.9.3** · NestJS 11 + TypeORM 1 +
 ```text
 apps/api      servidor: todas as regras de negócio
 apps/web      site
-apps/mobile   aplicativo do aluno
+apps/mobile   aplicativo: aluno, e o que o profissional faz em quadra
 packages/     types (contratos compartilhados) e config (tsconfig, ESLint)
 e2e/          testes em navegador, contra o sistema inteiro
 docs/         product · domain · adr · sistema · tech-debt.md
