@@ -105,4 +105,30 @@ export class UserTokenService {
 
     return { userId: token.userId, payload: token.payload };
   }
+
+  /**
+   * Busca um token que **já foi consumido**, para quem precisa saber se a repetição é inofensiva.
+   *
+   * O mesmo link de e-mail é aberto mais de uma vez sem que ninguém tenha clicado duas vezes:
+   * filtros antispam corporativos visitam os endereços da mensagem antes de entregá-la, o
+   * navegador às vezes pré-carrega, e em desenvolvimento o modo estrito do React monta a tela
+   * duas vezes de propósito. O `consumir` recusa a segunda vez, e está certo em recusar — quem
+   * chama é que sabe se o efeito pretendido já aconteceu e a repetição pode terminar em
+   * silêncio.
+   *
+   * **Isto não autoriza nada.** Só responde "este pedido já foi atendido?", e só serve para
+   * operação idempotente, onde repetir leva ao mesmo estado. Um token de redefinição de senha
+   * não pode passar por aqui: a segunda troca é uma troca de verdade.
+   */
+  async consumidoAntes(
+    tokenEmClaro: string,
+    purpose: TokenPurpose,
+  ): Promise<TokenConsumido | null> {
+    const token = await this.tokens.findOne({
+      where: { tokenHash: hashDe(tokenEmClaro), purpose, revokedAt: IsNull() },
+    });
+    if (!token || token.usedAt === null) return null;
+
+    return { userId: token.userId, payload: token.payload };
+  }
 }

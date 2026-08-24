@@ -131,12 +131,37 @@ anunciador de rota. Nos testes, use o helper `alerta()` de `e2e/apoio.ts`.
 **Sem `RESEND_API_KEY` a API sobe assim mesmo** e o e-mail vai para o log com o link inteiro.
 É proposital: dá para seguir qualquer fluxo sem provedor configurado.
 
+**Confirmar o e-mail é idempotente; redefinir senha não é.** Reapresentar o link de confirmação
+responde 204 em silêncio, porque confirmar duas vezes leva ao mesmo estado. O caminho é
+`consumir` e, se falhar, `consumidoAntes` — que **só serve para operação idempotente** e nunca
+autoriza nada. Um link de redefinição não pode passar por ali: a segunda troca de senha é uma
+troca de verdade.
+
+Isso existe porque a repetição acontece sem ninguém clicar duas vezes: o modo estrito do React
+monta a tela duas vezes em desenvolvimento, filtros antispam corporativos abrem os endereços da
+mensagem antes de entregá-la, e o navegador às vezes pré-carrega. A tela mostrava "este link
+expirou" numa conta confirmada com sucesso 28 ms antes. A tela também guarda a promessa em
+andamento por token, para não pedir duas vezes — as duas defesas são independentes de
+propósito, porque cada uma cobre um caso que a outra não cobre.
+
+O `UPDATE` da confirmação leva `emailVerifiedAt: IsNull()` no critério. Preserva o instante da
+primeira confirmação e torna a gravação segura contra dois pedidos simultâneos.
+
 ## 6. Como verificar que continua funcionando
 
 ```bash
 pnpm lint && pnpm typecheck && pnpm test    # 68 testes de unidade
 pnpm test:e2e                               # 36 testes em navegador
 ```
+
+**Derrube o `pnpm dev` antes de rodar os testes de tela.** Eles sobem a própria API e a própria
+web nas portas 3000 e 3333. Com o ambiente de desenvolvimento no ar, as duas instâncias
+disputam a porta, o servidor de desenvolvimento morre no meio, e a suíte falha em massa com
+erros que não têm nada a ver com a mudança em análise. No Windows, `parar.bat` resolve.
+
+Localmente o Playwright roda em paralelo, e vários cadastros ao mesmo tempo estouram o limite
+por IP. Um punhado de falhas em `cadastrar` costuma ser isso, não regressão: confirme com
+`pnpm exec playwright test --workers=1`, que é como o CI roda.
 
 Contas de exemplo depois de `pnpm --filter @gestao/api seed`, todas com senha
 `desenvolvimento1`:

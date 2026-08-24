@@ -7,6 +7,33 @@ import { ApiError, apiFetch, errosPorCampo } from '@/lib/api';
 
 type Estado = 'verificando' | 'pronto' | 'falhou';
 
+/**
+ * A confirmação em andamento, por token.
+ *
+ * O modo estrito do React monta, desmonta e monta de novo cada componente em desenvolvimento,
+ * para expor efeitos que não se limpam. Aqui isso disparava **duas** confirmações do mesmo
+ * link: a primeira consumia o token e a segunda esbarrava num token já usado. Como a limpeza
+ * da primeira montagem descarta o resultado dela, a tela mostrava o erro da segunda — com o
+ * e-mail confirmado no banco, 28 ms antes.
+ *
+ * Guardar a promessa faz as duas montagens esperarem a **mesma** requisição, e de quebra
+ * evita o pedido repetido quando a pessoa recarrega rápido. O servidor também trata a
+ * repetição como sucesso, mas isso é a rede de baixo: aqui o certo é não pedir duas vezes.
+ */
+const emAndamento = new Map<string, Promise<void>>();
+
+function confirmar(token: string): Promise<void> {
+  let requisicao = emAndamento.get(token);
+  if (!requisicao) {
+    requisicao = apiFetch<void>('/auth/email/verify', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+    emAndamento.set(token, requisicao);
+  }
+  return requisicao;
+}
+
 function Verificacao() {
   const token = useSearchParams().get('token') ?? '';
   const [estado, setEstado] = useState<Estado>(token ? 'verificando' : 'falhou');
@@ -19,10 +46,7 @@ function Verificacao() {
 
     let cancelado = false;
 
-    void apiFetch<void>('/auth/email/verify', {
-      method: 'POST',
-      body: JSON.stringify({ token }),
-    })
+    void confirmar(token)
       .then(() => {
         // A tela pode ser desmontada antes da resposta — em navegação rápida ou no modo
         // estrito do React, que monta e desmonta de propósito. Gravar estado depois disso

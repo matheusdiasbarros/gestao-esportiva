@@ -8,7 +8,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, QueryFailedError, Repository } from 'typeorm';
+import { DataSource, IsNull, QueryFailedError, Repository } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
 import { MailService } from '../../mail/mail.service';
 import { MailKind } from '../../mail/mail.types';
@@ -463,9 +463,24 @@ export class AuthService {
     });
   }
 
-  /** Confirma o endereço. Repetir com o mesmo link falha — é de uso único. */
+  /**
+   * Confirma o endereço.
+   *
+   * **Reapresentar o mesmo link não é erro.** Confirmar duas vezes deixa a conta no mesmo
+   * estado que confirmar uma, e a repetição acontece sem ninguém pedir: filtro antispam que
+   * abre os endereços antes de entregar a mensagem, pré-carregamento do navegador, o modo
+   * estrito do React em desenvolvimento. Tratar isso como falha mostrava "este link expirou"
+   * numa conta que tinha acabado de ser confirmada com sucesso — e o pior é que a tela mentia,
+   * porque no banco a confirmação estava lá.
+   *
+   * Continua sendo erro o que de fato não confirma nada: token inexistente, de outro tipo,
+   * expirado ou revogado.
+   */
   async verificarEmail(tokenEmClaro: string): Promise<void> {
-    const consumido = await this.userTokens.consumir(tokenEmClaro, TokenPurpose.VerifyEmail);
+    const consumido =
+      (await this.userTokens.consumir(tokenEmClaro, TokenPurpose.VerifyEmail)) ??
+      (await this.userTokens.consumidoAntes(tokenEmClaro, TokenPurpose.VerifyEmail));
+
     if (!consumido) {
       throw new UnprocessableEntityException({
         validationErrors: [
@@ -477,7 +492,13 @@ export class AuthService {
       });
     }
 
-    await this.users.update({ id: consumido.userId }, { emailVerifiedAt: new Date() });
+    // O `IsNull` no critério preserva o instante da primeira confirmação: reabrir o link
+    // depois não reescreve a data para agora. E torna a gravação segura contra dois pedidos
+    // simultâneos, que é exatamente o caso que trouxe este trecho até aqui.
+    await this.users.update(
+      { id: consumido.userId, emailVerifiedAt: IsNull() },
+      { emailVerifiedAt: new Date() },
+    );
   }
 
   /** Quem é esta conta, com os dados frescos do banco em vez dos que vieram no token. */
