@@ -22,7 +22,11 @@ test.describe('Cadastro de profissional', () => {
   }) => {
     await cadastrar(page);
 
-    await expect(page.getByText('ainda não')).toBeVisible();
+    // Ancorado no rótulo do campo, e não solto na página: "ainda não" é fragmento curto demais
+    // e passou a casar com a seção de convites ("alunos que ainda não têm conta").
+    await expect(
+      page.getByRole('term').filter({ hasText: 'E-mail verificado' }).locator('+ dd'),
+    ).toHaveText('ainda não');
     await expect(page.getByText(/pode usar o sistema normalmente/i)).toBeVisible();
   });
 

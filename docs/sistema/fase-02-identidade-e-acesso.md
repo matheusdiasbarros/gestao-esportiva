@@ -13,18 +13,19 @@ Contas, login e as duas portas de entrada do aluno.
 - Modelo de identidade completo, com sete tabelas
 - Cadastro de profissional e de aluno, login, logout, renovação de acesso
 - Link público do profissional — "treine comigo"
+- **Convite**, nas duas modalidades, ligando uma ficha existente a uma conta
 - Recuperação de senha e confirmação de e-mail, com envio real
 - Limite de tentativas por IP **e** por e-mail alvo
 - Telas web para tudo isso, com o painel protegido no servidor
 
-**Não entregou ainda:** convites endereçados a uma ficha existente, telas no aplicativo, e a
-autorização por recurso — que só faz sentido quando existir dado de negócio para proteger.
+**Não entregou ainda:** troca de e-mail, telas no aplicativo, e a autorização por recurso.
 
 ## 2. Mapa dos arquivos
 
 ```text
 apps/api/src/modules/iam/
   auth.controller.ts               as 12 rotas de autenticação
+  invites.controller.ts            as 4 rotas de convite
   iam.module.ts                    fronteira do módulo e os dois guards globais
   auth/
     jwt.strategy.ts                lê o token do cookie ou do cabeçalho
@@ -32,13 +33,16 @@ apps/api/src/modules/iam/
     public.decorator.ts
     current-user.decorator.ts      injeta quem está autenticado no controller
     cookies.ts                     nomes dos cookies, num lugar só
+    sessao-http.ts                 sessão -> resposta HTTP; a política de cookie mora aqui
     rate-limit.ts                  os limites por rota e a chave por alvo
     rate-limit.guard.ts            acrescenta o cabeçalho Retry-After padrão
   dto/auth.dto.ts                  o formato de cada formulário aceito
+  dto/invite.dto.ts
   entities/                        user, user-identity, professional, student,
                                    student-invite, refresh-token, user-token
   services/
     auth.service.ts                **as regras** — o arquivo mais importante da fase
+    invite.service.ts              emitir, descrever e aceitar convite
     password.service.ts            hash argon2id
     password-policy.ts             comprimento e lista de senhas vazadas
     token.service.ts               emissão, rotação e revogação de tokens
@@ -53,10 +57,12 @@ apps/api/src/modules/mail/
 
 apps/web/src/
   app/entrar, criar-conta, criar-conta/aluno, esqueci-a-senha,
-      redefinir-senha, verificar-email, painel, treine-com/[slug]
+      redefinir-senha, verificar-email, painel, treine-com/[slug],
+      convite/[token]
   lib/session.ts                   lê a sessão **no servidor**, repassando o cookie
   components/                      campos, sair, link-publico, reenviar-verificacao,
-                                   form-cadastro-aluno, entrar-com-professor
+                                   form-cadastro-aluno, entrar-com-professor,
+                                   aceitar-convite, convidar-alunos
 ```
 
 ## 3. Rotas e telas
@@ -75,6 +81,11 @@ apps/web/src/
 | `POST /auth/email/verify/request` | **não** | reenvia o link de confirmação |
 | `POST /auth/email/verify` | sim | confirma pelo link |
 | `GET /auth/me` | **não** | quem está autenticado, **fresco do banco** |
+| `GET /invites` | **não** | as fichas da carteira que ainda não têm conta |
+| `POST /invites` | **não** | emite convite; devolve a URL só no avulso |
+| `GET /invites/:token` | sim | quem convidou e para quem, para a tela de aceite |
+| `POST /invites/:token/accept` | sim | aceita criando conta |
+| `POST /invites/:token/join` | **não** | aceita com a conta que já está logada |
 | `GET /health` | sim | fora do limite de tentativas |
 
 ## 4. Invariantes — o que não pode ser quebrado
@@ -92,6 +103,21 @@ apps/web/src/
 | **O limite de tentativas roda antes da autenticação** | conferir senha custa CPU; depois do guard, a defesa vira o alvo |
 | **Recurso de outro dono responde 404, não 403** | 403 confirmaria que aquele identificador existe |
 | **A web recebe token em cookie `httpOnly`, nunca no corpo** | o que o JavaScript não alcança, um XSS não rouba |
+| **No máximo um convite válido por ficha** | garantido por índice parcial, não por checagem na aplicação, que perderia sob concorrência |
+| **Só o convite endereçado nasce com o e-mail verificado** | é o único canal que prova controle da caixa. Qualquer outro caminho marcando `emailVerifiedAt` é bug |
+| **A URL do convite endereçado nunca é devolvida a quem o emitiu** | poder repassá-la por outro canal dissolveria a prova acima |
+
+## 4.1 O que muda no banco a cada passo do convite
+
+| Passo | `student_invites` | `students` | `users` |
+| --- | --- | --- | --- |
+| Emitir | anterior recebe `revoked_at`; nasce linha nova | — | — |
+| Aceitar | `accepted_at` preenchido | `user_id` preenchido | conta criada, verificada só no endereçado |
+| Expirar | nada muda; a data é que passa | — | — |
+
+As duas gravações do aceite acontecem **na mesma transação** da criação da conta. Sem isso, uma
+falha no meio deixaria a pessoa logada, sem professor e com o convite gasto — sem nenhum
+caminho de volta a não ser pedir outro.
 
 ## 5. Armadilhas — o que parece errado e é de propósito
 
@@ -131,6 +157,19 @@ anunciador de rota. Nos testes, use o helper `alerta()` de `e2e/apoio.ts`.
 **Sem `RESEND_API_KEY` a API sobe assim mesmo** e o e-mail vai para o log com o link inteiro.
 É proposital: dá para seguir qualquer fluxo sem provedor configurado.
 
+**O link do convite avulso volta uma vez só, e o do endereçado nunca.** O banco guarda o hash,
+então nem o sistema consegue remontá-lo — perdeu, gera outro, e o anterior morre na hora. No
+endereçado a `url` não é devolvida em nenhuma hipótese: é ela que sustenta a conta nascer
+verificada, e um link que o profissional pudesse repassar por WhatsApp dissolveria a garantia.
+
+**O e-mail informado no corpo do aceite endereçado é ignorado.** Vale o do convite. Aceitar um
+endereço diferente criaria uma conta marcada como verificada sem ninguém ter verificado nada, e
+o resto do sistema confia nessa marca para deixar a conta agir para fora.
+
+**`consumidoAntes` só serve para operação idempotente.** Existe para confirmar e-mail, onde
+repetir leva ao mesmo estado. Nunca use em redefinição de senha nem em convite: ali a segunda
+vez é uma ação de verdade.
+
 **Confirmar o e-mail é idempotente; redefinir senha não é.** Reapresentar o link de confirmação
 responde 204 em silêncio, porque confirmar duas vezes leva ao mesmo estado. O caminho é
 `consumir` e, se falhar, `consumidoAntes` — que **só serve para operação idempotente** e nunca
@@ -151,7 +190,17 @@ primeira confirmação e torna a gravação segura contra dois pedidos simultân
 
 ```bash
 pnpm lint && pnpm typecheck && pnpm test    # 68 testes de unidade
-pnpm test:e2e                               # 36 testes em navegador
+pnpm test:e2e                               # 42 testes em navegador
+```
+
+**A suíte não pode ser rodada duas vezes seguidas.** Ela mesma gasta o teto de login por IP —
+`limite-tentativas.spec.ts` estoura o limite de propósito, porque é o que ele testa. Numa
+segunda execução dentro de cinco minutos, dois testes de `sessao.spec.ts` falham com "o painel
+não abriu", sem nada indicando bloqueio. Está medido e registrado em DT-004; para contornar em
+desenvolvimento:
+
+```bash
+docker exec gestao-redis sh -c "redis-cli --scan --pattern '*:hits' | xargs -r redis-cli DEL"
 ```
 
 **Derrube o `pnpm dev` antes de rodar os testes de tela.** Eles sobem a própria API e a própria
@@ -179,8 +228,9 @@ Qualquer outro destinatário volta 403, e o log explica.
 
 ## 7. O que NÃO existe
 
-- **Convite endereçado a uma ficha existente.** A tabela `student_invites` está criada e
-  **nenhuma rota a usa.** Só o link público funciona hoje
+- **Criar ficha pela interface.** O profissional só convida quem já está na carteira dele, e em
+  Fase 2 a única forma de uma ficha existir é a seed ou o link público. Criar, editar e mesclar
+  ficha é da Fase 5 — e é o que destrava o teste do aceite (DT-005)
 - **Troca de e-mail.** A coluna `pending_email` e o propósito `CHANGE_EMAIL` existem, sem fluxo
 - **Autorização por recurso.** Os guards sabem *quem* você é; ainda não impedem um profissional
   de ver dado de outro, porque não existe dado de negócio. Isso fecha junto com a Fase 5

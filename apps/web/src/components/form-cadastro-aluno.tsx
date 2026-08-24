@@ -13,11 +13,21 @@ import { ApiError, apiFetch, errosPorCampo } from '@/lib/api';
  * Com `signupSlug`, a conta nasce já ligada ao professor dono do link. Sem ele, é o cadastro
  * aberto: a conta nasce sem professor e cai num estado vazio até alguém convidá-la.
  *
- * As duas telas compartilham este componente porque só o que muda entre elas é o texto e a
- * presença do slug — duplicar o formulário faria a validação e a acessibilidade divergirem na
+ * Com `convite`, é o aceite de um convite: a conta nasce ligada à ficha que o profissional já
+ * mantinha. No convite endereçado o e-mail vem junto e **não se edita** — é ele que faz a conta
+ * nascer verificada, e trocá-lo dissolveria essa garantia.
+ *
+ * As três telas compartilham este componente porque só o que muda entre elas é o texto e para
+ * onde o formulário aponta — duplicá-lo faria a validação e a acessibilidade divergirem na
  * primeira correção feita em só um dos lados.
  */
-export function FormCadastroAluno({ signupSlug }: { signupSlug?: string }) {
+export function FormCadastroAluno({
+  signupSlug,
+  convite,
+}: {
+  signupSlug?: string;
+  convite?: { token: string; email: string | null };
+}) {
   const router = useRouter();
   const [carregando, setCarregando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -32,7 +42,11 @@ export function FormCadastroAluno({ signupSlug }: { signupSlug?: string }) {
     const dados = new FormData(evento.currentTarget);
 
     try {
-      await apiFetch<{ user: AuthenticatedUser }>('/auth/signup/student', {
+      const destino = convite
+        ? `/invites/${encodeURIComponent(convite.token)}/accept`
+        : '/auth/signup/student';
+
+      await apiFetch<{ user: AuthenticatedUser }>(destino, {
         method: 'POST',
         body: JSON.stringify({
           email: String(dados.get('email')),
@@ -71,7 +85,16 @@ export function FormCadastroAluno({ signupSlug }: { signupSlug?: string }) {
         <Aviso mensagem={aviso} />
 
         <Campo id="fullName" label="Nome completo" autoComplete="name" erro={erros.fullName} />
-        <Campo id="email" label="E-mail" type="email" autoComplete="email" erro={erros.email} />
+        <Campo
+          id="email"
+          label="E-mail"
+          type="email"
+          autoComplete="email"
+          erro={erros.email}
+          defaultValue={convite?.email ?? undefined}
+          readOnly={Boolean(convite?.email)}
+          dica={convite?.email ? 'O convite foi enviado para este endereço.' : undefined}
+        />
         <Campo
           id="birthDate"
           label="Data de nascimento"
@@ -106,7 +129,7 @@ export function FormCadastroAluno({ signupSlug }: { signupSlug?: string }) {
           </p>
         ) : null}
 
-        <Botao carregando={carregando}>Criar conta</Botao>
+        <Botao carregando={carregando}>{convite ? 'Aceitar convite' : 'Criar conta'}</Botao>
       </form>
 
       <p className="text-sm text-(--color-ink-muted)">

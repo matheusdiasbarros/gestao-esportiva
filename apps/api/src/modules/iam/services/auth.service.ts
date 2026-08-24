@@ -8,7 +8,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, IsNull, QueryFailedError, Repository } from 'typeorm';
+import { DataSource, EntityManager, IsNull, QueryFailedError, Repository } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
 import { MailService } from '../../mail/mail.service';
 import { MailKind } from '../../mail/mail.types';
@@ -37,6 +37,25 @@ export interface DadosDeCadastro {
 export interface DadosDeCadastroDeAluno extends DadosDeCadastro {
   /** Ausente no cadastro aberto: a conta nasce sem professor, e isso é estado válido. */
   signupSlug?: string;
+}
+
+export interface OpcoesDeCadastroDeAluno {
+  /**
+   * Cria a conta com o e-mail **já confirmado**.
+   *
+   * Só o convite endereçado justifica: o link chegou naquela caixa, então a prova já foi dada e
+   * pedi-la de novo seria atrito sem ganho. Qualquer outra porta deixa isto falso — marcar como
+   * verificado o que ninguém verificou é pior do que não verificar, porque o resto do sistema
+   * confia nessa marca para deixar a conta agir para fora.
+   */
+  emailVerificado?: boolean;
+  /**
+   * Roda **dentro** da transação que cria a conta, logo antes do commit.
+   *
+   * É como o aceite de convite gasta o token e liga a ficha sem janela: ou a conta e o vínculo
+   * nascem juntos, ou nenhum dos dois nasce.
+   */
+  naMesmaTransacao?: (manager: EntityManager, userId: string) => Promise<void>;
 }
 
 export interface Credenciais {
@@ -162,6 +181,7 @@ export class AuthService {
     dados: DadosDeCadastroDeAluno,
     client: ClientType,
     deviceLabel: string | null,
+    opcoes: OpcoesDeCadastroDeAluno = {},
   ): Promise<SessaoAberta> {
     const email = normalizarEmail(dados.email);
     this.validarCadastro(dados, email);
@@ -203,7 +223,7 @@ export class AuthService {
           birthDate: dados.birthDate,
           isPlatformAdmin: false,
           status: UserStatus.Active,
-          emailVerifiedAt: null,
+          emailVerifiedAt: opcoes.emailVerificado ? agora : null,
           pendingEmail: null,
           termsVersion: TERMS_VERSION,
           termsAcceptedAt: agora,
@@ -233,6 +253,8 @@ export class AuthService {
             accessHolder: AccessHolder.Self,
           });
         }
+
+        await opcoes.naMesmaTransacao?.(manager, userId);
       });
     } catch (erro) {
       if (ehViolacaoDeUnicidade(erro, 'uq_users_email')) {
@@ -581,7 +603,7 @@ export function normalizarEmail(email: string): string {
 }
 
 /** "Rodrigo Almeida" → "Rodrigo". E-mail que chama pelo nome completo soa como cobrança. */
-function primeiroNome(nomeCompleto: string): string {
+export function primeiroNome(nomeCompleto: string): string {
   return nomeCompleto.trim().split(/\s+/)[0] ?? nomeCompleto;
 }
 

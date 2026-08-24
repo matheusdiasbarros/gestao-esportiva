@@ -14,6 +14,7 @@ import { AuthController } from './auth.controller';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { JwtStrategy } from './auth/jwt.strategy';
 import { LimiteDeTentativasGuard } from './auth/rate-limit.guard';
+import { SessaoHttp } from './auth/sessao-http';
 import {
   alvoDaRequisicao,
   LIMITE_ALVO,
@@ -28,7 +29,9 @@ import { Student } from './entities/student.entity';
 import { UserToken } from './entities/user-token.entity';
 import { UserIdentity } from './entities/user-identity.entity';
 import { User } from './entities/user.entity';
+import { InvitesController } from './invites.controller';
 import { AuthService } from './services/auth.service';
+import { InviteService } from './services/invite.service';
 import { PasswordService } from './services/password.service';
 import { RolesService } from './services/roles.service';
 import { TokenService } from './services/token.service';
@@ -93,13 +96,15 @@ import { UserTokenService } from './services/user-token.service';
       UserToken,
     ]),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, InvitesController],
   providers: [
     PasswordService,
     RolesService,
     TokenService,
     UserTokenService,
+    SessaoHttp,
     AuthService,
+    InviteService,
     JwtStrategy,
     // A ordem importa: o limite de tentativas roda **antes** da autenticação. Conferir uma
     // senha com argon2 custa centenas de milissegundos de CPU por tentativa — deixar isso

@@ -60,6 +60,57 @@ export function montarMensagem(job: MailJob): MensagemPronta {
              continua a mesma.</p>
         `),
       };
+
+    case MailKind.StudentInvite:
+      // O nome do profissional vai no assunto porque é o que faz a pessoa abrir. "Convite da
+      // Gestão Esportiva" é mensagem de empresa desconhecida; "Rodrigo Almeida convidou você"
+      // é mensagem de alguém que ela conhece.
+      return {
+        subject: `${job.professionalName} convidou você para acompanhar os treinos`,
+        text: [
+          `Olá, ${job.name}.`,
+          '',
+          `${job.professionalName} usa a Gestão Esportiva para organizar as aulas, e convidou`,
+          'você a acompanhar os seus treinos por lá — marcar, remarcar e ver os pagamentos.',
+          '',
+          `Aceite por aqui (o convite vale ${job.diasDeValidade} dias):`,
+          job.link,
+          '',
+          'Se você não conhece essa pessoa, ignore esta mensagem. Nada acontece.',
+        ].join('\n'),
+        html: envelope(`
+          <p>Olá, ${escapar(job.name)}.</p>
+          <p><strong>${escapar(job.professionalName)}</strong> usa a Gestão Esportiva para
+             organizar as aulas, e convidou você a acompanhar os seus treinos por lá — marcar,
+             remarcar e ver os pagamentos.</p>
+          ${botao(job.link, 'Aceitar o convite')}
+          <p style="color:#666">O convite vale <strong>${job.diasDeValidade} dias</strong>. Se
+             você não conhece essa pessoa, ignore esta mensagem — nada acontece.</p>
+        `),
+      };
+
+    case MailKind.InviteAccepted:
+      // Traz o e-mail de quem aceitou de propósito. É o único jeito de o profissional perceber
+      // que o link avulso foi parar na mão errada, e a mensagem diz o que fazer nesse caso.
+      return {
+        subject: `${job.studentName} aceitou seu convite`,
+        text: [
+          `Olá, ${job.name}.`,
+          '',
+          `O convite que você enviou para ${job.studentName} foi aceito.`,
+          `A conta que aceitou é: ${job.acceptedByEmail}`,
+          '',
+          'Não reconhece esse endereço? Encerre o vínculo pelo painel e envie um convite novo.',
+        ].join('\n'),
+        html: envelope(`
+          <p>Olá, ${escapar(job.name)}.</p>
+          <p>O convite que você enviou para <strong>${escapar(job.studentName)}</strong> foi
+             aceito.</p>
+          <p>A conta que aceitou é <strong>${escapar(job.acceptedByEmail)}</strong>.</p>
+          <p style="color:#666">Não reconhece esse endereço? Encerre o vínculo pelo painel e
+             envie um convite novo.</p>
+        `),
+      };
   }
 }
 

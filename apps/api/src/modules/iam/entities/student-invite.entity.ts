@@ -1,13 +1,7 @@
+import { InviteKind } from '@gestao/types';
 import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../../../database/base.entity';
 import { Student } from './student.entity';
-
-export enum InviteKind {
-  /** E-mail enviado pela plataforma para um endereço específico. */
-  Addressed = 'ADDRESSED',
-  /** Link que o profissional copia e cola no WhatsApp. */
-  Link = 'LINK',
-}
 
 /**
  * Convite: a ponte entre uma ficha que já existe e uma conta.

@@ -15,6 +15,14 @@ interface CampoProps {
   dica?: string;
   defaultValue?: string;
   required?: boolean;
+  /**
+   * Campo que a pessoa vê mas não muda — hoje só o e-mail do convite endereçado.
+   *
+   * `readOnly` e não `disabled`: campo desabilitado sai do `FormData` e some da navegação por
+   * teclado, então o valor não chegaria ao servidor e quem usa leitor de tela nem saberia que
+   * ele existe.
+   */
+  readOnly?: boolean;
 }
 
 export function Campo({
@@ -26,6 +34,7 @@ export function Campo({
   dica,
   defaultValue,
   required = true,
+  readOnly = false,
 }: CampoProps) {
   const idErro = `${id}-erro`;
   const idDica = `${id}-dica`;
@@ -43,13 +52,14 @@ export function Campo({
         autoComplete={autoComplete}
         defaultValue={defaultValue}
         required={required}
+        readOnly={readOnly}
         aria-invalid={erro ? true : undefined}
         // Liga o campo à mensagem de erro: sem isto o leitor de tela lê o rótulo e ignora
         // o motivo da recusa, e a pessoa fica presa no formulário sem saber por quê.
         aria-describedby={erro ? idErro : dica ? idDica : undefined}
-        className={`rounded-lg border bg-(--color-surface) px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-(--color-ink)/20 ${
-          erro ? 'border-(--color-danger)' : 'border-(--color-border)'
-        }`}
+        className={`rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-(--color-ink)/20 ${
+          readOnly ? 'bg-(--color-surface-muted) text-(--color-ink-muted)' : 'bg-(--color-surface)'
+        } ${erro ? 'border-(--color-danger)' : 'border-(--color-border)'}`}
       />
 
       {erro ? (

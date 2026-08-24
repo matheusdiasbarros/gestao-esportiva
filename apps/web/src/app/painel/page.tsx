@@ -1,5 +1,6 @@
 import { Role } from '@gestao/types';
 import { redirect } from 'next/navigation';
+import { ConvidarAlunos } from '@/components/convidar-alunos';
 import { LinkPublico } from '@/components/link-publico';
 import { ReenviarVerificacao } from '@/components/reenviar-verificacao';
 import { Sair } from '@/components/sair';
@@ -72,6 +73,17 @@ export default async function Painel() {
         </section>
       ) : null}
 
+      {sessao.professionalId ? (
+        <section className="rounded-xl border border-(--color-border) bg-(--color-surface-muted) p-6">
+          <h2 className="text-sm font-medium">Alunos que ainda não têm conta</h2>
+          <p className="mt-1 mb-4 text-xs text-(--color-ink-muted)">
+            Convide para que eles marquem e paguem sozinhos. Quem não aceitar continua na sua
+            carteira do mesmo jeito.
+          </p>
+          <ConvidarAlunos emailVerificado={sessao.emailVerified} />
+        </section>
+      ) : null}
+
       {ehAlunoSemProfessor ? (
         <section className="rounded-xl border border-(--color-border) bg-(--color-surface-muted) p-6">
           <h2 className="text-sm font-medium">Você ainda não tem professor</h2>
@@ -80,8 +92,15 @@ export default async function Painel() {
             aulas nem pagamentos para mostrar.
           </p>
           <p className="mt-3 text-sm text-(--color-ink-muted)">
-            Peça ao seu professor o link <strong>&ldquo;treine comigo&rdquo;</strong> dele, ou um
-            convite. Ao abrir esse link já estando com a conta criada, é só entrar.
+            Há dois caminhos, e os dois partem do professor: o link{' '}
+            <strong>&ldquo;treine comigo&rdquo;</strong> dele, ou um <strong>convite</strong> para a
+            ficha que ele já mantém sobre você. Abrindo qualquer um dos dois já com a conta criada,
+            é só confirmar.
+          </p>
+          <p className="mt-3 text-xs text-(--color-ink-muted)">
+            Nada é ligado sozinho, nem por telefone nem por documento: os dados da ficha foram
+            digitados pelo professor e ninguém provou que são seus. O convite é o que faz as duas
+            partes concordarem.
           </p>
         </section>
       ) : null}

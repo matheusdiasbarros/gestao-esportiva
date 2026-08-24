@@ -553,7 +553,7 @@ ela ·
   - [x] Cadastro aberto de aluno
   - [x] Link público do profissional ("treine comigo") — cadastro já ligado a ele
   - [x] Quem **já tem conta** entra pelo link público e vira aluno, sem criar conta nova
-  - [ ] Convite endereçado e convite avulso — dependem do Epic 2.5
+  - [x] Convite endereçado (7 dias, conta nasce verificada) e avulso (48 h, link para WhatsApp)
   - [x] Verificação de e-mail: não bloqueia a entrada; reenvio pelo painel
   - [x] Login e logout
   - [x] Renovação com rotação e **detecção de reuso** (invalida a família do aparelho)
@@ -578,10 +578,11 @@ ela ·
   - [x] Estado vazio do aluno sem professor
   - [x] O profissional vê e copia o próprio link de captação
   - [x] Telas web de esqueci a senha, redefinir e confirmar e-mail
-  - [ ] Aceite de convite pelo navegador
+  - [x] Aceite de convite pelo navegador — três estados: já logado, tem conta, sem conta
   - [ ] Telas mobile equivalentes, com token em `expo-secure-store`
   - [x] Playwright: Chromium instalado, cadastro/login/proteção de rota cobertos e rodando no CI
-  - [ ] Playwright: cobrir também recuperação de senha e aceite de convite, quando existirem
+  - [x] Playwright: recuperação de senha e emissão de convite cobertas
+  - [ ] Playwright: **o aceite** do convite — bloqueado até a Fase 5, ver DT-005
 - [x] **Epic 2.5 — E-mail transacional mínimo 🔁** ✅ 2026-08-21 *(antecipado da Fase 10)*
   - [x] Provedor de e-mail configurado (Resend), com a chave fora do repositório
   - [x] Fila BullMQ para envio assíncrono, com espera crescente entre tentativas
@@ -635,14 +636,18 @@ Todas resolvidas em 2026-08-20. Registro completo em [`docs/domain/iam.md`](docs
 ### Critérios de conclusão
 
 - [ ] Cadastro → verificação → login → renovação → logout funcionando ponta a ponta
-- [ ] Aceite de convite funciona **inteiramente no navegador**, coberto por teste Playwright
+- [x] Aceite de convite funciona **inteiramente no navegador** — verificado à mão e pela API em
+      2026-08-24. O teste Playwright do aceite fica para a Fase 5: aceitar consome a única ficha
+      sem conta que existe, e criar ficha pela interface é da Fase 5. Ver DT-005
 - [ ] Rotas protegidas retornam 401/403/404 conforme `iam.md` §7, com testes de integração
 - [ ] **Cada célula "não pode" da matriz tem um teste** — célula sem teste é lacuna
 - [ ] Reutilizar token de renovação já rotacionado invalida a família, com teste explícito
 - [x] Recuperação de senha entregue por e-mail real — verificada à mão em 2026-08-21, com
       entrega confirmada pelo Resend. O *staging* saiu do escopo da fase
 - [x] Matriz de permissões documentada em `docs/domain/iam.md`
-- [ ] *Staging* publicado e atualizado automaticamente a partir da `main`
+- [x] ~~*Staging* publicado e atualizado automaticamente a partir da `main`~~ → saiu do escopo
+      junto com o Epic 2.6, em 2026-08-21. Ficou aqui em aberto por engano, o que tornava a fase
+      impossível de concluir
 - [ ] Revisão de segurança do fluxo de auth registrada
 - [x] Manual de manutenção em `docs/sistema/fase-02-identidade-e-acesso.md`
 

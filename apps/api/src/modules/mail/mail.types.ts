@@ -13,6 +13,10 @@ export const MailKind = {
   VerifyEmail: 'VERIFY_EMAIL',
   /** Redefinição de senha. Chega sempre, mesmo quando a conta não existe — ver `AuthService`. */
   ResetPassword: 'RESET_PASSWORD',
+  /** Convite endereçado: o profissional chama alguém que já tem ficha na carteira dele. */
+  StudentInvite: 'STUDENT_INVITE',
+  /** Aviso ao profissional de que o convite foi aceito, e por quem. */
+  InviteAccepted: 'INVITE_ACCEPTED',
 } as const;
 
 export type MailKind = (typeof MailKind)[keyof typeof MailKind];
@@ -36,4 +40,28 @@ export interface ResetPasswordJob extends Base {
   minutosDeValidade: number;
 }
 
-export type MailJob = VerifyEmailJob | ResetPasswordJob;
+export interface StudentInviteJob extends Base {
+  kind: typeof MailKind.StudentInvite;
+  link: string;
+  /** Quem convidou. É o que faz a pessoa reconhecer a mensagem em vez de apagá-la. */
+  professionalName: string;
+  /** Quantos dias o convite vale, para o texto poder dizer. */
+  diasDeValidade: number;
+}
+
+/**
+ * Aviso ao profissional de que alguém aceitou.
+ *
+ * Existe como controle de segurança, não como cortesia: o convite avulso circula por WhatsApp e
+ * pode ser repassado para a pessoa errada. Não dá para impedir, mas dá para o dono da ficha
+ * descobrir no mesmo dia. Ver `docs/domain/iam.md` §9.3.
+ */
+export interface InviteAcceptedJob extends Base {
+  kind: typeof MailKind.InviteAccepted;
+  /** Como a ficha se chama na carteira dele. */
+  studentName: string;
+  /** O e-mail da conta que aceitou — é o que denuncia um link repassado. */
+  acceptedByEmail: string;
+}
+
+export type MailJob = VerifyEmailJob | ResetPasswordJob | StudentInviteJob | InviteAcceptedJob;

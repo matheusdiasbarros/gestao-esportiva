@@ -3,7 +3,7 @@
 Registro de compromissos assumidos conscientemente. Cada item diz o que é, por que foi
 aceito e o que dispara a correção.
 
-Última atualização: 2026-08-20
+Última atualização: 2026-08-24
 
 ---
 
@@ -52,6 +52,61 @@ com acesso pelo responsável e conta sem professor nenhum. É idempotente.
 
 ---
 
+## Fase 2
+
+### DT-004 — A suíte de tela gasta o teto de login por IP, e não pode ser reexecutada em seguida
+
+**O que:** `pnpm test:e2e` passa inteira quando os contadores estão zerados, e **falha dois
+testes de `sessao.spec.ts` se rodar de novo dentro de cinco minutos**. O sintoma é enganoso: a
+tela de login simplesmente não redireciona, e nada diz que houve bloqueio.
+
+O teto por IP para login é 60 tentativas em 5 minutos. A suíte sozinha chega perto dele — e
+`limite-tentativas.spec.ts` estoura o limite **de propósito**, que é o que ele testa.
+
+**Medido em 2026-08-24:** suíte original (36 testes) com contadores zerados passa 36/36; a
+reexecução imediata falha 2. Não tem relação com os testes de convite, que foram adicionados
+depois e passam nas duas condições.
+
+**Aceito porque:** o CI roda a suíte uma vez por job, então não é afetado. E as três saídas
+óbvias são piores que o problema: subir o teto enfraquece uma defesa real para conveniência de
+teste; isentar o IP do ambiente de teste é uma porta dos fundos que um dia vai para produção;
+zerar o Redis dentro do teste dá ao teste acesso à infraestrutura.
+
+**Como contornar em desenvolvimento:**
+
+```bash
+docker exec gestao-redis sh -c "redis-cli --scan --pattern '*:hits' | xargs -r redis-cli DEL"
+```
+
+**Dispara correção:** se o CI passar a rodar a suíte mais de uma vez por execução, ou se o teto
+por IP for revisto por motivo de produto — que é plausível, porque academia inteira atrás de um
+NAT compartilha o mesmo IP. A revisão de segurança da Fase 2 é o lugar dessa decisão.
+
+---
+
+### DT-005 — O aceite de convite não tem teste em navegador
+
+**O que:** `e2e/convite.spec.ts` cobre emitir convite, reemitir invalidando o anterior, a tela de
+quem recebeu, o convite morto e quem não pode convidar. **Não cobre o aceite em si.**
+
+**Por quê:** aceitar liga a ficha a uma conta para sempre, e a Fase 2 não tem nenhuma forma de
+criar uma ficha *sem conta* pela interface — criar ficha é da Fase 5. A única ficha nesse estado
+é a do João Pereira, que vem da seed. Um teste que a consumisse passaria uma vez e falharia em
+todas as execuções seguintes, inclusive derrubando os outros cinco testes do arquivo.
+
+**Aceito porque:** a alternativa era uma rota só para teste que criasse fichas — e rota de teste
+em código de produção é exatamente o tipo de coisa que sobrevive ao motivo que a criou.
+
+**Verificado à mão e pela API em 2026-08-24:** aceite criando conta pelo avulso (conta nasce não
+verificada), pelo endereçado (conta nasce verificada e o e-mail do corpo é ignorado), aceite com
+conta já logada, repetição do mesmo convite, e o caso de quem já é aluno daquele profissional —
+que devolve 409 e **não** gasta o convite, porque a transação reverte.
+
+**Dispara correção:** a Fase 5, no primeiro épico que criar ficha pela interface. O teste então
+cria e descarta a própria ficha, e este débito fecha.
+
+---
+
 ## Armadilhas já resolvidas (não repetir)
 
 Não são débito — são erros que custaram tempo e que a documentação agora previne.
@@ -72,3 +127,5 @@ Não são débito — são erros que custaram tempo e que a documentação agora
 | `.returning()` do TypeORM devolve a linha crua do PostgreSQL, fora do mapeamento de nomes — `userId` vem indefinido | `user-token.service.ts`, função `consumir` |
 | `response.json()` num corpo vazio lança, e o erro chega na tela como falha de rede. Checar o tipo de conteúdo, não a lista de códigos | `apps/web/src/lib/api.ts` |
 | **`next build` e `next dev` na mesma pasta fazem toda rota menos a raiz devolver 404**, sem erro no terminal. Resolvido com pastas de saída separadas | `apps/web/next.config.ts`, `distDir` |
+| **Rodar `pnpm test:e2e` com o `pnpm dev` no ar derruba os dois.** A suíte sobe a própria API e web nas mesmas portas; as instâncias disputam, o servidor de desenvolvimento morre no meio e a suíte falha em massa por um motivo que não tem nada a ver com a mudança em análise | `docs/sistema/fase-02-identidade-e-acesso.md` §6 |
+| **O modo estrito do React dispara duas vezes o efeito que consome um token de uso único.** A primeira montagem gasta o token, a segunda recebe o erro — e é a segunda que a tela mostra | `apps/web/src/app/verificar-email/page.tsx` |
