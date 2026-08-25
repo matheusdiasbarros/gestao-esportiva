@@ -8,8 +8,9 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, IsNull, QueryFailedError, Repository } from 'typeorm';
+import { DataSource, EntityManager, IsNull, Repository } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
+import { ehViolacaoDeUnicidade } from '../../../common/database/violacao-de-unicidade';
 import { MailService } from '../../mail/mail.service';
 import { MailKind } from '../../mail/mail.types';
 import { Professional } from '../entities/professional.entity';
@@ -781,13 +782,6 @@ export function normalizarEmail(email: string): string {
 /** "Rodrigo Almeida" → "Rodrigo". E-mail que chama pelo nome completo soa como cobrança. */
 export function primeiroNome(nomeCompleto: string): string {
   return nomeCompleto.trim().split(/\s+/)[0] ?? nomeCompleto;
-}
-
-/** `23505` é o código do PostgreSQL para violação de restrição única. */
-export function ehViolacaoDeUnicidade(erro: unknown, constraint: string): boolean {
-  if (!(erro instanceof QueryFailedError)) return false;
-  const driver = erro.driverError as { code?: string; constraint?: string } | undefined;
-  return driver?.code === '23505' && driver.constraint === constraint;
 }
 
 /** Slug aleatório, não derivado do nome: previsível permitiria varrer a plataforma. */

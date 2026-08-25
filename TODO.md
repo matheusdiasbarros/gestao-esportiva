@@ -725,16 +725,18 @@ privado — verificar a resposta, não só a tela ·
   - [x] Campos públicos vs. privados — a tabela em `docs/domain/professional-profile.md`, que é
         o que a revisão de segurança confere contra a resposta real
   - [x] Migration revisada à mão, revertível — 17 garantias exercitadas contra o banco, e o `revert` conferido
-- [ ] **Epic 3.2 — Preços** 🟨 *o modelo está de pé; falta a rota que grava*
+- [x] **Epic 3.2 — Preços** ✅ 2026-08-25
 
-  > As quatro tarefas abaixo são de modelagem, e estão feitas. O épico **não** fecha aqui: não
-  > existe ainda rota para definir um preço nem tela para digitá-lo, e marcar como concluído
-  > seria a mesma ilusão de progresso que o aviso do Epic 2.2 descreve.
+  > O aviso 🟨 de ontem dizia que o épico não fechava sem a rota que grava. **A rota existe**:
+  > `POST` e `PATCH /professionals/me/sports`, com o preço viajando dentro da modalidade —
+  > modalidade sem preço é estado que o domínio proíbe, e duas rotas separadas criariam
+  > exatamente ele. A tela de digitar é do Epic 3.4, pela divisão do próprio roteiro.
 
   - [x] `professional_sport_prices`: por modalidade **e** por tipo de atendimento
   - [x] Tipos de atendimento: individual, dupla, turma
-  - [x] Inteiro em centavos, moeda `BRL` (ADR-003) — nunca ponto flutuante
-  - [x] O que acontece com o preço quando a modalidade sai do perfil
+  - [x] Inteiro em centavos, moeda `BRL` (ADR-003) — nunca ponto flutuante. A borda da API
+        recusa decimal, zero, negativo e o que passa do teto — quatro testes provam
+  - [x] O que acontece com o preço quando a modalidade sai do perfil — vai junto, por `CASCADE`
 - [ ] **Epic 3.3 — Foto** *(reduzido: o MVP diz "sem mídia elaborada")*
   - [ ] Upload de **uma** foto de perfil, com validação de tipo e tamanho **no servidor** —
         extensão e `Content-Type` são escolhidos por quem envia e não provam nada
@@ -744,11 +746,17 @@ privado — verificar a resposta, não só a tela ·
 - [ ] **Epic 3.4 — Edição do perfil (web)**
   - [ ] Formulário com validação compartilhada (`packages/types`)
   - [ ] Indicador de completude do perfil
-- [ ] **Epic 3.5 — Locais de atendimento 🔁** *(absorvido da Fase 4 — decidido na Fase 0)*
-  - [ ] Cadastro de locais com endereço em texto, sem mapa nem geolocalização
-  - [ ] Múltiplos locais por profissional, com local principal
-  - [ ] Tipos: local próprio, academia/clube, espaço público, casa do aluno
-  - [ ] Só bairro e cidade saem em resposta pública; o endereço exato, nunca
+- [ ] **Epic 3.5 — Locais de atendimento 🔁** 🟨 *(absorvido da Fase 4 — decidido na Fase 0)*
+
+  > A API está de pé e testada. Falta a tela (Epic 3.4) e falta o recorte público (Epic 3.7) —
+  > e é o recorte público que a revisão de segurança obrigatória da fase confere.
+
+  - [x] Cadastro de locais com endereço em texto, sem mapa nem geolocalização — API
+  - [x] Múltiplos locais por profissional, com local principal. Exatamente um, garantido por
+        índice único parcial; excluir o principal promove o mais antigo dos que ficaram
+  - [x] Tipos: local próprio, academia/clube, espaço público, casa do aluno. **Casa do aluno não
+        aceita endereço**, e virar casa do aluno apaga o que estava lá
+  - [ ] Só bairro e cidade saem em resposta pública; o endereço exato, nunca — é o Epic 3.7
 - [ ] **Epic 3.7 — A página "treine comigo" cresce** 🔁 *(acrescentado em 2026-08-25)*
   - [ ] `/treine-com/:slug` passa a mostrar foto, modalidades e locais por bairro e cidade
   - [ ] Teste que prova que a **resposta da API** não devolve dado privado — não basta a tela

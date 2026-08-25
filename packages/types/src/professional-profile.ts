@@ -87,7 +87,14 @@ export interface LocationRow {
   accessNotes: string | null;
 }
 
-/** O perfil como o **dono** o vê. Tudo, inclusive o que não sai para mais ninguém. */
+/**
+ * O perfil como o **dono** o vê. Tudo, inclusive o que não sai para mais ninguém.
+ *
+ * **Sem o link "treine comigo".** O slug mora na âncora de identidade, em `iam`, e o módulo de
+ * perfil não lê tabela de lá (ADR-005 §5). A tela já o recebe em `GET /auth/me`, junto com a
+ * sessão — copiá-lo para cá criaria duas fontes para o mesmo dado, e a segunda desatualiza no
+ * dia em que o profissional trocar o link.
+ */
 export interface ProfessionalProfile {
   bio: string | null;
   /** Formação, especialidades e certificações, em texto livre. **Ninguém verificou.** */
@@ -95,9 +102,6 @@ export interface ProfessionalProfile {
   photoUrl: string | null;
   sports: ProfessionalSportRow[];
   locations: LocationRow[];
-  /** O link "treine comigo" e o estado dele. */
-  signupSlug: string;
-  signupLinkEnabled: boolean;
   completeness: ProfileCompleteness;
 }
 
@@ -144,6 +148,53 @@ export interface PublicProfileArea {
   city: string;
   state: string;
 }
+
+/**
+ * As 27 unidades federativas. Usada pela API para validar e pela web para montar o seletor.
+ *
+ * Existe porque `state` é `char(2)`: sem a lista, "XX" entra, e a busca por cidade e estado da
+ * Fase 12 herda um campo com lixo dentro que ninguém vai saber quando começou.
+ */
+export const UFS_DO_BRASIL = [
+  'AC',
+  'AL',
+  'AP',
+  'AM',
+  'BA',
+  'CE',
+  'DF',
+  'ES',
+  'GO',
+  'MA',
+  'MT',
+  'MS',
+  'MG',
+  'PA',
+  'PB',
+  'PR',
+  'PE',
+  'PI',
+  'RJ',
+  'RN',
+  'RS',
+  'RO',
+  'RR',
+  'SC',
+  'SP',
+  'SE',
+  'TO',
+] as const;
+
+export type UF = (typeof UFS_DO_BRASIL)[number];
+
+/**
+ * O ano de início de experiência mais antigo que aceitamos.
+ *
+ * O teto é o **ano corrente**, calculado na hora — uma constante com o ano de hoje viraria
+ * mentira em 1º de janeiro. Os dois limites também estão como `CHECK` no banco, com folga
+ * (1900–2200), porque lá o papel é impedir absurdo, não conferir regra de produto.
+ */
+export const MIN_EXPERIENCE_YEAR = 1900;
 
 export const MAX_BIO_LENGTH = 600;
 export const MAX_CREDENTIALS_LENGTH = 600;

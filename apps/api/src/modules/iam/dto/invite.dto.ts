@@ -1,11 +1,8 @@
 import { InviteKind } from '@gestao/types';
 import { ApiProperty } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
 import { IsEmail, IsEnum, IsOptional, IsUUID } from 'class-validator';
+import { Trim } from '../../../common/validation/trim';
 import { SignupProfessionalDto } from './auth.dto';
-
-const Trim = (): PropertyDecorator =>
-  Transform(({ value }) => (typeof value === 'string' ? value.trim() : value));
 
 export class CreateInviteDto {
   @ApiProperty({ description: 'A ficha da carteira que vai receber o convite.' })

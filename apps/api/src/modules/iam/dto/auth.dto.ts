@@ -1,6 +1,5 @@
 import { MINIMUM_PASSWORD_LENGTH } from '@gestao/types';
 import { ApiProperty } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
 import {
   Equals,
   IsBoolean,
@@ -10,10 +9,7 @@ import {
   IsString,
   Length,
 } from 'class-validator';
-
-/** Espaço nas pontas de e-mail digitado no celular é regra, não exceção. */
-const Trim = (): PropertyDecorator =>
-  Transform(({ value }) => (typeof value === 'string' ? value.trim() : value));
+import { Trim } from '../../../common/validation/trim';
 
 export class SignupProfessionalDto {
   @ApiProperty({ example: 'rodrigo@exemplo.com' })

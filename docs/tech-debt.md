@@ -201,6 +201,32 @@ dois provedores antes de existir o segundo (ADR-005).
 
 ---
 
+### DT-010 — A suíte de ponta a ponta gasta 66 dos 100 cadastros por hora que o IP tem
+
+**O que:** cada teste de tela cria a própria conta, de propósito (`e2e/apoio.ts` explica por
+quê), e todos saem de `127.0.0.1`. Uma execução limpa da suíte consome **cerca de 66** dos 100
+cadastros por hora que `LimitarCadastro` permite por IP. Uma execução cabe; **duas na mesma hora
+não cabem.**
+
+**Como isso aparece:** não como "limite estourado". Aparece como meia dúzia de testes de
+arquivos diferentes falhando em `expect(page).toHaveURL('/painel')`, porque o formulário de
+cadastro recebeu 429 e a página não navegou. Custou uma hora a primeira vez, e o diagnóstico
+errado foi acusar o teto de 100 — que estava certo. A prova é simples e vale repetir antes de
+mexer no limite: apagar os contadores (`redis-cli --scan --pattern "{*}:*" | xargs redis-cli
+del`) e rodar de novo.
+
+**Por que não está corrigido agora:** o teto de 100/hora é um controle de segurança da Fase 2,
+com motivo escrito, e afrouxá-lo para acomodar teste seria trocar produção por conveniência de
+CI. Compartilhar conta entre testes desfaria o isolamento que `apoio.ts` documenta. No CI o
+problema não existe: cada execução sobe um Redis limpo.
+
+**Dispara correção:** quando uma execução limpa passar de ~85 cadastros — o que vai acontecer,
+porque toda fase acrescenta testes. Aí a saída certa **não** é subir o teto: é a suíte apagar os
+contadores de limite no `globalSetup`, que é o Redis de desenvolvimento e é dela. Medir antes de
+decidir; o número de hoje está no comentário de `LimitarCadastro`.
+
+---
+
 ## Armadilhas já resolvidas (não repetir)
 
 Não são débito — são erros que custaram tempo e que a documentação agora previne.
@@ -222,6 +248,7 @@ Não são débito — são erros que custaram tempo e que a documentação agora
 | `response.json()` num corpo vazio lança, e o erro chega na tela como falha de rede. Checar o tipo de conteúdo, não a lista de códigos | `apps/web/src/lib/api.ts` |
 | **`next build` e `next dev` na mesma pasta fazem toda rota menos a raiz devolver 404**, sem erro no terminal. Resolvido com pastas de saída separadas | `apps/web/next.config.ts`, `distDir` |
 | **Rodar `pnpm test:e2e` com o `pnpm dev` no ar derruba os dois.** A suíte sobe a própria API e web nas mesmas portas; as instâncias disputam, o servidor de desenvolvimento morre no meio e a suíte falha em massa por um motivo que não tem nada a ver com a mudança em análise | `docs/sistema/fase-02-identidade-e-acesso.md` §6 |
+| **O Playwright reaproveita o servidor que já estiver na porta, mesmo de um build velho.** `reuseExistingServer: !ehCI` existe para não subir tudo de novo a cada execução — e o efeito colateral é que uma correção recém-compilada simplesmente não entra, sem nenhum aviso. O sintoma é a mudança "não fazer efeito"; a checagem é `Get-NetTCPConnection -LocalPort 3333,3000` e olhar o `StartTime` do processo | `playwright.config.ts` |
 | **O modo estrito do React dispara duas vezes o efeito que consome um token de uso único.** A primeira montagem gasta o token, a segunda recebe o erro — e é a segunda que a tela mostra | `apps/web/src/app/verificar-email/page.tsx` |
 | **O `router.d.ts` do expo-router pode encher de rotas falsas.** O arquivo gerado chegou a listar caminhos de `apps/api` e `apps/web` — arquivos criados enquanto um servidor Expo estava no ar, que vigia a raiz do monorepo. O sintoma é `tsc` recusar todo `href` válido. Não é versionado: apagar `.expo/types` e deixar o Expo gerar de novo resolve | `apps/mobile/.expo/types/` |
 | **`react` e `react-dom` precisam ser a MESMA versão, exata.** O `bundledNativeModules` do Expo indicava 19.2.3 e o projeto usa 19.2.8; a página abria em branco, e o motivo só aparecia no console do navegador — nada no terminal do Metro | `apps/mobile/package.json` |

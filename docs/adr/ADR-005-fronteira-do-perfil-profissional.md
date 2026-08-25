@@ -160,8 +160,16 @@ saber o que mostrar; o serviço vai ao banco.
 | Prefixo | Dono |
 | --- | --- |
 | `/auth/*`, `/invites/*`, `/admin/*` | `iam` — inalterado |
-| `/professionals/me`, `/professionals/me/prices`, `/professionals/me/locations`, `/professionals/me/photo` | `professional-profile` |
+| `/professionals/me`, `/professionals/me/sports`, `/professionals/me/locations`, `/professionals/me/photo` | `professional-profile` |
 | `/sports` | `sports`, público |
+
+> **Correção de 2026-08-25, na implementação:** a linha do meio dizia
+> `/professionals/me/prices`. Preço **não** tem rota própria — ele viaja dentro de
+> `/professionals/me/sports`. O motivo apareceu ao construir: modalidade sem preço é um estado
+> que o domínio proíbe (`professional-profile.md` §6.3), e duas rotas separadas criariam
+> exatamente ele, na janela entre criar a modalidade e criar o primeiro preço. Com o preço
+> junto, esse estado não é representável. A fronteira não muda — o dono continua sendo
+> `professional-profile`.
 
 `iam` não ganha rota sob `/professionals`. O perfil público da Epic 3.6 fica de fora do MVP; no
 dia em que existir, ele mora em `professional-profile` e precisa de uma porta nova em `iam` para
@@ -255,11 +263,16 @@ consumidor só, hoje, e extração barata amanhã. Ver §4.
   o profissional reajusta a tabela. O desenho que a fronteira sugere é copiar o valor no momento
   da venda e nunca mais consultar — mas isso é regra de negócio, e quem responde é `product` na
   Fase 9.
-- **Confirmar que nenhuma consulta do módulo novo toca `users`, `professionals` ou `students`.**
-  Um `grep` por essas entidades fora de `iam` deve continuar voltando vazio ao fim da fase, e
-  esse é o teste da decisão inteira.
-- Conferir que a modalidade digitada por um profissional, enquanto pendente de curadoria, **não
-  aparece na lista que os outros escolhem**. Ela é dele até alguém promovê-la ao catálogo.
+- ~~**Confirmar que nenhuma consulta do módulo novo toca `users`, `professionals` ou
+  `students`.**~~ **Conferido em 2026-08-25**, com a API do perfil de pé: o grep por
+  `iam/entities` fora de `modules/iam/` volta vazio, e tudo que `professional-profile` importa
+  de fora são três decorators de autenticação, `IamModule`, `SportsService` e
+  `AccessService` — todos exportados de propósito. `professionalId` chega pelo `AccessService`,
+  e a única leitura de identidade do módulo é a dele.
+- ~~Conferir que a modalidade digitada por um profissional, enquanto pendente de curadoria,
+  **não aparece na lista que os outros escolhem**.~~ **Conferido em 2026-08-25.** `GET /sports`
+  filtra por `APPROVED` e não olha quem pergunta — a pendente não aparece nem para quem a
+  criou, porque ela já chega a ele pelo próprio perfil. Teste em `e2e/perfil.spec.ts`.
 
 ## Quando revisitar
 

@@ -50,6 +50,10 @@ export const LimitarLogin = (): MethodDecorator & ClassDecorator =>
  * O que se combate aqui é criação de contas em massa, que é comportamento de hora, não de
  * segundo. A contagem por alvo continua valendo no teto global e impede alguém martelar o
  * mesmo e-mail para descobrir se ele já tem conta.
+ *
+ * **Este número é o orçamento da suíte de ponta a ponta**, e vale saber: uma execução limpa
+ * gasta cerca de 66 cadastros, todos vindos de `127.0.0.1`. Cabe uma execução por hora com
+ * folga, e **não cabem duas** — ver DT-010. Mexer aqui para baixo quebra o CI.
  */
 export const LimitarCadastro = (): MethodDecorator & ClassDecorator =>
   Throttle({ [LIMITE_IP]: { limit: 100, ttl: 60 * MINUTO } });

@@ -17,6 +17,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, IsNull, Repository } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
+import { ehViolacaoDeUnicidade } from '../../../common/database/violacao-de-unicidade';
 import { MailService } from '../../mail/mail.service';
 import { MailKind } from '../../mail/mail.types';
 import { Professional } from '../entities/professional.entity';
@@ -27,7 +28,6 @@ import {
   AuthService,
   DadosDeCadastro,
   SessaoAberta,
-  ehViolacaoDeUnicidade,
   normalizarEmail,
   primeiroNome,
 } from './auth.service';

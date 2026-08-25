@@ -7,6 +7,8 @@ import { buildDataSourceOptions } from './config/database.config';
 import { EnvironmentVariables, NodeEnv } from './config/env.validation';
 import { HealthModule } from './modules/health/health.module';
 import { IamModule } from './modules/iam/iam.module';
+import { ProfessionalProfileModule } from './modules/professional-profile/professional-profile.module';
+import { SportsModule } from './modules/sports/sports.module';
 import { RedisModule } from './redis/redis.module';
 
 @Module({
@@ -85,6 +87,8 @@ import { RedisModule } from './redis/redis.module';
     RedisModule,
     HealthModule,
     IamModule,
+    SportsModule,
+    ProfessionalProfileModule,
   ],
 })
 export class AppModule {}

@@ -176,6 +176,13 @@ do módulo começa com o `professionalId` que o `AccessService` devolve, e termi
 | `PENDING` | **só de quem a criou** | alguém digitou; espera curadoria |
 | `ARCHIVED` | de ninguém | saiu do catálogo; as ligações existentes continuam valendo |
 
+**Como "só de quem a criou" é implementado, e por que não é o óbvio.** `GET /sports` devolve
+apenas as `APPROVED` — e **não olha quem está perguntando**. A pendente chega a quem a criou por
+outro caminho: ela já está no perfil dele, porque digitar o nome e ligar-se à modalidade é a
+mesma operação. O efeito na tela é o combinado; o mecanismo é mais simples e tem uma propriedade
+que o óbvio não teria: a rota do catálogo é igual para todo mundo, então **é cacheável e não tem
+como vazar** a pendente de um profissional para outro por um erro de filtro.
+
 **Por que um estado na mesma tabela, e não uma tabela de sugestões. (proposta)** Com duas
 tabelas, todo consumidor a jusante — preço, sessão, turma, busca — precisaria lidar com "ou
 uma modalidade, ou uma string". Com uma tabela, `professional_sports.sport_id` sempre aponta
@@ -198,6 +205,13 @@ usa índice parcial (`iam.md`, invariante do convite único).
 Isso é o que resolve, sozinho, o caso que motivou D1: "Beach Tennis", "beach-tennis" e
 "beach tennis" caem todos na mesma linha. **"BT" não cai** — nenhuma normalização pega
 abreviação. É exatamente para isso que a curadoria existe.
+
+**Escolher da lista é mais estrito do que digitar, e a assimetria é de propósito.** Pelo
+identificador, o sistema aceita as aprovadas e as pendentes **dele**; arquivada ou pendente de
+outra pessoa respondem 404. Pelo nome, qualquer estado serve. O motivo: quem digita não sabia
+que a linha existia, e recusar o deixaria sem saída — o índice único também não deixaria criar
+uma cópia. Quem manda um identificador, ao contrário, o tirou de algum lugar, e esse lugar não
+mostra arquivada nem pendente alheia.
 
 **Limites. (proposta)** Até **10 modalidades por profissional** e até **3 linhas `PENDING`
 criadas pela mesma conta**. A primeira é folga larga sobre a realidade (a persona primária dá
