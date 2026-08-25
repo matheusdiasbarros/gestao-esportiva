@@ -111,6 +111,63 @@ export function montarMensagem(job: MailJob): MensagemPronta {
              envie um convite novo.</p>
         `),
       };
+
+    case MailKind.ChangeEmail:
+      return {
+        subject: 'Confirme seu novo e-mail',
+        text: [
+          `Olá, ${job.name}.`,
+          '',
+          'Você pediu para passar a usar este endereço na sua conta da Gestão Esportiva.',
+          `Confirme pelo link abaixo — ele vale por ${job.minutosDeValidade} minutos:`,
+          job.link,
+          '',
+          'Até confirmar, nada muda: sua conta continua com o endereço antigo.',
+          'Se não foi você que pediu, ignore esta mensagem.',
+        ].join('\n'),
+        html: envelope(`
+          <p>Olá, ${escapar(job.name)}.</p>
+          <p>Você pediu para passar a usar <strong>este endereço</strong> na sua conta da Gestão
+             Esportiva.</p>
+          ${botao(job.link, 'Confirmar este endereço')}
+          <p style="color:#666">O link vale por
+             <strong>${job.minutosDeValidade} minutos</strong>. Até você confirmar, nada muda —
+             sua conta continua com o endereço antigo. Se não foi você que pediu, ignore esta
+             mensagem.</p>
+        `),
+      };
+
+    case MailKind.EmailChangeRequested:
+      // O assunto é o aviso inteiro. Muita gente decide se abre pelo assunto, e este é o e-mail
+      // que precisa ser aberto: é a última chance de barrar uma troca que a pessoa não pediu.
+      return {
+        subject: 'Pediram para trocar o e-mail da sua conta',
+        text: [
+          `Olá, ${job.name}.`,
+          '',
+          'Alguém pediu para que a sua conta da Gestão Esportiva passe a usar este endereço:',
+          job.novoEmail,
+          '',
+          `O pedido vale por ${job.minutosDeValidade} minutos e só se completa quando for`,
+          'confirmado lá. Enquanto isso, sua conta continua com o endereço atual.',
+          '',
+          'FOI VOCÊ? Não precisa fazer nada aqui — confirme no endereço novo.',
+          '',
+          'NÃO FOI VOCÊ? Troque sua senha agora, em "Esqueci a senha". Isso cancela o pedido',
+          'e desconecta todos os aparelhos, inclusive o de quem estiver na sua conta.',
+        ].join('\n'),
+        html: envelope(`
+          <p>Olá, ${escapar(job.name)}.</p>
+          <p>Alguém pediu para que a sua conta da Gestão Esportiva passe a usar este endereço:</p>
+          <p><strong>${escapar(job.novoEmail)}</strong></p>
+          <p>O pedido vale por <strong>${job.minutosDeValidade} minutos</strong> e só se completa
+             quando for confirmado lá. Enquanto isso, sua conta continua com o endereço atual.</p>
+          <p><strong>Foi você?</strong> Não precisa fazer nada aqui — confirme no endereço novo.</p>
+          <p><strong>Não foi você?</strong> Troque sua senha agora, em
+             &ldquo;Esqueci a senha&rdquo;. Isso cancela o pedido e desconecta todos os
+             aparelhos, inclusive o de quem estiver na sua conta.</p>
+        `),
+      };
   }
 }
 

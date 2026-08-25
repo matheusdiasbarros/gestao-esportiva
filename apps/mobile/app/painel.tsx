@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ActivityIndicator, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { Botao, cores } from '@/componentes/campos';
 import { ConvidarAlunos } from '@/componentes/convidar';
+import { TrocarEmail } from '@/componentes/trocar-email';
 import { useSessao } from '@/contexto/sessao';
 import { webUrl } from '@/lib/api';
 
@@ -59,6 +60,10 @@ export default function Painel() {
             deste endereço.
           </Text>
         ) : null}
+
+        <View style={estilos.separador}>
+          <TrocarEmail pendente={usuario.pendingEmail} />
+        </View>
       </View>
 
       {ehProfissional ? (
@@ -157,6 +162,7 @@ const estilos = StyleSheet.create({
   valor: { fontSize: 14, fontWeight: '500', color: cores.tinta, flexShrink: 1, textAlign: 'right' },
   texto: { fontSize: 14, color: cores.suave, lineHeight: 20 },
   nota: { fontSize: 12, color: cores.tenue, lineHeight: 18 },
+  separador: { borderTopWidth: 1, borderTopColor: cores.borda, marginTop: 4, paddingTop: 12 },
   aviso: { fontSize: 12, color: cores.tenue, lineHeight: 18 },
   link: { gap: 8, paddingBottom: 4 },
   enderecoTexto: {

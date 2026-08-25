@@ -87,6 +87,9 @@ O ambiente de desenvolvimento é Windows, o CI é Linux e a imagem de produção
 - Mínimo de **10 caracteres**.
 - **Sem** exigência de maiúscula, número ou símbolo.
 - Bloqueio das senhas mais vazadas do mundo, por lista local — sem chamada a serviço externo.
+  Implementado em 2026-08-24 com **143 mil entradas de 10 caracteres ou mais**, das listas do
+  NCSC britânico (as mais vistas nos vazamentos do Have I Been Pwned), do Pwdb e da lista em
+  português. Só entram senhas de 10+ porque a regra de comprimento já barra o resto.
 - **Sem** expiração periódica.
 - Medidor de força na tela, informativo, nunca bloqueante.
 
@@ -179,6 +182,8 @@ sistema que ainda não tem uma senha gravada.
 - Somos responsáveis pelo código de autenticação — o que torna a revisão obrigatória do agente
   `security` uma exigência real, não formalidade.
 - A lista de senhas vazadas precisa ser embarcada e ocupa espaço no repositório ou na imagem.
+  **Custo medido em 2026-08-24:** 596 KB versionados, cerca de 15 MB de memória na aplicação, e
+  o arquivo tem que ser copiado para a imagem junto com o código — se faltar, a API não sobe.
 - A detecção de reuso pode deslogar um usuário legítimo quando dois pedidos de renovação saem
   ao mesmo tempo — condição de corrida real em app mobile com várias telas. Precisa de janela
   de tolerância curta na implementação, e de teste.

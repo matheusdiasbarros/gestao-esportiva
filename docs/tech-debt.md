@@ -107,6 +107,27 @@ cria e descarta a própria ficha, e este débito fecha.
 
 ---
 
+### DT-006 — A confirmação da troca de e-mail não tem teste em navegador
+
+**O que:** `e2e/trocar-email.spec.ts` cobre as três recusas, o estado de espera, o cancelamento e
+o link inválido. **Não cobre a confirmação que dá certo** — nem a tela `/trocar-email` no caminho
+feliz.
+
+**Por quê:** o token só existe dentro da mensagem enviada, e o teste não tem caixa de entrada. A
+única cópia legível fica no job da fila, no Redis; ler de lá exigiria `ioredis` como dependência
+da raiz só para teste, ou um cliente Redis escrito à mão sobre `node:net`. As duas opções custam
+mais do que protegem: acoplariam a suíte de tela ao formato interno da fila do BullMQ.
+
+**Aceito porque:** é o mesmo limite do DT-005 e do teste de recuperação de senha, e a defesa está
+no mesmo lugar — o servidor. As regras que importam (idempotência, link antigo que não arrasta a
+conta de volta, redefinição de senha que cancela a troca) são de API, e foram exercitadas ponta a
+ponta contra a API rodando: **33 verificações, todas passando em 2026-08-24**.
+
+**Dispara correção:** quando o projeto tiver um coletor de e-mail em desenvolvimento — Mailpit
+ou equivalente. Aí este débito e o DT-005 fecham juntos, com o mesmo mecanismo.
+
+---
+
 ## Armadilhas já resolvidas (não repetir)
 
 Não são débito — são erros que custaram tempo e que a documentação agora previne.

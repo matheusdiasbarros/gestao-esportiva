@@ -88,6 +88,22 @@ export class TokenDto {
   token: string;
 }
 
+export class ChangeEmailDto {
+  @ApiProperty({ example: 'rodrigo.novo@exemplo.com', description: 'O endereço novo.' })
+  @Trim()
+  @IsEmail({}, { message: 'Informe um e-mail válido.' })
+  @Length(1, 254)
+  email: string;
+
+  /**
+   * A senha atual, mesmo com a sessão aberta. Sem `@Length`: a política pode ter endurecido
+   * depois que a conta foi criada, e barrar aqui uma senha antiga e válida travaria a pessoa.
+   */
+  @ApiProperty({ description: 'A senha atual, para provar que a sessão não foi roubada.' })
+  @IsString()
+  password: string;
+}
+
 export class LoginDto {
   @ApiProperty({ example: 'rodrigo@exemplo.com' })
   @Trim()

@@ -17,6 +17,10 @@ export const MailKind = {
   StudentInvite: 'STUDENT_INVITE',
   /** Aviso ao profissional de que o convite foi aceito, e por quem. */
   InviteAccepted: 'INVITE_ACCEPTED',
+  /** Confirmação do endereço **novo** numa troca de e-mail. Vai para o endereço novo. */
+  ChangeEmail: 'CHANGE_EMAIL',
+  /** Aviso da troca pedida. Vai para o endereço **antigo**, e é o alarme contra sequestro. */
+  EmailChangeRequested: 'EMAIL_CHANGE_REQUESTED',
 } as const;
 
 export type MailKind = (typeof MailKind)[keyof typeof MailKind];
@@ -64,4 +68,34 @@ export interface InviteAcceptedJob extends Base {
   acceptedByEmail: string;
 }
 
-export type MailJob = VerifyEmailJob | ResetPasswordJob | StudentInviteJob | InviteAcceptedJob;
+export interface ChangeEmailJob extends Base {
+  kind: typeof MailKind.ChangeEmail;
+  link: string;
+  minutosDeValidade: number;
+}
+
+/**
+ * Aviso ao endereço que está saindo da conta.
+ *
+ * É o controle que sustenta a troca inteira. Quem rouba uma sessão aberta troca o e-mail e, a
+ * partir daí, é dono da conta: recupera a senha pelo endereço novo e o titular não tem como
+ * voltar. Esta mensagem chega **antes** de a troca valer, e diz a única coisa que ainda
+ * funciona nesse momento — trocar a senha, que derruba todos os aparelhos e cancela a troca.
+ *
+ * O endereço novo vai por extenso, não mascarado: é o que a pessoa precisa para reconhecer a
+ * própria digitação ou para relatar o abuso. E não há o que proteger — a mensagem só chega a
+ * quem já é dono da conta.
+ */
+export interface EmailChangeRequestedJob extends Base {
+  kind: typeof MailKind.EmailChangeRequested;
+  novoEmail: string;
+  minutosDeValidade: number;
+}
+
+export type MailJob =
+  | VerifyEmailJob
+  | ResetPasswordJob
+  | StudentInviteJob
+  | InviteAcceptedJob
+  | ChangeEmailJob
+  | EmailChangeRequestedJob;

@@ -560,10 +560,12 @@ ela ·
   - [x] Guard global: rota nasce protegida, pública só com `@Public()`
   - [x] Cookie `httpOnly` na web, token no corpo no app
   - [x] Recuperação e redefinição de senha — redefinir derruba todos os aparelhos
-  - [ ] Troca de e-mail com confirmação no endereço novo e aviso no antigo
+  - [x] Troca de e-mail com confirmação no endereço novo e aviso no antigo — **exige a senha
+        atual**, e redefinir a senha cancela uma troca pendente
   - [x] Respostas indistinguíveis no login — **o cadastro de profissional é exceção consciente**, ver ADR-004 §9
   - [x] Rate limiting por IP **e** por alvo, em Redis — 5 tentativas por e-mail a cada 15 min
-  - [ ] Lista completa de senhas vazadas (hoje é um subconjunto)
+  - [x] Lista completa de senhas vazadas — 143 mil entradas com 10+ caracteres, embarcadas e
+        geradas por `apps/api/scripts/gerar-senhas-vazadas.mjs`
 - [x] **Epic 2.3 — Autorização** ✅ 2026-08-24
   - [x] Guard global: rota é protegida por padrão, pública só com marcação explícita *(entregue junto do Epic 2.2)*
   - [x] `@Papeis()` e o `PapeisGuard` — a camada de papel, com **administrador reconferido no banco**

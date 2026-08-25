@@ -107,6 +107,20 @@ export class UserTokenService {
   }
 
   /**
+   * Derruba todos os links pendentes de um tipo.
+   *
+   * Existe para a troca de senha poder cancelar uma troca de e-mail em andamento. É o que dá
+   * sentido ao aviso enviado ao endereço antigo: sem isto, a vítima trocaria a senha, veria os
+   * aparelhos caírem, e o link de troca de e-mail continuaria de pé esperando ser confirmado.
+   */
+  async revogarPendentes(userId: string, purpose: TokenPurpose): Promise<void> {
+    await this.tokens.update(
+      { userId, purpose, usedAt: IsNull(), revokedAt: IsNull() },
+      { revokedAt: new Date() },
+    );
+  }
+
+  /**
    * Busca um token que **já foi consumido**, para quem precisa saber se a repetição é inofensiva.
    *
    * O mesmo link de e-mail é aberto mais de uma vez sem que ninguém tenha clicado duas vezes:

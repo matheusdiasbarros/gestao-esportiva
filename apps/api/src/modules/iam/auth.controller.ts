@@ -2,6 +2,7 @@ import { AuthenticatedUser } from '@gestao/types';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -15,7 +16,12 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { CurrentUser } from './auth/current-user.decorator';
 import { Public } from './auth/public.decorator';
-import { LimitarCadastro, LimitarLogin, LimitarRenovacao } from './auth/rate-limit';
+import {
+  LimitarCadastro,
+  LimitarLogin,
+  LimitarRenovacao,
+  LimitarTrocaDeEmail,
+} from './auth/rate-limit';
 import {
   RespostaDeSessao,
   SessaoHttp,
@@ -24,6 +30,7 @@ import {
   lerRefresh,
 } from './auth/sessao-http';
 import {
+  ChangeEmailDto,
   ForgotPasswordDto,
   LoginDto,
   ResetPasswordDto,
@@ -173,6 +180,33 @@ export class AuthController {
   @ApiOperation({ summary: 'Confirma o endereço a partir do link recebido' })
   async verificarEmail(@Body() dto: TokenDto): Promise<void> {
     await this.auth.verificarEmail(dto.token);
+  }
+
+  @LimitarTrocaDeEmail()
+  @Post('email/change')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({ summary: 'Pede a troca do endereço da conta, confirmando a senha atual' })
+  async pedirTrocaDeEmail(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ChangeEmailDto,
+  ): Promise<void> {
+    await this.auth.solicitarTrocaDeEmail(user.id, dto.email, dto.password);
+  }
+
+  @Delete('email/change')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Desiste de uma troca de e-mail que ainda não foi confirmada' })
+  async cancelarTrocaDeEmail(@CurrentUser() user: AuthenticatedUser): Promise<void> {
+    await this.auth.cancelarTrocaDeEmail(user.id);
+  }
+
+  @Public()
+  @LimitarCadastro()
+  @Post('email/change/confirm')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Confirma a troca a partir do link recebido no endereço novo' })
+  async confirmarTrocaDeEmail(@Body() dto: TokenDto): Promise<void> {
+    await this.auth.confirmarTrocaDeEmail(dto.token);
   }
 
   @Get('me')

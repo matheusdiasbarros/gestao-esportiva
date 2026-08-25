@@ -1,5 +1,5 @@
 import { MINIMUM_PASSWORD_LENGTH } from '@gestao/types';
-import { avaliarSenha, MotivoSenhaFraca } from './password-policy';
+import { avaliarSenha, carregarSenhasVazadas, MotivoSenhaFraca } from './password-policy';
 
 describe('avaliarSenha', () => {
   it('aceita uma senha longa e comum, sem exigir maiúscula, número ou símbolo', () => {
@@ -14,7 +14,12 @@ describe('avaliarSenha', () => {
   });
 
   it('aceita exatamente o comprimento mínimo', () => {
-    expect(avaliarSenha('a'.repeat(MINIMUM_PASSWORD_LENGTH)).ok).toBe(true);
+    // Já foi `'a'.repeat(10)`, que passou a ser recusado quando a lista completa de senhas
+    // vazadas entrou — `aaaaaaaaaa` está lá, e com razão. A senha de teste precisa exercitar só
+    // a regra de comprimento, então tem que ser uma que ninguém nunca usou.
+    const dezCaracteres = 'quadra-sol';
+    expect(dezCaracteres).toHaveLength(MINIMUM_PASSWORD_LENGTH);
+    expect(avaliarSenha(dezCaracteres).ok).toBe(true);
   });
 
   it('conta pontos de código, não unidades UTF-16 — emoji não vale por dois', () => {
@@ -45,5 +50,31 @@ describe('avaliarSenha', () => {
     const resultado = avaliarSenha('123456789');
     expect(resultado.mensagem).toBeDefined();
     expect(resultado.mensagem).not.toContain('SENHAS_VAZADAS');
+  });
+});
+
+describe('lista de senhas vazadas', () => {
+  it('está embarcada e é a lista completa, não uma amostra', () => {
+    // O número exato muda quando as fontes forem atualizadas; o piso é o que interessa. Se cair
+    // para a casa das dezenas, alguém trocou o arquivo por um esboço sem perceber.
+    expect(carregarSenhasVazadas()).toBeGreaterThan(100_000);
+  });
+
+  it('cobre senhas longas de vazamento que a lista curta anterior deixava passar', () => {
+    for (const senha of ['1qaz2wsx3edc', 'superman123', 'familia2010']) {
+      expect(avaliarSenha(senha).motivo).toBe(MotivoSenhaFraca.Vazada);
+    }
+  });
+
+  it('cobre o português, que as listas mundiais representam mal', () => {
+    for (const senha of ['deusefiel10', 'princesa123', 'flamengo123']) {
+      expect(avaliarSenha(senha).motivo).toBe(MotivoSenhaFraca.Vazada);
+    }
+  });
+
+  it('não recusa uma frase inventada — a política precisa deixar a boa senha passar', () => {
+    // O contrapeso do teste acima. Lista grande demais, ou comparação frouxa, transformaria a
+    // proteção em obstáculo: a frase longa é justamente o que a ADR-004 §6 quer incentivar.
+    expect(avaliarSenha('cachorro azul na praia de manhã').ok).toBe(true);
   });
 });

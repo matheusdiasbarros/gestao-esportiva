@@ -4,6 +4,7 @@ import { ConvidarAlunos } from '@/components/convidar-alunos';
 import { LinkPublico } from '@/components/link-publico';
 import { ReenviarVerificacao } from '@/components/reenviar-verificacao';
 import { Sair } from '@/components/sair';
+import { TrocarEmail } from '@/components/trocar-email';
 import { getSessao } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
@@ -64,6 +65,10 @@ export default async function Painel() {
             <ReenviarVerificacao />
           </div>
         ) : null}
+
+        <div className="mt-4 border-t border-(--color-border) pt-4">
+          <TrocarEmail pendente={sessao.pendingEmail} />
+        </div>
       </section>
 
       {sessao.signupSlug ? (

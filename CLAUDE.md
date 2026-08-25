@@ -20,7 +20,8 @@ Escopo do MVP em [`docs/product/mvp.md`](docs/product/mvp.md).
 **Fase 2 (identidade e acesso) em andamento.** Fases 0 e 1 concluídas.
 
 Funciona hoje: criar conta de profissional ou de aluno, entrar, sair, recuperar senha,
-confirmar e-mail, o link público "treine comigo" do professor, e o painel protegido.
+confirmar e trocar e-mail, convidar alunos, o link público "treine comigo" do professor, a
+autorização por papel e propriedade, e o painel protegido — na web e no aplicativo.
 Não existe ainda nada de agenda, aluno como funcionalidade, ou pagamento.
 
 O roadmap de 20 fases está em [`TODO.md`](TODO.md) — é o documento que manda.
@@ -48,8 +49,8 @@ pnpm --filter @gestao/api migration:run
 pnpm --filter @gestao/api seed            # dados de desenvolvimento, idempotente
 pnpm dev                                  # API :3333 · web :3000
 
-pnpm lint && pnpm typecheck && pnpm test  # 68 testes de unidade
-pnpm test:e2e                             # 36 testes em navegador
+pnpm lint && pnpm typecheck && pnpm test  # 78 testes de unidade
+pnpm test:e2e                             # 66 testes contra o sistema inteiro
 
 pnpm --filter @gestao/api test -- health.service   # um teste específico
 pnpm exec playwright test cadastro                 # um arquivo de tela

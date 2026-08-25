@@ -467,6 +467,161 @@ export class AuthService {
     );
 
     await this.tokens.revogarTudoDoUsuario(user.id);
+
+    // Trocar a senha cancela uma troca de e-mail em andamento, e é isto que dá poder ao aviso
+    // que o endereço antigo recebeu. Sem esta linha, a vítima faria exatamente o que a mensagem
+    // manda — trocar a senha —, veria os aparelhos do invasor caírem, e o link que move a conta
+    // para o endereço dele continuaria válido na caixa de entrada dele.
+    await this.userTokens.revogarPendentes(user.id, TokenPurpose.ChangeEmail);
+    await this.users.update({ id: user.id }, { pendingEmail: null });
+  }
+
+  /**
+   * Pede para a conta passar a usar outro endereço.
+   *
+   * **Exige a senha atual, mesmo com a sessão aberta.** Sem isso, quem rouba uma sessão troca o
+   * e-mail e a conta acabou: ele recupera a senha pelo endereço novo e o titular não tem por
+   * onde voltar. A senha é o segredo que a sessão roubada não carrega.
+   *
+   * A troca **não vale agora**. Fica pendente até ser confirmada no endereço novo, e o endereço
+   * antigo recebe o aviso no mesmo instante — é o par que fecha o cerco: uma via prova que o
+   * endereço novo é alcançável, a outra dá ao titular a chance de barrar.
+   */
+  async solicitarTrocaDeEmail(
+    userId: string,
+    emailInformado: string,
+    senha: string,
+  ): Promise<void> {
+    const novoEmail = normalizarEmail(emailInformado);
+
+    const identity = await this.identities
+      .createQueryBuilder('identity')
+      .addSelect('identity.passwordHash')
+      .innerJoinAndSelect('identity.user', 'user')
+      .where('identity.userId = :userId', { userId })
+      .andWhere('identity.provider = :provider', { provider: IdentityProvider.Password })
+      .getOne();
+
+    if (!identity?.passwordHash) {
+      throw new UnprocessableEntityException({
+        validationErrors: [
+          { field: 'password', message: 'Esta conta não entra por senha. Fale com o suporte.' },
+        ],
+      });
+    }
+
+    if (!(await this.passwords.verify(identity.passwordHash, senha))) {
+      throw new UnprocessableEntityException({
+        validationErrors: [{ field: 'password', message: 'Senha incorreta.' }],
+      });
+    }
+
+    const user = identity.user;
+
+    if (novoEmail === user.email) {
+      throw new UnprocessableEntityException({
+        validationErrors: [{ field: 'email', message: 'Este já é o endereço da sua conta.' }],
+      });
+    }
+
+    // Dizer que o endereço já tem conta revela que ele tem conta. É o mesmo custo que o cadastro
+    // já paga por decisão consciente (ADR-004 §9) — e aqui a informação sai só para quem está
+    // autenticado **e** acertou a senha, ou seja, para menos gente do que no cadastro. Esconder
+    // aqui não fecharia nada e deixaria a pessoa esperando um e-mail que nunca chegaria.
+    if (await this.users.exists({ where: { email: novoEmail } })) {
+      throw new UnprocessableEntityException({
+        validationErrors: [
+          { field: 'email', message: 'Já existe uma conta com este e-mail. Escolha outro.' },
+        ],
+      });
+    }
+
+    const { tokenEmClaro, minutos } = await this.userTokens.emitir(
+      user.id,
+      TokenPurpose.ChangeEmail,
+      novoEmail,
+    );
+
+    // Gravado depois de o link existir: se a emissão falhar, a conta não fica dizendo que há uma
+    // troca pendente que ninguém consegue confirmar.
+    await this.users.update({ id: user.id }, { pendingEmail: novoEmail });
+
+    await this.mail.enfileirar({
+      kind: MailKind.ChangeEmail,
+      to: novoEmail,
+      name: primeiroNome(user.fullName),
+      link: this.mail.link(`/trocar-email?token=${encodeURIComponent(tokenEmClaro)}`),
+      minutosDeValidade: minutos,
+    });
+
+    await this.mail.enfileirar({
+      kind: MailKind.EmailChangeRequested,
+      to: user.email,
+      name: primeiroNome(user.fullName),
+      novoEmail,
+      minutosDeValidade: minutos,
+    });
+  }
+
+  /**
+   * Confirma a troca, a partir do link que chegou no endereço novo.
+   *
+   * Rota pública de propósito: o link é aberto na caixa de entrada, que muitas vezes está em
+   * outro aparelho ou em outro navegador, sem a sessão. Quem prova a identidade aqui é o token.
+   */
+  async confirmarTrocaDeEmail(tokenEmClaro: string): Promise<void> {
+    const consumido = await this.userTokens.consumir(tokenEmClaro, TokenPurpose.ChangeEmail);
+
+    if (!consumido) {
+      // Reabrir o link depois de confirmado é inofensivo — mas **só** enquanto a conta ainda
+      // está no endereço que este link pedia. Sem essa conferência, um link antigo de A→B,
+      // reaberto depois de uma segunda troca B→C, arrastaria a conta de volta para B.
+      const anterior = await this.userTokens.consumidoAntes(tokenEmClaro, TokenPurpose.ChangeEmail);
+      if (anterior?.payload) {
+        const jaTrocado = await this.users.findOneBy({ id: anterior.userId });
+        if (jaTrocado?.email === anterior.payload) return;
+      }
+      throw linkDeTrocaInvalido();
+    }
+
+    const novoEmail = consumido.payload;
+    if (!novoEmail) throw linkDeTrocaInvalido();
+
+    const user = await this.users.findOneBy({ id: consumido.userId });
+    if (!user || user.status !== UserStatus.Active) throw linkDeTrocaInvalido();
+
+    // O endereço novo nasce confirmado: o link só chegou até aqui porque foi aberto na caixa
+    // daquele endereço, que é exatamente a prova que a verificação de e-mail procura.
+    try {
+      await this.users.update(
+        { id: user.id },
+        { email: novoEmail, emailVerifiedAt: new Date(), pendingEmail: null },
+      );
+    } catch (erro) {
+      if (ehViolacaoDeUnicidade(erro, 'uq_users_email')) {
+        // O endereço estava livre quando o link foi pedido e outra conta o tomou nesse meio.
+        throw new UnprocessableEntityException({
+          validationErrors: [
+            {
+              field: 'token',
+              message:
+                'Este endereço passou a ser de outra conta enquanto o link esperava. Peça a troca de novo.',
+            },
+          ],
+        });
+      }
+      throw erro;
+    }
+
+    // Os aparelhos conectados **não** caem. Quem pediu a troca é o dono da sessão, e derrubá-la
+    // seria punir o caminho normal. Contra o caminho anormal quem age é o aviso no endereço
+    // antigo, e a arma que ele oferece — trocar a senha — essa sim derruba tudo.
+  }
+
+  /** Desiste de uma troca pendente. Serve para o erro de digitação e para o "não fui eu". */
+  async cancelarTrocaDeEmail(userId: string): Promise<void> {
+    await this.userTokens.revogarPendentes(userId, TokenPurpose.ChangeEmail);
+    await this.users.update({ id: userId }, { pendingEmail: null });
   }
 
   /** Envia (ou reenvia) o link de confirmação do endereço. */
@@ -588,6 +743,18 @@ export class AuthService {
   private async gastarTempoDeHash(senha: string): Promise<void> {
     await this.passwords.hash(senha);
   }
+}
+
+/** A mesma recusa para todo link de troca que não serve — não se diz qual dos motivos foi. */
+function linkDeTrocaInvalido(): UnprocessableEntityException {
+  return new UnprocessableEntityException({
+    validationErrors: [
+      {
+        field: 'token',
+        message: 'Este link expirou ou já foi usado. Peça a troca de novo dentro da sua conta.',
+      },
+    ],
+  });
 }
 
 function montarPayload(user: AuthenticatedUser): AccessTokenPayload {

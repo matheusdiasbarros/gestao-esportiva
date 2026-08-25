@@ -1,5 +1,5 @@
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
-import { Module } from '@nestjs/common';
+import { Logger, Module, OnModuleInit } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -37,6 +37,7 @@ import { AccessService } from './services/access.service';
 import { AdminService } from './services/admin.service';
 import { AuthService } from './services/auth.service';
 import { InviteService } from './services/invite.service';
+import { carregarSenhasVazadas } from './services/password-policy';
 import { PasswordService } from './services/password.service';
 import { RolesService } from './services/roles.service';
 import { TokenService } from './services/token.service';
@@ -126,4 +127,18 @@ import { UserTokenService } from './services/user-token.service';
   ],
   exports: [PasswordService, RolesService, TokenService, AccessService],
 })
-export class IamModule {}
+export class IamModule implements OnModuleInit {
+  private readonly logger = new Logger(IamModule.name);
+
+  /**
+   * Descompacta a lista de senhas vazadas na subida.
+   *
+   * Feito aqui, e não na primeira consulta, por duas razões. A leitura é síncrona e leva
+   * centenas de milissegundos — deixá-la para depois travaria o laço de eventos no meio de um
+   * cadastro real. E se o arquivo não tiver sido copiado para a imagem, a aplicação precisa
+   * morrer agora, não meses depois, do jeito silencioso: aceitando `senha123456`.
+   */
+  onModuleInit(): void {
+    this.logger.log(`Lista de senhas vazadas: ${carregarSenhasVazadas()} entradas`);
+  }
+}

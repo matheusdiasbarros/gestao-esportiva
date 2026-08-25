@@ -64,6 +64,13 @@ export interface AuthenticatedUser {
   fullName: string;
   roles: Role[];
   emailVerified: boolean;
+  /**
+   * Endereço novo esperando confirmação, quando há uma troca em andamento.
+   *
+   * A tela precisa saber para dizer "confirme em X" em vez de parecer que o pedido se perdeu —
+   * e para oferecer o cancelamento, que é o que a pessoa procura quando digitou errado.
+   */
+  pendingEmail?: string;
   /** Presente quando a conta tem perfil de profissional. */
   professionalId?: string;
   /**

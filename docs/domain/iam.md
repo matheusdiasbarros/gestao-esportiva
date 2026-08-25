@@ -272,6 +272,29 @@ prevenção.
 | Fechar o buraco pelo lado do profissional | a lista de alunos marca as fichas cujo e-mail já tem conta, com um botão de convidar — **Fase 5** |
 | Reivindicação pelo aluno, com e-mail confirmado e o profissional aprovando | **Fase 5**, se ainda fizer sentido |
 
+### 9.5 Troca de e-mail
+
+O e-mail é a chave de recuperação da conta: quem controla a caixa recupera a senha e entra.
+Trocá-lo é, portanto, transferir a conta — e o fluxo trata a operação com esse peso.
+
+| Regra | Por quê |
+| --- | --- |
+| Exige a **senha atual**, mesmo com a sessão aberta | é o segredo que uma sessão roubada não carrega. Sem isso, roubar a sessão é ganhar a conta |
+| O endereço novo precisa estar **livre** | duas contas com o mesmo e-mail não existem, e descobrir isso na confirmação seria tarde |
+| A troca **não vale na hora**: fica pendente até ser confirmada no endereço novo | endereço digitado errado viraria uma conta sem dono e sem recuperação |
+| O endereço **antigo** recebe aviso no mesmo instante | é a única chance de o titular barrar uma troca que não pediu |
+| O aviso manda **trocar a senha**, e trocar a senha cancela a troca pendente | a instrução precisa funcionar de verdade, não ser conselho genérico |
+| O endereço novo nasce **confirmado** | o link só foi aberto porque chegou naquela caixa — é a mesma prova que a verificação de e-mail procura |
+| O titular pode **desistir** enquanto está pendente | serve tanto para o erro de digitação quanto para o "não fui eu" |
+
+**Quem confirma é o token, não a sessão.** O link é aberto na caixa de entrada, muitas vezes em
+outro aparelho. Exigir sessão ali quebraria o caso comum sem impedir nada — o token já é a prova.
+
+**Dizer que o endereço já tem conta revela que ele tem conta.** É o mesmo custo que o cadastro
+paga por decisão consciente (ADR-004 §9), e aqui sai para menos gente: só para quem está
+autenticado e acertou a senha. Esconder não fecharia nada e deixaria a pessoa esperando um
+e-mail que nunca chegaria.
+
 ## 10. Em que contexto a pessoa está
 
 Quando a mesma conta é profissional e aluno, alguma tela precisa dizer qual chapéu ela está

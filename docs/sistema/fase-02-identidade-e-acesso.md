@@ -17,12 +17,14 @@ Contas, login e as duas portas de entrada do aluno.
 - **Autorização**: papel por rota, propriedade por recurso, e o 404 que não confirma existência
 - Rotas de administração (sem tela), com auditoria de toda leitura de dado pessoal
 - Recuperação de senha e confirmação de e-mail, com envio real
+- **Troca de e-mail**: confirmação no endereço novo e aviso no antigo
+- Política de senha com a **lista completa** de senhas vazadas embarcada
 - Limite de tentativas por IP **e** por e-mail alvo
 - Telas web para tudo isso, com o painel protegido no servidor
 
 - Telas no aplicativo — **aluno e profissional** —, com a sessão no cofre do aparelho
 
-**Não entregou ainda:** troca de e-mail.
+**Falta para fechar a fase:** a revisão de segurança obrigatória.
 
 ## 2. Mapa dos arquivos
 
@@ -55,9 +57,13 @@ apps/api/src/modules/iam/
     admin.service.ts               listar contas, suspender e reativar
     password.service.ts            hash argon2id
     password-policy.ts             comprimento e lista de senhas vazadas
+    senhas-vazadas.txt.gz          143 mil senhas com 10+ caracteres, gerado por script
     token.service.ts               emissão, rotação e revogação de tokens
     user-token.service.ts          links de uso único do e-mail
     roles.service.ts               deriva os papéis do dado
+
+apps/api/scripts/
+  gerar-senhas-vazadas.mjs         regera a lista a partir das fontes públicas
 
 apps/api/src/modules/mail/
   mail.service.ts                  coloca na fila; nunca derruba quem chamou
@@ -73,15 +79,16 @@ apps/mobile/
   src/contexto/sessao.tsx          quem esta logado, para o app inteiro
   src/componentes/campos.tsx       campos, botao, aviso e a moldura de teclado
   src/componentes/convidar.tsx     convite pelo celular, via folha de compartilhamento
+  src/componentes/trocar-email.tsx troca de e-mail pelo celular
 
 apps/web/src/
   app/entrar, criar-conta, criar-conta/aluno, esqueci-a-senha,
-      redefinir-senha, verificar-email, painel, treine-com/[slug],
-      convite/[token]
+      redefinir-senha, verificar-email, trocar-email, painel,
+      treine-com/[slug], convite/[token]
   lib/session.ts                   lê a sessão **no servidor**, repassando o cookie
   components/                      campos, sair, link-publico, reenviar-verificacao,
                                    form-cadastro-aluno, entrar-com-professor,
-                                   aceitar-convite, convidar-alunos
+                                   aceitar-convite, convidar-alunos, trocar-email
 ```
 
 ## 3. Rotas e telas
@@ -99,6 +106,9 @@ apps/web/src/
 | `POST /auth/password/reset` | sim | troca a senha e derruba todos os aparelhos |
 | `POST /auth/email/verify/request` | **não** | reenvia o link de confirmação |
 | `POST /auth/email/verify` | sim | confirma pelo link |
+| `POST /auth/email/change` | **não** | pede a troca; **exige a senha atual** |
+| `DELETE /auth/email/change` | **não** | desiste da troca pendente |
+| `POST /auth/email/change/confirm` | sim | aplica a troca, pelo link que foi ao endereço novo |
 | `GET /auth/me` | **não** | quem está autenticado, **fresco do banco** |
 | `GET /invites` | **não** | as fichas da carteira que ainda não têm conta |
 | `POST /invites` | **não** | emite convite; devolve a URL só no avulso |
@@ -143,6 +153,11 @@ Confundir os três é o erro mais comum aqui, e cada um protege uma coisa difere
 | **A auditoria registra o identificador, nunca o conteúdo** | copiar dado pessoal para o log cria uma segunda cópia dele, com outra retenção e outro controle de acesso |
 | **No aplicativo os tokens vão para `expo-secure-store`, nunca `AsyncStorage`** | o AsyncStorage grava em arquivo comum: em aparelho com root e em backup não criptografado, o token sai em texto puro |
 | **Toda chamada do aplicativo manda `x-client-type: mobile`** | sem isso a API responde com cookie, que em React Native não existe — o login "dá certo" e nada depois fica autenticado |
+| **Trocar o e-mail exige a senha atual, mesmo com a sessão aberta** | sem isso, quem rouba uma sessão vira dono da conta: troca o endereço e recupera a senha por lá |
+| **Redefinir a senha cancela uma troca de e-mail pendente** | é o que dá poder ao aviso mandado ao endereço antigo, que manda fazer exatamente isso |
+| **O e-mail só muda depois de confirmado no endereço novo** | um endereço com erro de digitação viraria uma conta sem dono e sem recuperação possível |
+| **Link de troca já usado só é aceito de novo se a conta ainda estiver naquele endereço** | sem a conferência, reabrir um link antigo arrastaria a conta de volta a um endereço anterior |
+| **A lista de senhas vazadas é local, e a aplicação morre se ela sumir** | controle de segurança que desaparece em silêncio é pior do que o que nunca existiu |
 
 ## 4.1 O que muda no banco a cada passo do convite
 
@@ -255,11 +270,28 @@ propósito, porque cada uma cobre um caso que a outra não cobre.
 O `UPDATE` da confirmação leva `emailVerifiedAt: IsNull()` no critério. Preserva o instante da
 primeira confirmação e torna a gravação segura contra dois pedidos simultâneos.
 
+**A troca de e-mail aceita o mesmo link duas vezes — mas não qualquer link já usado.** A
+confirmação é idempotente pelo mesmo motivo acima, e por isso `confirmarTrocaDeEmail` recorre a
+`consumidoAntes` quando o token já foi gasto. A diferença está na conferência que vem em
+seguida: a repetição só passa se a conta **ainda estiver** no endereço daquele link. Sem ela,
+uma conta que foi de A para B e depois de B para C voltaria para B se alguém reabrisse o link
+antigo — que continua na caixa de entrada, indistinguível do novo.
+
+**A lista de senhas vazadas é lida do disco, não de um `Set` no código.** São 143 mil entradas
+num arquivo comprimido ao lado do serviço, e `nest-cli.json` precisa copiá-lo para `dist` — é o
+que faz a linha `"assets": ["**/*.txt.gz"]` estar lá. Sem ela o `tsc` levaria só os `.js`, e a
+API subiria sem a lista. **Ela morre na subida se o arquivo faltar**, e é assim de propósito:
+uma política de senha que passa a aceitar tudo em silêncio é um defeito que ninguém procura.
+
+**`aaaaaaaaaa` deixou de ser uma senha de teste válida.** Está na lista, com razão. Teste que
+precise exercitar só a regra de comprimento tem que usar algo que ninguém nunca digitou — um
+teste quebrou exatamente assim quando a lista completa entrou.
+
 ## 6. Como verificar que continua funcionando
 
 ```bash
-pnpm lint && pnpm typecheck && pnpm test    # 74 testes de unidade
-pnpm test:e2e                               # 59 testes contra o sistema inteiro
+pnpm lint && pnpm typecheck && pnpm test    # 78 testes de unidade
+pnpm test:e2e                               # 66 testes contra o sistema inteiro
 ```
 
 **A suíte não pode ser rodada duas vezes seguidas.** Ela mesma gasta o teto de login por IP —
@@ -300,6 +332,20 @@ cookie `httpOnly` que o JavaScript da página não alcança: não há como exerc
 **O e-mail só chega no endereço da conta Resend** enquanto o remetente for `resend.dev`.
 Qualquer outro destinatário volta 403, e o log explica.
 
+**A confirmação da troca de e-mail não tem teste de tela**, pela mesma razão do aceite de
+convite: o token só existe dentro da mensagem. Os testes cobrem as recusas, a espera e o
+cancelamento; o caminho completo foi exercitado à mão contra a API — pedido, os dois e-mails,
+confirmação, idempotência, login com o endereço novo, cancelamento, e os dois casos de
+segurança (redefinir a senha mata a troca pendente; link antigo não arrasta a conta de volta).
+Está registrado em DT-006.
+
+Para ler o link sem caixa de entrada, os e-mails ficam uma hora na fila do Redis:
+
+```bash
+docker exec gestao-redis sh -c \
+  'for k in $(redis-cli --scan --pattern "bull:mail:[0-9]*"); do redis-cli HGET "$k" data; done'
+```
+
 ### O aplicativo
 
 ```bash
@@ -334,14 +380,15 @@ mostra o endereço que ele está usando de fato.
 - **Criar ficha pela interface.** O profissional só convida quem já está na carteira dele, e em
   Fase 2 a única forma de uma ficha existir é a seed ou o link público. Criar, editar e mesclar
   ficha é da Fase 5 — e é o que destrava o teste do aceite (DT-005)
-- **Troca de e-mail.** A coluna `pending_email` e o propósito `CHANGE_EMAIL` existem, sem fluxo
-- **Autorização por recurso.** Os guards sabem *quem* você é; ainda não impedem um profissional
-  de ver dado de outro, porque não existe dado de negócio. Isso fecha junto com a Fase 5
-- **Telas no aplicativo.** O Expo só tem a tela inicial de saúde
+- **Trocar a própria senha estando logado.** Só existe o caminho de "esqueci a senha", que passa
+  pelo e-mail. É suficiente e ninguém pediu o outro
+- **Tela de aparelhos conectados.** `refresh_tokens` guarda uma etiqueta por aparelho, mas não
+  há onde vê-los nem como derrubar um sem derrubar todos
 - **Painel administrativo.** O papel existe, a tela não — e não tem épico em fase nenhuma
 - **Termos de Uso e Política de Privacidade.** O aceite é gravado com versão `v0-desenvolvimento`;
   os documentos não existem
-- **Lista completa de senhas vazadas.** Hoje é um subconjunto de duas dezenas
+- **Verificação da senha contra vazamento fora do cadastro.** A lista é consultada ao criar conta
+  e ao redefinir senha; não há aviso para quem já usa uma senha que vazou depois
 - **Ambiente publicado.** O staging foi adiado para depois da Fase 5
 
 ## 8. Se você for mexer aqui
@@ -360,6 +407,12 @@ acontecer.
 
 **Ao mexer em e-mail:** o texto sai em HTML **e** em texto puro. Mandar só HTML piora a nota
 de spam, e a mensagem de recuperar senha é justamente a que não pode cair no spam.
+
+**Ao atualizar a lista de senhas vazadas:** `node scripts/gerar-senhas-vazadas.mjs`, de dentro
+de `apps/api`. Precisa de internet — a aplicação não. O script documenta as fontes e o corte de
+10 caracteres, e a saída é ordenada para o diff do arquivo ser estável. Depois, `pnpm test`: um
+teste confere que a lista não encolheu para uma amostra e outro que uma frase inventada continua
+passando.
 
 **Ao mexer no limite de tentativas:** rode `pnpm test:e2e` inteiro. O limite por IP é
 compartilhado por toda a suíte, e apertá-lo demais faz testes não relacionados falharem de

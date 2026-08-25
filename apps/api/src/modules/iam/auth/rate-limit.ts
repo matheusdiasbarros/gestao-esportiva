@@ -55,6 +55,23 @@ export const LimitarCadastro = (): MethodDecorator & ClassDecorator =>
   Throttle({ [LIMITE_IP]: { limit: 100, ttl: 60 * MINUTO } });
 
 /**
+ * Troca de e-mail: **3 pedidos por endereço de destino a cada hora**.
+ *
+ * O alvo aqui é o endereço **novo**, e é ele que precisa de teto. A rota manda uma mensagem
+ * para um endereço escolhido por quem chama — sem limite por destino, uma conta qualquer viraria
+ * um canhão para encher a caixa de entrada de terceiros com e-mails vindos do nosso domínio, o
+ * que além do incômodo queima a reputação de envio do produto inteiro.
+ *
+ * O teto por IP é baixo pelo mesmo motivo, e não incomoda ninguém: trocar o próprio e-mail é
+ * coisa que se faz uma vez por ano.
+ */
+export const LimitarTrocaDeEmail = (): MethodDecorator & ClassDecorator =>
+  Throttle({
+    [LIMITE_IP]: { limit: 10, ttl: 60 * MINUTO },
+    [LIMITE_ALVO]: { limit: 3, ttl: 60 * MINUTO },
+  });
+
+/**
  * Renovação: teto alto de propósito, e sem alvo — não há e-mail no corpo, então a contagem por
  * alvo se pula sozinha. O app renova sem a pessoa pedir e várias abas renovam em paralelo;
  * bloquear renovação legítima desloga usuário sem motivo nenhum.

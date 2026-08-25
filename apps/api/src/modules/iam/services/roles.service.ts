@@ -73,6 +73,7 @@ export class RolesService {
       }),
       emailVerified: user.emailVerifiedAt !== null,
       hasProfessional: temFicha,
+      ...(user.pendingEmail ? { pendingEmail: user.pendingEmail } : {}),
       ...(professional ? { professionalId: professional.id } : {}),
       // O slug só sai quando o link está ligado: entregá-lo desligado faria a tela oferecer
       // para copiar um endereço que não funciona.
