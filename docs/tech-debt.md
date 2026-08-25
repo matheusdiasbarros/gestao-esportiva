@@ -128,6 +128,54 @@ ou equivalente. Aí este débito e o DT-005 fecham juntos, com o mesmo mecanismo
 
 ---
 
+### DT-007 — Bloquear a conta dos outros custa 6 requisições
+
+**O que:** o limite por alvo no login bloqueia por 15 minutos depois de 5 tentativas erradas
+contra um e-mail — **de qualquer IP**. Quem souber o endereço de alguém tranca o login daquela
+pessoa com 6 requisições, e mantém a conta trancada indefinidamente ao custo de umas 24
+requisições por hora. Um único IP, dentro do teto de 60 por 5 minutos, mantém cerca de 30 contas
+trancadas continuamente. O bloqueio também conta o login **bem-sucedido**, porque o limite roda
+antes do handler — de propósito, para conferir senha não virar o alvo.
+
+**Por quê:** é o outro lado da defesa que de fato importa. O limite por alvo é o que para
+credential stuffing — testar a lista das senhas mais comuns contra uma conta específica —, e ele
+só funciona porque conta independentemente do IP de origem. Remover troca um problema raro por
+um comum.
+
+**Aceito porque:** as saídas custam mais do que resolvem nesta fase. Contar só tentativas
+falhas exigiria mover o limite para depois da verificação de senha, que é exatamente o que
+transforma o argon2 em alvo de exaustão de CPU. Exigir CAPTCHA depois de N tentativas é produto
+novo, com dependência nova.
+
+**O que fazer com isto agora:** é a **primeira suspeita** quando alguém disser "não consigo
+entrar e a senha está certa". Sem estar escrito, essa ligação vira uma tarde de investigação.
+
+**Dispara correção:** o primeiro relato real de conta trancada sem explicação, ou a chegada de
+uma borda (WAF, Cloudflare) que permita distinguir tráfego de ataque de tráfego de gente.
+
+---
+
+### DT-008 — `POST /invites` não tem teto, e vira canhão de e-mail na Fase 5
+
+**O que:** a rota que emite convite não tem limite de tentativas próprio, aceita um endereço de
+destino arbitrário no corpo, e o nome do profissional — 120 caracteres, sem restrição de
+conteúdo — vai para o **assunto** da mensagem. Um profissional com e-mail confirmado reemite
+convite em laço e faz a plataforma mandar quantas mensagens quiser, para qualquer endereço, com
+assunto escolhido por ele, saindo do nosso domínio.
+
+**Por que não está corrigido agora:** **não é explorável na Fase 2.** Reemitir exige uma ficha
+sem conta na carteira, e não existe forma de criar ficha pela interface nesta fase — a do link
+público já nasce com `user_id`, e a única ficha nesse estado vem da seed. O único caminho
+possível é o de uma ficha só, o que limita o volume ao teto global de 120 requisições por
+minuto e não vale como vetor.
+
+**Dispara correção — e isto é um prazo, não um talvez:** o **primeiro épico da Fase 5 que criar
+ficha pela interface**. O teto precisa entrar junto com ele, no mesmo commit, não depois. O
+modelo pronto é o `LimitarTrocaDeEmail` em `rate-limit.ts`, que existe pelo mesmo motivo: conta
+por endereço de destino, porque é o destinatário que precisa ser protegido de nós.
+
+---
+
 ## Armadilhas já resolvidas (não repetir)
 
 Não são débito — são erros que custaram tempo e que a documentação agora previne.

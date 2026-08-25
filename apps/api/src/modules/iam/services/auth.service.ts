@@ -385,6 +385,15 @@ export class AuthService {
 
     const descricao = await this.roles.describe(user);
     const tokens = await this.tokens.rotacionar(guardado, montarPayload(descricao), client);
+
+    // Perder a corrida da rotação **é** o reuso, só que descoberto um instante depois: outra
+    // requisição gastou este mesmo token entre a verificação acima e a gravação. A conferência
+    // lá em cima não pega esse caso, porque quando ela rodou o token ainda estava intacto.
+    if (!tokens) {
+      await this.tokens.revogarFamilia(guardado.familyId);
+      throw new UnauthorizedException('Este acesso foi encerrado por segurança. Entre novamente.');
+    }
+
     return { user: descricao, tokens };
   }
 

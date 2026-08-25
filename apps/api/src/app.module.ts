@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
+import { stdSerializers } from 'pino';
 import { AppConfigModule } from './config/config.module';
 import { buildDataSourceOptions } from './config/database.config';
 import { EnvironmentVariables, NodeEnv } from './config/env.validation';
@@ -39,6 +40,31 @@ import { RedisModule } from './redis/redis.module';
                 'req.body.token',
               ],
               remove: true,
+            },
+            /**
+             * A query string sai do log de acesso; ficam só os **nomes** dos parâmetros.
+             *
+             * O `redact` acima cobre cabeçalho e corpo, e não alcança a URL. Mas é pela URL que
+             * o dado pessoal escapa: a busca do administrador é `?busca=marina@exemplo.local`,
+             * e o log de acesso copiaria o e-mail dela para um lugar com outra retenção, outro
+             * controle de acesso, e que sobrevive à exclusão da conta. Mesma decisão do
+             * interceptor de auditoria, pelo mesmo motivo.
+             */
+            serializers: {
+              req(requisicao: Parameters<typeof stdSerializers.req>[0]) {
+                // O pino põe a query em **dois** lugares: dentro de `url` e num campo `query`
+                // já desmontado. Limpar só o primeiro não adianta — foi o que aconteceu na
+                // primeira tentativa desta correção, e o e-mail continuou saindo pelo segundo.
+                const { query, ...serializado } = stdSerializers.req(requisicao);
+                const [caminho] = String(serializado.url).split('?');
+                const filtros = Object.keys((query ?? {}) as Record<string, unknown>);
+
+                return {
+                  ...serializado,
+                  url: caminho,
+                  ...(filtros.length > 0 ? { filtros } : {}),
+                };
+              },
             },
             // O health check é chamado a cada poucos segundos pelo orquestrador;
             // logá-lo afogaria tudo que importa.

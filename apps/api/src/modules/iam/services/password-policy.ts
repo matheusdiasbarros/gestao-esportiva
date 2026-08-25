@@ -93,11 +93,17 @@ export interface ResultadoPolitica {
  *              quem ataca uma conta específica.
  */
 export function avaliarSenha(senha: string, email?: string): ResultadoPolitica {
+  // O comprimento é medido **sem os espaços das pontas**, que é o mesmo valor que a lista de
+  // vazadas consulta logo abaixo. Medindo na senha crua, dez espaços passavam: comprimento 10,
+  // e a versão normalizada — string vazia — não está em lista nenhuma.
+  //
   // Conta pontos de código, não unidades UTF-16: um emoji não deve valer por dois caracteres.
-  const comprimento = [...senha].length;
-  if (comprimento < MINIMUM_PASSWORD_LENGTH) return reprovar(MotivoSenhaFraca.Curta);
+  const semEspacosNasPontas = senha.trim();
+  if ([...semEspacosNasPontas].length < MINIMUM_PASSWORD_LENGTH) {
+    return reprovar(MotivoSenhaFraca.Curta);
+  }
 
-  const normalizada = senha.trim().toLowerCase();
+  const normalizada = semEspacosNasPontas.toLowerCase();
   if (listaDeVazadas().has(normalizada)) return reprovar(MotivoSenhaFraca.Vazada);
 
   if (email && normalizada === email.trim().toLowerCase()) {

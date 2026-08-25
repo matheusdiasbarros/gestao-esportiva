@@ -48,6 +48,9 @@ export class AdminController {
   }
 
   @Post('users/:id/email/verify/request')
+  // Era a única das três rotas sem rastro. É uma ação do administrador **sobre a conta de outra
+  // pessoa** — dispara e-mail em nome dela —, e ação assim não pode acontecer sem registro.
+  @LeituraDeDadoPessoal('users')
   @ApiOperation({ summary: 'Reenvia a confirmação de e-mail para a conta indicada' })
   async reenviarVerificacao(@Param('id') id: string): Promise<void> {
     // Não devolve nada e não distingue conta inexistente — reaproveita a mesma função que a

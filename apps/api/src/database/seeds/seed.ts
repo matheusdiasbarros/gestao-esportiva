@@ -160,6 +160,21 @@ async function seed(ds: DataSource): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  /**
+   * Nunca em produção.
+   *
+   * As senhas destes dados são conhecidas — estão escritas neste arquivo e no manual da fase —
+   * e a do administrador tem valor padrão quando `SEED_ADMIN_PASSWORD` não é definida. Rodar
+   * `pnpm seed` apontado por engano para o banco publicado criaria um administrador de
+   * plataforma com senha pública, e ninguém perceberia.
+   */
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'As seeds são dados de desenvolvimento e criam contas com senha conhecida. ' +
+        'Recusado com NODE_ENV=production.',
+    );
+  }
+
   const ds = await dataSource.initialize();
   try {
     await seed(ds);

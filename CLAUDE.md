@@ -17,7 +17,7 @@ Escopo do MVP em [`docs/product/mvp.md`](docs/product/mvp.md).
 
 ## Estado atual
 
-**Fase 2 (identidade e acesso) em andamento.** Fases 0 e 1 concluídas.
+**Fases 0, 1 e 2 concluídas.** A próxima é a Fase 3 (perfil profissional).
 
 Funciona hoje: criar conta de profissional ou de aluno, entrar, sair, recuperar senha,
 confirmar e trocar e-mail, convidar alunos, o link público "treine comigo" do professor, a
@@ -49,8 +49,8 @@ pnpm --filter @gestao/api migration:run
 pnpm --filter @gestao/api seed            # dados de desenvolvimento, idempotente
 pnpm dev                                  # API :3333 · web :3000
 
-pnpm lint && pnpm typecheck && pnpm test  # 78 testes de unidade
-pnpm test:e2e                             # 66 testes contra o sistema inteiro
+pnpm lint && pnpm typecheck && pnpm test  # 84 testes de unidade
+pnpm test:e2e                             # 68 testes contra o sistema inteiro
 
 pnpm --filter @gestao/api test -- health.service   # um teste específico
 pnpm exec playwright test cadastro                 # um arquivo de tela

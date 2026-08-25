@@ -101,4 +101,50 @@ test.describe('Renovação de acesso', () => {
 
     expect((await renovar(request, sessao.refreshToken)).status()).toBe(401);
   });
+
+  test('quem tem cookie não recebe token no corpo, nem dizendo que é o aplicativo', async ({
+    playwright,
+  }) => {
+    // Encontrado na revisão de segurança da fase, e era real: o cabeçalho `x-client-type` é
+    // escolhido por quem chama. Um script na página — XSS, dependência comprometida, extensão —
+    // renovava com `credentials: 'include'` e o cabeçalho de aplicativo. O cookie ia junto, a
+    // API se convencia de que falava com o celular, e devolvia os dois tokens no JSON. O cookie
+    // `httpOnly`, que existe exatamente para o JavaScript não alcançar o token, virava um passo
+    // intermediário.
+    //
+    // Contexto próprio porque este teste precisa de um pote de cookies, ao contrário dos de
+    // cima: é justamente o cookie que dispara a defesa.
+    const navegador = await playwright.request.newContext();
+    const cadastro = await navegador.post(`${API}/auth/signup/professional`, {
+      data: {
+        email: `cookie-${randomUUID()}@exemplo.local`,
+        fullName: 'Teste de Cookie',
+        birthDate: '1990-01-01',
+        password: 'uma frase que so eu lembro',
+        acceptedTerms: true,
+      },
+    });
+    expect(cadastro.status()).toBe(201);
+    expect(await cadastro.json()).not.toHaveProperty('accessToken');
+
+    const disfarcada = await navegador.post(`${API}/auth/refresh`, { headers: COMO_APP });
+    expect(disfarcada.status()).toBe(200);
+
+    const corpo = (await disfarcada.json()) as Partial<Sessao>;
+    expect(corpo.accessToken).toBeUndefined();
+    expect(corpo.refreshToken).toBeUndefined();
+
+    await navegador.dispose();
+  });
+
+  test('e o aplicativo de verdade, sem cookie nenhum, continua recebendo no corpo', async ({
+    request,
+  }) => {
+    // O contrapeso do teste acima. A defesa não pode ter sido "parar de responder ao aplicativo".
+    const sessao = await contaNovaComTokens(request);
+    const renovada = await renovar(request, sessao.refreshToken);
+
+    expect(renovada.status()).toBe(200);
+    expect(((await renovada.json()) as Sessao).refreshToken).toBeTruthy();
+  });
 });

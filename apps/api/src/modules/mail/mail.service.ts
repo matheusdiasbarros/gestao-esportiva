@@ -33,8 +33,11 @@ export class MailService {
         removeOnFail: { age: 7 * 24 * 3600 },
       });
     } catch (erro) {
+      // Sem o destinatário: é dado pessoal, e log tem outra retenção e outro controle de
+      // acesso. Aqui não há nem id de job para citar — o enfileiramento é justamente o que
+      // falhou —, então o que fica é o tipo da mensagem e o instante.
       this.logger.error(
-        `Não foi possível enfileirar o e-mail ${job.kind} para ${job.to}`,
+        `Não foi possível enfileirar o e-mail ${job.kind}`,
         erro instanceof Error ? erro.stack : String(erro),
       );
     }

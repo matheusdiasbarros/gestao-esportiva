@@ -41,6 +41,15 @@ describe('avaliarSenha', () => {
     expect(avaliarSenha('desenvolvimento1').motivo).toBe(MotivoSenhaFraca.Vazada);
   });
 
+  it('espaço nas pontas não conta como comprimento', () => {
+    // Dez espaços passavam: o comprimento era medido na senha crua, e a versão normalizada —
+    // string vazia — não está em lista nenhuma. Ninguém ataca com isso, mas é um caminho pelo
+    // qual uma senha vazia entrava.
+    expect(avaliarSenha(' '.repeat(12)).motivo).toBe(MotivoSenhaFraca.Curta);
+    expect(avaliarSenha('  quadra  ').motivo).toBe(MotivoSenhaFraca.Curta);
+    expect(avaliarSenha('  quadra-sol  ').ok).toBe(true);
+  });
+
   it('reprova senha igual ao próprio e-mail', () => {
     const resultado = avaliarSenha('rodrigo@exemplo.com', 'Rodrigo@Exemplo.com');
     expect(resultado.motivo).toBe(MotivoSenhaFraca.RepeteEmail);

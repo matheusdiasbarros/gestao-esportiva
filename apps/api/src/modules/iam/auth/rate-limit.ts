@@ -55,6 +55,41 @@ export const LimitarCadastro = (): MethodDecorator & ClassDecorator =>
   Throttle({ [LIMITE_IP]: { limit: 100, ttl: 60 * MINUTO } });
 
 /**
+ * "Esqueci a senha": teto próprio, e não o do login.
+ *
+ * Herdava `LimitarLogin`, que permite 60 por 5 minutos por IP — ou 720 mensagens por hora, cada
+ * uma para um endereço registrado diferente. O limite por alvo protege *uma conta*, não o
+ * volume: quem tiver a lista de alunos de um profissional dispara redefinição para todos.
+ *
+ * Login e recuperação custam coisas diferentes. Login custa CPU, e é isso que o teto dele
+ * dimensiona. Recuperação custa **reputação de envio** — e a mensagem que passa a cair no spam
+ * é justamente a de recuperar senha.
+ *
+ * Sem `blockDuration` no alvo, ao contrário do login: aqui o bloqueio só serviria para alguém
+ * impedir a vítima de recuperar a própria senha.
+ */
+export const LimitarRecuperacao = (): MethodDecorator & ClassDecorator =>
+  Throttle({
+    [LIMITE_IP]: { limit: 20, ttl: 60 * MINUTO },
+    [LIMITE_ALVO]: { limit: 5, ttl: 15 * MINUTO },
+  });
+
+/**
+ * Reenvio da confirmação de e-mail: **20 por hora por IP**.
+ *
+ * Não tinha teto nenhum, e sobrava só o global de 120/min — uma conta autenticada fazia a
+ * plataforma emitir 7.200 mensagens por hora do nosso domínio. Não há contagem por alvo aqui: o
+ * corpo é vazio, o destino é o e-mail da própria conta, e o tracker por alvo se pula sozinho.
+ *
+ * O ideal seria contar **por conta**, e não dá: o limite roda antes da autenticação, de
+ * propósito (ver `iam.module.ts`), então `request.user` ainda não existe quando a contagem
+ * acontece. O teto por IP é o que sobra, e para uma operação que se faz uma vez por cadastro é
+ * suficiente.
+ */
+export const LimitarReenvioDeVerificacao = (): MethodDecorator & ClassDecorator =>
+  Throttle({ [LIMITE_IP]: { limit: 20, ttl: 60 * MINUTO } });
+
+/**
  * Troca de e-mail: **3 pedidos por endereço de destino a cada hora**.
  *
  * O alvo aqui é o endereço **novo**, e é ele que precisa de teto. A rota manda uma mensagem

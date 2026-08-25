@@ -66,9 +66,14 @@ export class AuditoriaDeLeitura implements NestInterceptor {
           evento: 'leitura_de_dado_pessoal',
           actorId: user.id,
           recurso,
-          // `params` e `query` são o *endereço* do que foi lido, nunca o conteúdo.
+          // `params` é o *endereço* do que foi lido: identificadores, nunca conteúdo.
           alvo: request.params,
-          filtro: request.query,
+          // Da query vão só os **nomes** dos filtros. O valor é que é perigoso: o administrador
+          // busca por `?busca=marina@exemplo.local`, e gravar isso copiaria o e-mail dela para
+          // um lugar com outra retenção e outro controle de acesso — inclusive sobrevivendo à
+          // exclusão da conta, que anonimiza `users` e não alcança log nenhum. A trilha de
+          // auditoria não pode ser o maior vazamento do sistema.
+          filtros: Object.keys(request.query),
           metodo: request.method,
           rota: request.route?.path ?? request.path,
         });

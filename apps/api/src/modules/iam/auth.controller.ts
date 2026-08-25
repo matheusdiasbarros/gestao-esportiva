@@ -19,6 +19,8 @@ import { Public } from './auth/public.decorator';
 import {
   LimitarCadastro,
   LimitarLogin,
+  LimitarRecuperacao,
+  LimitarReenvioDeVerificacao,
   LimitarRenovacao,
   LimitarTrocaDeEmail,
 } from './auth/rate-limit';
@@ -141,13 +143,16 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
     @Body('refreshToken') doCorpo?: string,
   ): Promise<void> {
-    await this.auth.sair(lerRefresh(req) ?? doCorpo);
-    // Limpa sempre, mesmo sem token: sair tem que funcionar em qualquer estado.
+    // Os cookies são apagados **antes** da revogação, e não depois. Se `sair` lançar — banco
+    // fora do ar, por exemplo —, o filtro devolve 500 e nada depois dele roda: a pessoa num
+    // computador compartilhado veria "erro ao sair" e iria embora com o cookie de acesso ainda
+    // válido por até 15 minutos. Limpar primeiro custa nada e nunca deixa esse estado.
     this.sessoes.limpar(res);
+    await this.auth.sair(lerRefresh(req) ?? doCorpo);
   }
 
   @Public()
-  @LimitarLogin()
+  @LimitarRecuperacao()
   @Post('password/forgot')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Pede o link de redefinição de senha' })
@@ -166,6 +171,7 @@ export class AuthController {
     await this.auth.redefinirSenha(dto.token, dto.password);
   }
 
+  @LimitarReenvioDeVerificacao()
   @Post('email/verify/request')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Reenvia o link de confirmação para o próprio endereço' })

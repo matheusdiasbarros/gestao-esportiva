@@ -66,14 +66,28 @@ export class TokenService {
    * Marcar o token antigo como usado e criar o novo precisa ser atômico. Sem a transação, uma
    * falha no meio deixaria o usuário sem token nenhum — o antigo já invalidado e o novo nunca
    * gravado —, e o sintoma seria logout aleatório sem causa aparente.
+   *
+   * **`used_at IS NULL` no critério é o que fecha a detecção de reuso.** Quem chama leu o token
+   * antes de decidir, e entre a leitura e esta gravação cabe uma segunda apresentação do mesmo
+   * token: as duas passariam pela verificação, as duas rotacionariam, e nasceriam dois tokens
+   * vivos na mesma família sem que o alarme tocasse — exatamente o cenário que a detecção
+   * existe para pegar. Com a cláusula, quem chega em segundo lugar não afeta nenhuma linha.
+   *
+   * Devolve `null` nesse caso. Quem chama trata como reuso, porque é o que é.
    */
   async rotacionar(
     anterior: RefreshToken,
     payload: AccessTokenPayload,
     client: ClientType,
-  ): Promise<ParDeTokens> {
+  ): Promise<ParDeTokens | null> {
     return this.refreshTokens.manager.transaction(async (manager) => {
-      await manager.update(RefreshToken, { id: anterior.id }, { usedAt: new Date() });
+      const { affected } = await manager.update(
+        RefreshToken,
+        { id: anterior.id, usedAt: IsNull() },
+        { usedAt: new Date() },
+      );
+      if (affected !== 1) return null;
+
       return this.emitir(payload, client, anterior.deviceLabel, anterior.familyId, manager);
     });
   }

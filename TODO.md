@@ -502,7 +502,7 @@ CI verde com lint, typecheck, build e testes; um endpoint `/health` consumido pe
 
 ---
 
-## Fase 2 — Usuários e autenticação 🟨
+## Fase 2 — Usuários e autenticação ✅
 
 **Objetivo:**
 Identidade da plataforma: cadastro, login, recuperação de senha, papéis e autorização,
@@ -541,11 +541,16 @@ ela ·
   - [x] Papéis derivados do dado, sem coluna de papel
   - [x] Seeds: admin por variável de ambiente, profissional com alunos com e sem conta, aluno em dois profissionais *(fecha DT-003)*
   - [x] Serviço de hash argon2id, pronto para o Epic 2.2
-- [ ] **Epic 2.2 — Autenticação** 🟨 *fatia vertical entregue; ver o aviso abaixo*
+- [x] **Epic 2.2 — Autenticação** ✅ 2026-08-24
 
   > **Login funcionando não é login pronto.** Sem limite de tentativas e sem a revisão de
   > segurança obrigatória, o que existe roda na máquina de desenvolvimento e **não pode ir
   > para a internet**. Marcar o épico como concluído antes disso seria ilusão de progresso.
+  >
+  > **As duas condições foram cumpridas.** O limite existe por IP e por alvo, em Redis; a
+  > revisão aconteceu em 2026-08-24 e achou três coisas que bloqueavam — todas corrigidas, com
+  > teste de regressão para a mais séria. O aviso fica aqui porque a próxima fase que mexer em
+  > autenticação herda a mesma regra.
 
   - [x] Hash argon2id com `@node-rs/argon2` — falta calibrar na máquina de destino
   - [x] Política de senha: mínimo 10 caracteres, lista local de senhas vazadas, sem regra de composição
@@ -584,7 +589,9 @@ ela ·
         identificador do alvo e **sem** o conteúdo
   - [x] Rotas de administração: listar contas, suspender/reativar, reenviar confirmação.
         **Sem tela** — o painel do administrador não tem épico em fase nenhuma
-- [ ] **Epic 2.4 — Front-end de auth** 🟨
+- [x] **Epic 2.4 — Front-end de auth** ✅ 2026-08-24 — com **uma** tarefa adiada, e não esquecida:
+      o teste de tela do aceite de convite depende de criar ficha pela interface, que é da Fase 5.
+      Está em DT-005, com o gatilho escrito
   - [x] Telas web de cadastro de profissional e login
   - [x] Painel protegido no servidor: quem não tem sessão é redirecionado antes de o HTML sair
   - [x] Sair
@@ -671,7 +678,12 @@ Todas resolvidas em 2026-08-20. Registro completo em [`docs/domain/iam.md`](docs
 - [x] ~~*Staging* publicado e atualizado automaticamente a partir da `main`~~ → saiu do escopo
       junto com o Epic 2.6, em 2026-08-21. Ficou aqui em aberto por engano, o que tornava a fase
       impossível de concluir
-- [ ] Revisão de segurança do fluxo de auth registrada
+- [x] Revisão de segurança do fluxo de auth registrada — feita em 2026-08-24, registrada em
+      `docs/sistema/fase-02-identidade-e-acesso.md` §9. **Três achados bloqueavam a fase e foram
+      corrigidos**: o cabeçalho `x-client-type` derrotava o cookie `httpOnly` (reproduzido antes
+      e depois, com teste de regressão), `req.ip` sem `trust proxy` definido, e dado pessoal
+      indo para log. Mais sete correções menores. Dois limites ficaram registrados com o motivo:
+      DT-007 e DT-008. O teto de login por IP fica em 60/5min, e a razão está escrita
 - [x] Manual de manutenção em `docs/sistema/fase-02-identidade-e-acesso.md`
 
 ---
@@ -1954,3 +1966,4 @@ Preencher ao concluir cada fase.
 | --- | --- | --- | --- | --- | --- |
 | 0 | 2026-08-19 | 2026-08-19 | ADR-001 | `glossary.md` | MVP gestão-first, multiesporte, aluno com conta, assinatura. Fase 4 saiu do MVP. Pendências P1 e P2 em aberto |
 | 1 | 2026-08-20 | 2026-08-20 | ADR-002, ADR-003 | — | pnpm + Turborepo, TypeScript fixado em 5.9.3, UUID v7. API, web e Expo consumindo `/health`. CI verde. P2 resolvida: app nativo. P1 resolvida: turmas entram, sem lista de espera. Falta proteger a `main` |
+| 2 | 2026-08-20 | 2026-08-24 | ADR-004 | `iam.md` | Contas, login, convite nas duas modalidades, autorização por papel e propriedade, troca de e-mail, lista completa de senhas vazadas embarcada. Telas na web e no aplicativo — decidido no meio da fase que **o profissional também usa o app**. 84 testes de unidade, 68 de tela. Revisão de segurança achou 3 bloqueadores, todos corrigidos. Débitos: DT-004 a DT-008. **Epic 2.6 (staging) adiado para depois da Fase 5** |

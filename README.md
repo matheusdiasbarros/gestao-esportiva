@@ -6,10 +6,15 @@ de tênis, beach tennis, padel, futebol, corrida, natação, lutas, dança e out
 O produto organiza alunos, agenda e pagamentos em um lugar só, e deixa o aluno marcar,
 remarcar e pagar sozinho.
 
-> **Estado:** Fase 2 (usuários e autenticação) em andamento. A fundação está pronta e o modelo
-> de identidade já existe no banco; login e telas ainda não. O roadmap está no
-> [TODO.md](TODO.md); o escopo do MVP, em [docs/product/mvp.md](docs/product/mvp.md); quem pode
-> fazer o quê, em [docs/domain/iam.md](docs/domain/iam.md).
+> **Estado:** Fase 2 (usuários e autenticação) **concluída** em 2026-08-24. Dá para criar conta
+> de profissional ou de aluno, entrar, sair, recuperar a senha, confirmar e trocar o e-mail, e
+> convidar alunos — na web e no aplicativo. Agenda, alunos como funcionalidade e pagamento ainda
+> não existem. A próxima é a Fase 3, o perfil do profissional.
+>
+> O roadmap está no [TODO.md](TODO.md); o escopo do MVP, em
+> [docs/product/mvp.md](docs/product/mvp.md); quem pode fazer o quê, em
+> [docs/domain/iam.md](docs/domain/iam.md); e como cada fase funciona por dentro, em
+> [docs/sistema/](docs/sistema/).
 
 ---
 

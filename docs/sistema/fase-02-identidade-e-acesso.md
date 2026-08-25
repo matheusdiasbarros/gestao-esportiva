@@ -1,6 +1,6 @@
 # Fase 2 — Identidade e acesso
 
-Manual de manutenção. **Em andamento.** Regras de negócio em
+Manual de manutenção. **Fase concluída em 2026-08-24.** Regras de negócio em
 [`iam.md`](../domain/iam.md); decisões técnicas em
 [ADR-004](../adr/ADR-004-estrategia-de-autenticacao.md).
 
@@ -24,7 +24,7 @@ Contas, login e as duas portas de entrada do aluno.
 
 - Telas no aplicativo — **aluno e profissional** —, com a sessão no cofre do aparelho
 
-**Falta para fechar a fase:** a revisão de segurança obrigatória.
+A revisão de segurança obrigatória aconteceu e está registrada na §9.
 
 ## 2. Mapa dos arquivos
 
@@ -117,7 +117,7 @@ apps/web/src/
 | `POST /invites/:token/join` | **não** | aceita com a conta que já está logada |
 | `GET /admin/users` | **admin** | lista contas, com busca. Auditada |
 | `PATCH /admin/users/:id/status` | **admin** | suspende ou reativa. Auditada |
-| `POST /admin/users/:id/email/verify/request` | **admin** | reenvia a confirmação |
+| `POST /admin/users/:id/email/verify/request` | **admin** | reenvia a confirmação. Auditada |
 | `GET /health` | sim | fora do limite de tentativas |
 
 ### Qual código sai em qual situação
@@ -158,6 +158,10 @@ Confundir os três é o erro mais comum aqui, e cada um protege uma coisa difere
 | **O e-mail só muda depois de confirmado no endereço novo** | um endereço com erro de digitação viraria uma conta sem dono e sem recuperação possível |
 | **Link de troca já usado só é aceito de novo se a conta ainda estiver naquele endereço** | sem a conferência, reabrir um link antigo arrastaria a conta de volta a um endereço anterior |
 | **A lista de senhas vazadas é local, e a aplicação morre se ela sumir** | controle de segurança que desaparece em silêncio é pior do que o que nunca existiu |
+| **Cookie de sessão presente ⇒ é navegador, acima do que o cabeçalho disser** | `x-client-type` é escolhido por quem chama; confiar só nele deixava um script na página trocar o cookie `httpOnly` por tokens legíveis no corpo |
+| **Gravar e apagar cookie usam o mesmo `path`** | o navegador identifica o cookie pelo trio nome/domínio/caminho; apagar no caminho errado não apaga nada, só parece |
+| **A rotação do token de renovação é atômica, e perder a corrida é reuso** | ler e gravar em passos separados deixava duas apresentações simultâneas rotacionarem as duas, sem o alarme tocar |
+| **Nada de valor de query string em log — só os nomes dos parâmetros** | a busca do administrador carrega e-mail; log tem outra retenção e sobrevive à exclusão da conta |
 
 ## 4.1 O que muda no banco a cada passo do convite
 
@@ -290,8 +294,8 @@ teste quebrou exatamente assim quando a lista completa entrou.
 ## 6. Como verificar que continua funcionando
 
 ```bash
-pnpm lint && pnpm typecheck && pnpm test    # 78 testes de unidade
-pnpm test:e2e                               # 66 testes contra o sistema inteiro
+pnpm lint && pnpm typecheck && pnpm test    # 84 testes de unidade
+pnpm test:e2e                               # 68 testes contra o sistema inteiro
 ```
 
 **A suíte não pode ser rodada duas vezes seguidas.** Ela mesma gasta o teto de login por IP —
@@ -422,3 +426,48 @@ passando.
 **Ao mexer no limite de tentativas:** rode `pnpm test:e2e` inteiro. O limite por IP é
 compartilhado por toda a suíte, e apertá-lo demais faz testes não relacionados falharem de
 forma intermitente.
+
+**Ao criar rota que manda e-mail para um endereço escolhido por quem chama:** ela precisa de
+teto **por destinatário**, não só por IP. Sem isso a plataforma vira ferramenta para encher a
+caixa de entrada de terceiros com mensagens vindas do nosso domínio, o que além do incômodo
+queima a reputação de envio do produto inteiro. O modelo é `LimitarTrocaDeEmail`.
+
+## 9. A revisão de segurança da fase
+
+Feita em 2026-08-24, obrigatória pelo TODO. O relatório completo não vive num arquivo: o que
+importa dele virou código, teste ou débito registrado, que é onde alguém vai de fato encontrar.
+
+**Três coisas bloqueavam a fase, e as três foram corrigidas.**
+
+| Achado | O que era | Como fechou |
+| --- | --- | --- |
+| O cabeçalho `x-client-type` derrotava o cookie `httpOnly` | Script na página renovava com `credentials: 'include'` e o cabeçalho de aplicativo; a API devolvia os dois tokens em JSON legível. O cookie que existe para o JavaScript não alcançar o token virava um passo intermediário | `clienteDe` passou a tratar **cookie de sessão como prova de navegador**, acima do cabeçalho. Reproduzido antes e depois; testes em `sessao-http.spec.ts` e `renovacao.spec.ts` |
+| `req.ip` sem significado definido | Sem `trust proxy` escrito, o dia em que a API subir atrás de proxy transforma o teto por IP no teto da plataforma inteira | `app.set('trust proxy', false)` explícito em `main.ts`, com o comentário dizendo por que `true` nunca é a resposta |
+| Dado pessoal em log | A busca do administrador (`?busca=marina@exemplo.local`) ia para o log de auditoria **e** para o log de acesso, que têm outra retenção e sobrevivem à exclusão da conta | Vão só os **nomes** dos filtros. E o destinatário saiu dos logs do e-mail, substituído pelo id do job |
+
+**Sete correções menores** entraram junto: rotação de token agora é atômica (`used_at IS NULL`
+no critério, perder a corrida **é** reuso); tetos próprios para "esqueci a senha" e para o
+reenvio de verificação; logout apaga o cookie com o mesmo `path` com que gravou, e apaga
+**antes** de revogar; a terceira rota de administração passou a deixar rastro; senha só de
+espaços deixou de passar; sem chave do Resend em produção a mensagem não vai mais para o log; e
+as seeds recusam rodar com `NODE_ENV=production`.
+
+**Duas ficaram registradas em vez de corrigidas**, com o motivo: DT-007 (bloquear a conta dos
+outros custa 6 requisições) e DT-008 (o convite precisa de teto **antes** do primeiro épico da
+Fase 5 que criar ficha).
+
+**O teto de login por IP fica em 60 por 5 minutos**, e a razão não é força bruta — é orçamento
+de CPU. Cada tentativa custa um argon2, inclusive a de e-mail inexistente, que gasta um hash de
+propósito. Subir compra pouco e vende a resistência a exaustão. Abaixar bloqueia a academia
+inteira atrás de um IP antes de bloquear atacante, e quem para o ataque real é o limite por
+alvo, que não depende de IP. **Não suba este número para a suíte poder rodar duas vezes** — ver
+DT-004.
+
+**Ficou confirmado como aceitável**, e não precisa ser rediscutido: o 409 no cadastro de
+profissional (ADR-004 §9), revelar que o endereço já tem conta na troca de e-mail, os 15 minutos
+de atraso de papel no token com administrador reconferido no banco, consumir o token antes de
+validar a senha nova, o token na query string dos links de e-mail, e o `SameSite=Lax` — este
+último responde o item "a verificar" da ADR-004, porque nenhuma rota muda estado por GET.
+
+**Continua em aberto para o dia do deploy:** cabeçalhos de segurança (`helmet`), o `domain` do
+cookie entre `api.` e `app.`, e revisitar o `trust proxy` com o número de saltos reais.

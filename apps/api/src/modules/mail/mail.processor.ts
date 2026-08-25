@@ -2,7 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job, UnrecoverableError } from 'bullmq';
 import { Resend } from 'resend';
-import { EnvironmentVariables } from '../../config/env.validation';
+import { EnvironmentVariables, NodeEnv } from '../../config/env.validation';
 import { montarMensagem } from './mail.templates';
 import { MAIL_QUEUE, MailJob } from './mail.types';
 
@@ -30,6 +30,17 @@ export class MailProcessor extends WorkerHost {
     if (!this.resend) {
       // Sem chave configurada, o e-mail vai para o log em vez de sumir. Quem está mexendo numa
       // tela consegue copiar o link do terminal e seguir o fluxo inteiro sem provedor nenhum.
+      //
+      // **Só fora de produção.** O corpo carrega o link de redefinição de senha em claro; em
+      // produção isso não é conveniência, é entrega de conta a quem lê o log. Lá, chave ausente
+      // é falha de configuração e precisa parecer uma.
+      if (this.env.NODE_ENV === NodeEnv.Production) {
+        throw new UnrecoverableError(
+          `RESEND_API_KEY ausente em produção. O e-mail ${kind} não foi enviado, e o conteúdo ` +
+            `não vai para o log porque contém o link de acesso à conta.`,
+        );
+      }
+
       this.logger.warn(
         `RESEND_API_KEY ausente — e-mail não enviado. Assunto: "${mensagem.subject}", ` +
           `destinatário: ${to}\n${mensagem.text}`,
@@ -46,7 +57,10 @@ export class MailProcessor extends WorkerHost {
     });
 
     if (!error) {
-      this.logger.log(`E-mail ${kind} enviado para ${to}`);
+      // O destinatário **não** vai para o log: é dado pessoal, e sai da máquina para qualquer
+      // coletor que exista. O id do job é o ponteiro — a fila guarda os dados por uma hora, e a
+      // falha por sete dias, que é onde se descobre quem não recebeu.
+      this.logger.log(`E-mail ${kind} enviado (job ${job.id})`);
       return;
     }
 

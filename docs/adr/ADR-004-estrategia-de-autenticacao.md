@@ -191,4 +191,11 @@ sistema que ainda não tem uma senha gravada.
 **A verificar na implementação**
 
 - Calibrar os parâmetros do argon2id na máquina de destino, não copiar valores de exemplo.
-- Medir se `SameSite=Lax` basta para o fluxo de aceite de convite vindo de link externo.
+- ~~Medir se `SameSite=Lax` basta para o fluxo de aceite de convite vindo de link externo.~~
+  **Respondido em 2026-08-24, na revisão de segurança da fase:** basta. Nenhuma rota do sistema
+  muda estado por `GET` — conferido nas três controllers —, e `Lax` já barra `POST` de outro
+  site. `Strict` derrubaria justamente quem chega pelo link do e-mail ou do WhatsApp.
+- **Definir `trust proxy` no dia do deploy.** Hoje é `false` explícito em `main.ts`, correto para
+  a API atendendo direto. Atrás de balanceador, proxy reverso ou Cloudflare, `req.ip` vira o
+  endereço do proxy e o teto por IP passa a valer para a plataforma inteira. O valor certo é o
+  **número de saltos confiáveis**; `true` faz o limite por IP valer zero, em silêncio.
