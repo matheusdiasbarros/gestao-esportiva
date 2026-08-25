@@ -220,9 +220,15 @@ MongoDB, service mesh, event sourcing, CQRS.
 - **PostgreSQL é a única fonte de verdade.**
 - **Redis apenas onde traz benefício real:** cache, filas (BullMQ), locks distribuídos,
   realtime e rate limiting. Nunca como armazenamento primário.
-- Módulos previstos (nascem conforme as fases): `iam`, `professionals`, `locations`,
+- Módulos previstos (nascem conforme as fases): `iam`, `professional-profile`, `sports`,
   `students`, `scheduling`, `packages`, `classes`, `billing`, `notifications`,
   `marketplace`, `reviews`, `social`, `venues`.
+  - O nome `professionals` saiu da lista em 2026-08-25: a **tabela** `professionals` é a âncora
+    de identidade e continua em `iam`, então um módulo com esse nome seria um módulo que não é
+    dono da tabela homônima. Ver ADR-005.
+  - `locations` também saiu: nesta fase um local é filho de um profissional e não tem vida
+    própria, então mora dentro de `professional-profile`. Vira módulo quando a Fase 12 trouxer
+    PostGIS ou a Fase 15 criar `venues` — o gatilho está na ADR-005 §4.
 - O desenho de módulos é **preparação para extração futura**, não compromisso de extrair.
 
 ---
@@ -699,6 +705,10 @@ Editor de perfil na web, perfil retornado pela API e uma página pública mínim
 
 **Dependências:** Fase 2.
 
+**Ferramentas a instalar nesta fase:** nenhuma. Conferido no mapa de `AI-DEVELOPMENT.md` §6.9
+na abertura — o MCP de PostgreSQL é gatilho da Fase 4, que saiu do MVP, e o S3 saiu do escopo
+junto com a decisão de guardar a foto no servidor.
+
 **Agentes desta fase:**
 `product` ⬤ catálogo de modalidades, preços e o que é público ·
 `backend` ⬤ · `web` ⬤ editor de perfil ·
@@ -709,17 +719,23 @@ privado — verificar a resposta, não só a tela ·
 ### Épicos e tarefas
 
 - [ ] **Epic 3.1 — Modelo de perfil**
-  - [ ] Entidade `professional_profile`
-  - [ ] Catálogo de modalidades/esportes (tabela de referência)
-  - [ ] Especialidades, experiência, certificações
-  - [ ] Campos públicos vs. privados
+  - [ ] Entidade `professional_profile`: bio, especialidades, experiência, certificações
+  - [ ] Catálogo `sports` (tabela de referência) + a modalidade digitada, pendente de curadoria
+  - [ ] `professional_sports`: quais modalidades este profissional atende
+  - [ ] Campos públicos vs. privados — a tabela em `docs/domain/professional-profile.md`, que é
+        o que a revisão de segurança confere contra a resposta real
+  - [ ] Migration revisada à mão, revertível
 - [ ] **Epic 3.2 — Preços**
-  - [ ] Preço por modalidade e por tipo de atendimento (individual, dupla, turma)
-  - [ ] Moeda, formato monetário e armazenamento em inteiro (centavos)
-- [ ] **Epic 3.3 — Mídia**
-  - [ ] Upload de foto de perfil e galeria
-  - [ ] Armazenamento em S3 + URLs assinadas
-  - [ ] Redimensionamento/otimização assíncrona (BullMQ)
+  - [ ] `professional_prices`: por modalidade **e** por tipo de atendimento
+  - [ ] Tipos de atendimento: individual, dupla, turma
+  - [ ] Inteiro em centavos, moeda `BRL` (ADR-003) — nunca ponto flutuante
+  - [ ] O que acontece com o preço quando a modalidade sai do perfil
+- [ ] **Epic 3.3 — Foto** *(reduzido: o MVP diz "sem mídia elaborada")*
+  - [ ] Upload de **uma** foto de perfil, com validação de tipo e tamanho **no servidor** —
+        extensão e `Content-Type` são escolhidos por quem envia e não provam nada
+  - [ ] Guardada no disco do servidor. **Débito técnico consciente**, com o gatilho escrito:
+        em container publicado o arquivo some a cada reinício
+  - [ ] Sem galeria, sem S3, sem redimensionamento assíncrono — Fase 18 e pós-MVP
 - [ ] **Epic 3.4 — Edição do perfil (web)**
   - [ ] Formulário com validação compartilhada (`packages/types`)
   - [ ] Indicador de completude do perfil
@@ -727,20 +743,45 @@ privado — verificar a resposta, não só a tela ·
   - [ ] Cadastro de locais com endereço em texto, sem mapa nem geolocalização
   - [ ] Múltiplos locais por profissional, com local principal
   - [ ] Tipos: local próprio, academia/clube, espaço público, casa do aluno
+  - [ ] Só bairro e cidade saem em resposta pública; o endereço exato, nunca
+- [ ] **Epic 3.7 — A página "treine comigo" cresce** 🔁 *(acrescentado em 2026-08-25)*
+  - [ ] `/treine-com/:slug` passa a mostrar foto, modalidades e locais por bairro e cidade
+  - [ ] Teste que prova que a **resposta da API** não devolve dado privado — não basta a tela
+        não mostrar
 - [ ] **Epic 3.6 — Perfil público mínimo** *(fora do MVP; primeiro item pós-MVP)*
   - [ ] Rota pública `/{slug}` com SSR e metadados sociais
   - [ ] Botão de contato/interesse (sem agendamento ainda)
 
 ### Decisões da fase
 
-- [ ] Catálogo de modalidades fechado (curado) vs. aberto (criado pelo profissional)
-- [ ] Um profissional pode atuar em múltiplas modalidades com preços diferentes?
-- [ ] Slug do perfil: gerado, escolhido pelo usuário, único global?
-- [ ] Preço é obrigatório e público, ou pode ser "sob consulta"?
-- [ ] Perfil precisa de aprovação/moderação antes de ficar público?
-- [ ] Certificações são verificadas? Por quem?
-- [ ] Limites de mídia (quantidade, tamanho, formato) e política de conteúdo
-- [ ] Quais dados pessoais nunca aparecem na página pública (CPF, telefone, endereço exato)
+Tomadas na abertura, em 2026-08-25.
+
+- [x] Catálogo de modalidades fechado vs. aberto → **curado, com escape**. Tabela de referência
+      mantida por nós; a modalidade que faltar é digitada pelo profissional e fica marcada como
+      pendente de curadoria. Sem catálogo, "Beach Tennis", "beach-tennis" e "BT" viram três
+      coisas no banco e a busca da Fase 12 fica inviável; com catálogo fechado, o professor de
+      capoeira não completa o cadastro no primeiro dia
+- [x] Múltiplas modalidades com preços diferentes? → **sim**, é o caso normal. O produto é
+      multiesporte desde a Fase 0, e o MVP pede "preços por modalidade e tipo de atendimento"
+- [x] Preço é obrigatório e público? → **obrigatório, e o aluno vê**. Um valor por modalidade e
+      por tipo de atendimento (individual, dupla, turma). A Fase 7 monta pacote a partir dele e
+      a Fase 9 cobra — sem preço, essas fases não têm de onde partir. Cobrar diferente de um
+      aluno específico é assunto de fase posterior, não deste modelo
+- [x] Limites de mídia → **uma foto de perfil, sem galeria** (o MVP diz "sem mídia elaborada").
+      Guardada **no próprio servidor**, não em nuvem: é débito técnico consciente, porque em
+      container publicado arquivo em disco some a cada reinício. A nuvem entra na Fase 18, junto
+      com a decisão de hospedagem
+- [x] Quais dados nunca aparecem em página pública → a `/treine-com/:slug` passa a mostrar
+      **foto, modalidades e locais por bairro e cidade**. Endereço exato, telefone e documento
+      **nunca**. É a única página que um aluno em potencial vê antes de criar conta, e é
+      exatamente a resposta que a revisão de segurança obrigatória da fase confere
+- [ ] ~~Slug do perfil: gerado, escolhido, único global?~~ → **adiada**: só faz sentido com a
+      página pública `/{slug}` do Epic 3.6, que está fora do MVP. Hoje o `signupSlug` aleatório
+      já resolve o "treine comigo"
+- [ ] ~~Perfil precisa de moderação antes de ficar público?~~ → **adiada** para a Fase 12: sem
+      marketplace não há vitrine para moderar
+- [ ] ~~Certificações são verificadas, e por quem?~~ → **adiada** para a Fase 12. Nesta fase são
+      texto livre, e a tela precisa dizer que ninguém conferiu
 
 ### Tecnologias
 
@@ -753,12 +794,31 @@ privado — verificar a resposta, não só a tela ·
 - SSR e SEO no Next.js;
 - modelagem de dados públicos vs. privados.
 
+### Estratégia de testes
+
+Definida na abertura, porque o risco desta fase é diferente do da Fase 2. Lá o perigo era
+deixar alguém **entrar**; aqui é deixar um dado privado **sair**.
+
+- **Unidade**: a política de campos públicos, isolada do HTTP e do banco. É a regra que a
+  revisão de segurança confere, e ela precisa ser testável sem subir nada.
+- **API**: a resposta de `/treine-com/:slug` conferida **campo a campo contra uma lista
+  fechada** — não basta afirmar que o endereço exato está ausente. Campo novo no perfil que
+  vaze por esquecimento tem que quebrar o teste, e só uma lista fechada faz isso.
+- **Tela**: criar perfil, escolher modalidades, pôr preço, subir foto, cadastrar dois locais e
+  trocar o principal.
+- **O que não dá para testar aqui**: nada previsto. Diferente da Fase 2, não há dependência de
+  caixa de entrada.
+
 ### Critérios de conclusão
 
 - [ ] Profissional cria e edita o perfil completo pela web
-- [ ] Upload de imagens funcionando com validação de tipo e tamanho
-- [ ] Página pública renderiza apenas dados públicos (verificado em teste)
+- [ ] Upload da foto funcionando, com validação de tipo e tamanho **no servidor**
+- [ ] A resposta pública devolve **apenas** os campos da lista fechada — verificado por teste
+      contra a API, não contra a tela
+- [ ] Preço gravado em centavos, e nenhum ponto flutuante em nenhuma camada
 - [ ] Regras do domínio em `docs/domain/professional-profile.md`
+- [ ] Revisão de segurança obrigatória registrada
+- [ ] Manual de manutenção em `docs/sistema/fase-03-perfil-profissional.md`
 
 ---
 
@@ -1874,10 +1934,16 @@ ADRs previstas (não escritas ainda):
 | ADR-002 | Monorepo, gerenciador de pacotes e toolchain | 1 | ✅ |
 | ADR-003 | Identificadores e convenções de dados | 1 | ✅ |
 | ADR-004 | Estratégia de autenticação | 2 | ✅ |
-| ADR-005 | PostGIS e provedor de geocoding | 12 | ⬜ |
+| ADR-005 | Fronteira do perfil profissional | 3 | ✅ |
 | ADR-006 | Modelagem temporal da agenda | 6 | ⬜ |
 | ADR-007 | Provedor de pagamento | 9 | ⬜ |
 | ADR-008 | Hospedagem e deploy | 18 | ⬜ |
+| ADR-009 | PostGIS e provedor de geocoding | 12 | ⬜ |
+
+> **O 005 mudou de dono, e a regra vale para os próximos.** Estava reservado para PostGIS, e
+> foi tomado pela fronteira do perfil em 2026-08-25. Número de ADR se atribui **quando o
+> documento é escrito**, não quando é previsto — as reservas desta tabela são intenção, e a
+> Fase 3 chegou antes da Fase 12. Reserva que colide cede o número e vai para o fim.
 
 ### Documentação de domínio — `docs/domain/`
 

@@ -176,6 +176,31 @@ por endereço de destino, porque é o destinatário que precisa ser protegido de
 
 ---
 
+## Fase 3
+
+### DT-009 — A foto de perfil mora no disco do servidor, e disco de container é volátil
+
+**O que:** o upload grava o arquivo no disco da máquina que roda a API, e o banco guarda só o
+caminho. Em desenvolvimento funciona perfeitamente. **Em container publicado, todo reinício
+apaga as fotos** — e reinício acontece a cada deploy, a cada atualização de imagem e a cada vez
+que o orquestrador decide mover o processo.
+
+**Por quê:** decisão do dono do produto em 2026-08-25, com o motivo escrito. Armazenamento em
+nuvem exige conta e cartão, e a hospedagem inteira continua sem provedor definido (ADR-008,
+Fase 18). Contratar S3 na Fase 3 resolveria em separado um problema que a Fase 18 vai resolver
+junto, e com a informação que hoje não existe: onde o sistema roda.
+
+**O que já está feito para o dia em que quebrar:** a página mostra **as iniciais** quando não há
+foto ou quando o arquivo sumiu — nunca uma imagem quebrada. O comportamento degradado é rotina,
+não incidente, e é o que faz a perda ser um incômodo em vez de um chamado.
+
+**Dispara correção — e é um prazo, não um talvez:** a Fase 18, no épico que escolher a
+hospedagem, **antes** do primeiro deploy que sirva gente de verdade. Na prática: trocar o
+adaptador de gravação e migrar os arquivos existentes. Não construir camada de abstração para
+dois provedores antes de existir o segundo (ADR-005).
+
+---
+
 ## Armadilhas já resolvidas (não repetir)
 
 Não são débito — são erros que custaram tempo e que a documentação agora previne.

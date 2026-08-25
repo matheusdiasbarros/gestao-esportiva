@@ -29,7 +29,7 @@ conta" sem nenhum caso especial no resto do sistema.
 | Termo | Código | Significado | Completa em |
 | --- | --- | --- | --- |
 | Conta | `User` | Quem consegue entrar. E-mail, senha, nome, data de nascimento | Fase 2 |
-| Profissional | `Professional` | Perfil de quem dá aula. **Um por conta** | Fase 3 |
+| Profissional | `Professional` | A **âncora**: a linha que diz que esta conta dá aula. **Um por conta**. Não é o perfil — bio, modalidades, preços e locais moram em `professional-profile` (ADR-005) | Fase 2 |
 | Aluno | `Student` | Ficha que **um** profissional mantém sobre alguém | Fase 5 |
 | Administrador | — | `users.is_platform_admin`. Não é entidade | Fase 2 |
 | Convite | `StudentInvite` | Token de uso único que liga uma ficha a uma conta | Fase 2 |

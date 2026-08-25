@@ -92,8 +92,17 @@ Nunca chamar nada disto de "sessão" — ver *Termos ambíguos*.
 
 | pt-BR | Código | Definição |
 | --- | --- | --- |
-| Modalidade | `Sport` | Esporte ou atividade oferecida. Ex.: beach tennis, natação, dança |
+| Modalidade | `Sport` | Esporte ou atividade oferecida. Ex.: beach tennis, natação, dança. Linha do catálogo, compartilhada — não pertence a nenhum profissional |
 | Local | `Location` | Onde a aula acontece. Um profissional pode ter vários |
+| Perfil | `ProfessionalProfile` | Bio, credenciais e foto. **Não é `Professional`**, que é a âncora de identidade — ver ADR-005 |
+| Catálogo de modalidades | `sports` com `status = APPROVED` | O conjunto curado. Não é tabela separada |
+| Modalidade pendente | `Sport` com `status = PENDING` | Digitada pelo profissional porque não estava no catálogo. Funciona igual, para ele |
+| Modalidade do profissional | `ProfessionalSport` | Ligação entre um profissional e uma modalidade que ele atende |
+| Formato de atendimento | `SessionFormat` | `INDIVIDUAL`, `PAIR`, `CLASS_GROUP`. **Nunca `AttendanceType`** — `Attendance` é presença |
+| Preço | `ProfessionalSportPrice` | Valor de uma modalidade num formato. **Por aluno, por aula.** Inteiro em centavos |
+| Tipo de local | `LocationKind` | `OWN_VENUE`, `PARTNER_VENUE`, `PUBLIC_SPACE`, `STUDENT_HOME` |
+| Local principal | `locations.is_primary` | O pré-selecionado ao criar sessão e disponibilidade. Não é ranking |
+| Completude do perfil | — | Foto, modalidade com preço, local. **Derivada, nunca guardada** |
 | Disponibilidade | `Availability` | Faixa recorrente em que o profissional aceita agendamento, por local |
 | Bloqueio | `TimeBlock` | Exceção que remove disponibilidade em período específico |
 | Sessão | `Session` | Uma ocorrência agendada. É a unidade central da agenda |
