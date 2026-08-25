@@ -1097,6 +1097,12 @@ inconsistente ·
 
 ### Decisões da fase
 
+> **Abrir esta fase lendo a nota da Fase 8.** O dono descreveu, em 2026-08-25, um modelo de
+> turma **não fixa**: as turmas se distribuem na semana e o aluno de um nível frequenta algumas
+> delas, com colegas diferentes. Se for esse o desenho, o produto natural aqui é **pacote de
+> créditos** — "8 aulas no mês, use quando quiser" —, e não mensalidade amarrada a uma turma.
+> Isso muda a resposta de metade das perguntas abaixo.
+
 - [ ] Crédito é consumido no agendamento ou na realização da aula?
 - [ ] Prazo de cancelamento sem perda (ex.: 24 h) — fixo pela plataforma ou configurável pelo profissional?
 - [ ] Cancelamento pelo profissional sempre devolve crédito? Gera reposição obrigatória?
@@ -1168,7 +1174,25 @@ lista de espera funcional e registro de presença.
 
 ### Decisões da fase
 
+> **O dono descreveu o modelo real dele em 2026-08-25, e ele muda o peso destas decisões.**
+> Palavras dele: as turmas são distribuídas na semana, um aluno de um nível pode estar em
+> **algumas** turmas, com colegas diferentes em cada uma, e a turma **não é fixa**.
+>
+> Isso é a opção "reserva sessão a sessão" da primeira decisão abaixo — não a matrícula fixa. E
+> tem consequência antes da Fase 8: se o aluno escolhe quais aulas frequenta, o produto natural
+> da Fase 7 é **pacote de créditos** ("8 aulas no mês, use quando quiser"), não mensalidade de
+> turma. **A Fase 7 precisa abrir olhando para esta nota**, e não decidir do zero.
+>
+> Não está decidido — a fase decide, com as perguntas todas na mesa. Está registrado para não
+> se perder, que é o que aconteceria se ficasse só na conversa.
+
 - [ ] Aluno se matricula na **turma** (todas as sessões) ou reserva **sessão a sessão**?
+- [ ] **Preço da turma: por nível, por turma, ou herdado do perfil?** O nível é atributo de
+      `class_group` (Epic 8.1) e a Fase 3 só tem um valor por modalidade para "vaga em turma".
+      A combinação registrada em `professional-profile.md` §6.2 é: a turma **nasce com o valor
+      do perfil já preenchido e pode sobrescrever**. Confirmar aqui, porque é aqui que passa a
+      valer — e decidir se duas turmas do mesmo nível podem ter preços diferentes
+- [ ] Um aluno pode estar em **várias turmas** da mesma modalidade ao mesmo tempo?
 - [ ] Comportamento da lista de espera: FIFO, prioridade por plano, prioridade por reposição?
 - [ ] Prazo para o primeiro da fila aceitar a vaga antes de passar ao próximo
 - [ ] Vaga liberada perto do horário (< 2 h) ainda vai para a lista de espera?

@@ -244,6 +244,22 @@ Enum `SessionFormat`: `INDIVIDUAL`, `PAIR`, `CLASS_GROUP`.
 `CLASS_GROUP` casa com `ClassGroup` (turma) de propósito: o valor significa "uma vaga em
 turma", que é exatamente o que a Fase 8 vende.
 
+**O preço de `CLASS_GROUP` aqui é o valor de referência do profissional, não o preço final de
+cada turma.** A distinção apareceu numa pergunta do dono em 2026-08-25, e ela é real: uma escola
+de beach tennis cobra diferente da turma de iniciantes e da de avançados, e o nível é atributo
+da **turma** (`class_group`), que nasce na Fase 8 — não existe nada aqui onde pendurá-lo.
+
+O que fica combinado entre as duas fases:
+
+| Fase | Papel |
+| --- | --- |
+| 3 (esta) | um valor por modalidade para "vaga em turma". É o que o profissional cobra por padrão |
+| 8 | cada turma nasce com esse valor **já preenchido** e pode sobrescrevê-lo. Quem manda na cobrança é o preço da turma |
+
+Isto **não** é preço por nível disfarçado. Não existe entidade de nível na Fase 3, e criar uma
+agora seria modelar para uma tabela — `class_groups` — que ainda não existe. Registrado como
+decisão da Fase 8 no `TODO.md`.
+
 ### 6.3 Obrigatório, mas barato de preencher
 
 D2 diz que o preço é obrigatório. Isso é conciliado com a regra do `journeys.md` — "cada etapa
@@ -381,9 +397,22 @@ completo (galeria, S3, redimensionamento em fila) é pós-MVP.
 | **Excluir a conta apaga o arquivo** | o `iam.md` D8b anonimiza a conta. Anonimizar deixando o rosto da pessoa em disco não é anonimizar |
 | Foto ausente ou arquivo faltando: a página mostra **as iniciais**, nunca imagem quebrada | DT-009 torna isso rotina, não exceção |
 
-**Não há redimensionamento em fila (BullMQ) nesta fase. (proposta)** Uma imagem de perfil
-processa em milissegundos; a fila existe para lote e para vídeo. Ela entra junto com a nuvem,
-na Fase 18.
+**Não há redimensionamento em fila (BullMQ) nesta fase.** Uma imagem de perfil processa em
+milissegundos; a fila existe para lote e para vídeo. Ela entra junto com a nuvem, na Fase 18.
+
+### 8.1 Duas regras que tornam a troca para nuvem barata
+
+A ADR-005 proíbe construir camada de abstração de provedor antes de existir um segundo, e está
+certa. Isso **não** é licença para espalhar acesso a arquivo pelo código — a diferença entre as
+duas coisas é o que decide se a Fase 18 troca um arquivo ou vasculha o repositório.
+
+| Regra | O que ela compra |
+| --- | --- |
+| **Todo acesso a arquivo mora em um serviço só**, com três operações: gravar, ler, apagar. Nenhum outro arquivo do projeto conhece caminho de disco | trocar para S3, R2 ou qualquer outro é reescrever esse serviço. O resto do código não sabe onde a foto está, e continua não sabendo depois |
+| **A foto é servida por uma rota nossa**, não por URL do armazenamento | a web e o aplicativo guardam um endereço que não muda nunca. Se a URL apontasse direto para o disco hoje e para um domínio da Amazon amanhã, a troca vazaria para as duas telas e para qualquer link que já tenha sido compartilhado |
+
+O que **sobra** para o dia da migração, e não tem como evitar: mover os arquivos que já existem
+para o destino novo, uma vez. É script, não refatoração.
 
 ## 9. Público, aluno vinculado e dono — campo a campo
 
