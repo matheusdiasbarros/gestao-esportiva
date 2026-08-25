@@ -718,18 +718,23 @@ privado — verificar a resposta, não só a tela ·
 
 ### Épicos e tarefas
 
-- [ ] **Epic 3.1 — Modelo de perfil**
-  - [ ] Entidade `professional_profile`: bio, especialidades, experiência, certificações
-  - [ ] Catálogo `sports` (tabela de referência) + a modalidade digitada, pendente de curadoria
-  - [ ] `professional_sports`: quais modalidades este profissional atende
-  - [ ] Campos públicos vs. privados — a tabela em `docs/domain/professional-profile.md`, que é
+- [x] **Epic 3.1 — Modelo de perfil** ✅ 2026-08-25
+  - [x] Entidade `professional_profile`: bio, especialidades, experiência, certificações
+  - [x] Catálogo `sports` (tabela de referência) + a modalidade digitada, pendente de curadoria
+  - [x] `professional_sports`: quais modalidades este profissional atende
+  - [x] Campos públicos vs. privados — a tabela em `docs/domain/professional-profile.md`, que é
         o que a revisão de segurança confere contra a resposta real
-  - [ ] Migration revisada à mão, revertível
-- [ ] **Epic 3.2 — Preços**
-  - [ ] `professional_prices`: por modalidade **e** por tipo de atendimento
-  - [ ] Tipos de atendimento: individual, dupla, turma
-  - [ ] Inteiro em centavos, moeda `BRL` (ADR-003) — nunca ponto flutuante
-  - [ ] O que acontece com o preço quando a modalidade sai do perfil
+  - [x] Migration revisada à mão, revertível — 17 garantias exercitadas contra o banco, e o `revert` conferido
+- [ ] **Epic 3.2 — Preços** 🟨 *o modelo está de pé; falta a rota que grava*
+
+  > As quatro tarefas abaixo são de modelagem, e estão feitas. O épico **não** fecha aqui: não
+  > existe ainda rota para definir um preço nem tela para digitá-lo, e marcar como concluído
+  > seria a mesma ilusão de progresso que o aviso do Epic 2.2 descreve.
+
+  - [x] `professional_sport_prices`: por modalidade **e** por tipo de atendimento
+  - [x] Tipos de atendimento: individual, dupla, turma
+  - [x] Inteiro em centavos, moeda `BRL` (ADR-003) — nunca ponto flutuante
+  - [x] O que acontece com o preço quando a modalidade sai do perfil
 - [ ] **Epic 3.3 — Foto** *(reduzido: o MVP diz "sem mídia elaborada")*
   - [ ] Upload de **uma** foto de perfil, com validação de tipo e tamanho **no servidor** —
         extensão e `Content-Type` são escolhidos por quem envia e não provam nada

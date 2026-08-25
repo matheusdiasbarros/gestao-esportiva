@@ -110,40 +110,40 @@ já treina com ele — que é quem tem motivo para perguntar.
 ## 4. Como se relacionam
 
 ```text
-   módulo iam  ─────────────────────────────────────────────────────────
-                      ┌───────────────────────────────┐
-                      │            User               │   Fase 2
-                      └───────────────┬───────────────┘
-                                 0..1 │
-                      ┌───────────────▼───────────────┐
-                      │         Professional          │   a ÂNCORA
-                      │  signup_slug                  │   Fase 2
-                      └───────────────┬───────────────┘
-   ─────────────────────────────────  │  ── fronteira: FK atravessa,
-   módulo professional-profile        │     consulta não (ADR-005 §5)
-                                  1:1 │
-                      ┌───────────────▼───────────────┐
-                      │     ProfessionalProfile       │   Fase 3
-                      │  bio · credentials            │
-                      │  photo_path                   │
-                      └────┬─────────────────────┬────┘
-                      1..N │                     │ 1..N
-        ┌──────────────────▼──────┐   ┌──────────▼─────────────────┐
-        │    ProfessionalSport    │   │         Location           │
-        │  experience_since_year  │   │  name · kind · is_primary  │
-        └────┬───────────────┬────┘   │  street_address (nulo em   │
-        N..1 │          1..3 │        │    STUDENT_HOME)           │
-             │          ┌────▼──────────────────┐ neighborhood ·   │
-             │          │ProfessionalSportPrice │ city · state     │
-             │          │  session_format       │ access_notes     │
-             │          │  amount_cents         └──────────────────┘
-             │          └───────────────────────┘
-   ────────  │  ─────────────────────────────────────────────────────────
-   módulo sports
-   ┌─────────▼────────┐
-   │      Sport       │   compartilhado — não pertence a ninguém
-   │  name · status   │
-   └──────────────────┘
+  módulo iam ─────────────────────────────────────────────────────────────────
+
+        ┌──────────────┐        ┌────────────────────────────┐
+        │     User     │──0..1─▶│        Professional        │  a ÂNCORA
+        │    Fase 2    │        │  signup_slug · enabled     │  Fase 2
+        └──────────────┘        └─────────────┬──────────────┘
+                                              │
+  ────────────────────────────────────────────┼───────────────────────────────
+  módulo professional-profile                 │   a fronteira: a chave
+                                              │   estrangeira atravessa,
+        ┌─────────────────────────────────────┼──────────┐   a consulta não
+        │ 1:1                            1..N │     1..N │   (ADR-005 §5)
+        ▼                                     ▼          ▼
+┌───────────────────────┐   ┌─────────────────────────┐ ┌──────────────────────┐
+│  ProfessionalProfile  │   │    ProfessionalSport    │ │       Location       │
+│  bio                  │   │  experience_since_year  │ │  name · kind         │
+│  credentials          │   │                         │ │  is_primary          │
+│  photo_path           │   └─────┬─────────────┬─────┘ │  street_address      │
+└───────────────────────┘         │             │       │   (nulo em           │
+                                  │ 1..3        │ N..1  │    STUDENT_HOME)     │
+                                  ▼             │       │  neighborhood · city │
+                  ┌───────────────────────┐     │       │  state · access_notes│
+                  │ProfessionalSportPrice │     │       └──────────────────────┘
+                  │  session_format       │     │
+                  │  amount_cents         │     │
+                  └───────────────────────┘     │
+                                                │
+  ──────────────────────────────────────────────┼───────────────────────────────
+  módulo sports                                 ▼
+                                    ┌──────────────────────┐
+                                    │        Sport         │  compartilhado —
+                                    │   name · status      │  não pertence a
+                                    │   normalized_name    │  ninguém
+                                    └──────────────────────┘
 ```
 
 - Um profissional tem **de zero a N** modalidades e **de zero a N** locais. Perfil vazio é
@@ -154,6 +154,15 @@ já treina com ele — que é quem tem motivo para perguntar.
   a ninguém, e é por isso que ela precisa de curadoria.
 - `Location` pertence a **um** profissional. Arena compartilhada por dois professores são duas
   linhas — deduplicar locais é Fase 15.
+
+**As quatro tabelas penduram na âncora, não no perfil.** `ProfessionalProfile` é irmã de
+`ProfessionalSport` e de `Location`, não mãe delas, e todas apontam para `professionals.id`.
+
+Duas razões. A linha de perfil nasce **sob demanda**, no primeiro salvamento — se as
+modalidades pendurassem nela, acrescentar a primeira modalidade exigiria criar um perfil vazio
+antes, e a ordem viraria regra a lembrar. E a verificação de dono fica uniforme: toda operação
+do módulo começa com o `professionalId` que o `AccessService` devolve, e termina num
+`WHERE professional_id = :id` — sem nenhum salto a mais para descobrir o id do perfil.
 
 ## 5. Catálogo de modalidades
 
