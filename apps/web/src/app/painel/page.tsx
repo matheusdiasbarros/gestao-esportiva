@@ -1,4 +1,5 @@
 import { Role } from '@gestao/types';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ConvidarAlunos } from '@/components/convidar-alunos';
 import { LinkPublico } from '@/components/link-publico';
@@ -70,6 +71,22 @@ export default async function Painel() {
           <TrocarEmail pendente={sessao.pendingEmail} />
         </div>
       </section>
+
+      {sessao.professionalId ? (
+        <section className="rounded-xl border border-(--color-border) bg-(--color-surface-muted) p-6">
+          <h2 className="text-sm font-medium">Seu perfil</h2>
+          <p className="mt-1 text-sm text-(--color-ink-muted)">
+            Modalidades, preços, locais e foto. É o que a agenda e a cobrança vão consumir, e o que
+            aparece para quem recebe seu link.
+          </p>
+          <Link
+            href="/painel/perfil"
+            className="mt-4 inline-block rounded-lg border border-(--color-border) px-3 py-1.5 text-xs font-medium"
+          >
+            Editar perfil
+          </Link>
+        </section>
+      ) : null}
 
       {sessao.signupSlug ? (
         <section className="rounded-xl border border-(--color-border) bg-(--color-surface-muted) p-6">

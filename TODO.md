@@ -750,19 +750,28 @@ privado — verificar a resposta, não só a tela ·
   - [x] Servida por rota nossa, pública, com nome aleatório que não deriva de identificador
         nenhum — e validação do nome por lista de permissão, contra travessia de diretório
   - [x] Sem galeria, sem S3, sem redimensionamento assíncrono — Fase 18 e pós-MVP
-- [ ] **Epic 3.4 — Edição do perfil (web)**
-  - [ ] Formulário com validação compartilhada (`packages/types`)
-  - [ ] Indicador de completude do perfil
+- [x] **Epic 3.4 — Edição do perfil (web)** ✅ 2026-08-25
+  - [x] Formulário com validação compartilhada (`packages/types`) — limites de texto, teto de
+        preço, lista de UFs, tetos de modalidade e de local, e a **mesma** normalização de nome
+        que o banco usa, para avisar "você já tem essa modalidade" antes de enviar
+  - [x] Indicador de completude do perfil, com cada item linkando ao bloco que falta
+  - [x] Quatro blocos salváveis um a um, em `/painel/perfil` — o formulário único exigiria foto,
+        preço e endereço na mesma sentada, e quem não tem os três fecha a aba
+  - [x] Campo de preço formatado a cada tecla: os dígitos são lidos como centavos, e o que se vê
+        é o que vai ser gravado. Campo livre teria que adivinhar se "1.500" é mil e quinhentos
+        reais ou um e cinquenta
+  - [x] Os dois textos que o documento de domínio exige: **"por aluno, por aula"** ao lado do
+        preço e **"seu endereço não aparece no link público"** ao lado do local
 - [ ] **Epic 3.5 — Locais de atendimento 🔁** 🟨 *(absorvido da Fase 4 — decidido na Fase 0)*
 
   > A API está de pé e testada. Falta a tela (Epic 3.4) e falta o recorte público (Epic 3.7) —
   > e é o recorte público que a revisão de segurança obrigatória da fase confere.
 
-  - [x] Cadastro de locais com endereço em texto, sem mapa nem geolocalização — API
+  - [x] Cadastro de locais com endereço em texto, sem mapa nem geolocalização — API e tela
   - [x] Múltiplos locais por profissional, com local principal. Exatamente um, garantido por
         índice único parcial; excluir o principal promove o mais antigo dos que ficaram
   - [x] Tipos: local próprio, academia/clube, espaço público, casa do aluno. **Casa do aluno não
-        aceita endereço**, e virar casa do aluno apaga o que estava lá
+        aceita endereço** — o campo some da tela, e o banco recusa se alguém insistir
   - [ ] Só bairro e cidade saem em resposta pública; o endereço exato, nunca — é o Epic 3.7
 - [ ] **Epic 3.7 — A página "treine comigo" cresce** 🔁 *(acrescentado em 2026-08-25)*
   - [ ] `/treine-com/:slug` passa a mostrar foto, modalidades e locais por bairro e cidade

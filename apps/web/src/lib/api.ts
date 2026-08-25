@@ -25,13 +25,33 @@ async function lerProblema(response: Response): Promise<ProblemDetails> {
   };
 }
 
+/**
+ * O endereço completo de algo que a API devolveu como caminho relativo — hoje, a foto.
+ *
+ * A API não manda URL absoluta porque não sabe por qual endereço o cliente a alcança: o
+ * aplicativo em desenvolvimento fala com o IP da máquina na rede local, e um `localhost` dentro
+ * da resposta não abriria no celular. Quem sabe a base é cada cliente.
+ */
+export function urlAbsoluta(caminhoRelativo: string): string {
+  return `${baseUrl}/${caminhoRelativo}`;
+}
+
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  // Envio de arquivo vai como `multipart/form-data`, e o cabeçalho **precisa** ser montado pelo
+  // navegador: ele carrega a fronteira que separa as partes, um valor aleatório que só ele
+  // conhece. Declarar `application/json` aqui faria o servidor tentar ler um JSON que não é —
+  // e o erro apareceria como "campo obrigatório ausente", longe da causa.
+  const ehArquivo = init?.body instanceof FormData;
+
   const response = await fetch(`${baseUrl}${path}`, {
     ...init,
     // Sem isto o navegador não envia nem guarda os cookies de acesso, e o login "funciona"
     // sem nunca persistir — o sintoma é voltar deslogado a cada navegação.
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
+    headers: {
+      ...(ehArquivo ? {} : { 'Content-Type': 'application/json' }),
+      ...init?.headers,
+    },
   });
 
   if (!response.ok) {
