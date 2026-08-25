@@ -737,12 +737,19 @@ privado — verificar a resposta, não só a tela ·
   - [x] Inteiro em centavos, moeda `BRL` (ADR-003) — nunca ponto flutuante. A borda da API
         recusa decimal, zero, negativo e o que passa do teto — quatro testes provam
   - [x] O que acontece com o preço quando a modalidade sai do perfil — vai junto, por `CASCADE`
-- [ ] **Epic 3.3 — Foto** *(reduzido: o MVP diz "sem mídia elaborada")*
-  - [ ] Upload de **uma** foto de perfil, com validação de tipo e tamanho **no servidor** —
-        extensão e `Content-Type` são escolhidos por quem envia e não provam nada
-  - [ ] Guardada no disco do servidor. **Débito técnico consciente**, com o gatilho escrito:
-        em container publicado o arquivo some a cada reinício
-  - [ ] Sem galeria, sem S3, sem redimensionamento assíncrono — Fase 18 e pós-MVP
+- [x] **Epic 3.3 — Foto** ✅ 2026-08-25 *(reduzido: o MVP diz "sem mídia elaborada")*
+  - [x] Upload de **uma** foto de perfil, com validação de tipo e tamanho **no servidor** —
+        extensão e `Content-Type` são escolhidos por quem envia e não provam nada. O arquivo é
+        aberto de verdade, e o que fica gravado é uma imagem **reescrita por nós**
+  - [x] Metadados descartados. **EXIF de celular leva coordenada de GPS**, e a selfie tirada em
+        casa publicaria o endereço residencial em `/treine-com/:slug`. Teste prova que a sonda
+        gravada no EXIF da entrada não aparece nos bytes servidos
+  - [x] Guardada no disco do servidor, em um serviço só que conhece caminho de disco.
+        **Débito técnico consciente** (DT-009), com o gatilho escrito: em container publicado o
+        arquivo some a cada reinício
+  - [x] Servida por rota nossa, pública, com nome aleatório que não deriva de identificador
+        nenhum — e validação do nome por lista de permissão, contra travessia de diretório
+  - [x] Sem galeria, sem S3, sem redimensionamento assíncrono — Fase 18 e pós-MVP
 - [ ] **Epic 3.4 — Edição do perfil (web)**
   - [ ] Formulário com validação compartilhada (`packages/types`)
   - [ ] Indicador de completude do perfil

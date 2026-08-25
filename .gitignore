@@ -47,3 +47,7 @@ test-results/
 playwright-report/
 blob-report/
 .playwright/
+
+# Fotos de perfil enviadas em desenvolvimento. Foto de pessoa não entra no repositório —
+# nem por acidente, nem "só a de teste". Ver API_PHOTOS_DIR no .env.example.
+apps/api/dados/

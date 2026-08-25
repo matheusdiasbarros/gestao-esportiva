@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AppConfigModule } from '../../config/config.module';
 import { IamModule } from '../iam/iam.module';
 import { SportsModule } from '../sports/sports.module';
 import { Location } from './entities/location.entity';
@@ -7,11 +8,14 @@ import { ProfessionalProfile } from './entities/professional-profile.entity';
 import { ProfessionalSportPrice } from './entities/professional-sport-price.entity';
 import { ProfessionalSport } from './entities/professional-sport.entity';
 import { LocationsController } from './locations.controller';
+import { PhotosController } from './photos.controller';
 import { ProfessionalProfileController } from './professional-profile.controller';
 import { ProfessionalSportsController } from './professional-sports.controller';
 import { LocationsService } from './services/locations.service';
+import { PhotoStorage } from './services/photo-storage';
 import { ProfessionalProfileService } from './services/professional-profile.service';
 import { ProfessionalSportsService } from './services/professional-sports.service';
+import { ProfilePhotoService } from './services/profile-photo.service';
 import { ProfissionalAtual } from './services/profissional-atual';
 
 /**
@@ -32,6 +36,7 @@ import { ProfissionalAtual } from './services/profissional-atual';
  */
 @Module({
   imports: [
+    AppConfigModule,
     IamModule,
     SportsModule,
     TypeOrmModule.forFeature([
@@ -41,12 +46,19 @@ import { ProfissionalAtual } from './services/profissional-atual';
       Location,
     ]),
   ],
-  controllers: [ProfessionalProfileController, ProfessionalSportsController, LocationsController],
+  controllers: [
+    ProfessionalProfileController,
+    ProfessionalSportsController,
+    LocationsController,
+    PhotosController,
+  ],
   providers: [
     ProfissionalAtual,
     ProfessionalProfileService,
     ProfessionalSportsService,
     LocationsService,
+    PhotoStorage,
+    ProfilePhotoService,
   ],
 })
 export class ProfessionalProfileModule {}

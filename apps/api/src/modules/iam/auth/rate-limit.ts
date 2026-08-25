@@ -52,8 +52,9 @@ export const LimitarLogin = (): MethodDecorator & ClassDecorator =>
  * mesmo e-mail para descobrir se ele já tem conta.
  *
  * **Este número é o orçamento da suíte de ponta a ponta**, e vale saber: uma execução limpa
- * gasta cerca de 66 cadastros, todos vindos de `127.0.0.1`. Cabe uma execução por hora com
- * folga, e **não cabem duas** — ver DT-010. Mexer aqui para baixo quebra o CI.
+ * gasta **74** cadastros, todos vindos de `127.0.0.1` (medido em 2026-08-25, com 112 testes).
+ * Cabe uma execução por hora, e **não cabem duas** — ver DT-010. Mexer aqui para baixo quebra
+ * o CI.
  */
 export const LimitarCadastro = (): MethodDecorator & ClassDecorator =>
   Throttle({ [LIMITE_IP]: { limit: 100, ttl: 60 * MINUTO } });
@@ -109,6 +110,20 @@ export const LimitarTrocaDeEmail = (): MethodDecorator & ClassDecorator =>
     [LIMITE_IP]: { limit: 10, ttl: 60 * MINUTO },
     [LIMITE_ALVO]: { limit: 3, ttl: 60 * MINUTO },
   });
+
+/**
+ * Envio de foto: **20 por hora por IP**.
+ *
+ * É a operação autenticada mais cara do sistema. Decodificar 5 MB de JPEG, endireitar,
+ * recortar e recomprimir em WebP ocupa CPU de verdade — e o teto global de 120 por minuto
+ * significaria 7.200 dessas por hora, o que derruba a API sem precisar de ataque nenhum: basta
+ * alguém com sessão e um laço.
+ *
+ * Sem contagem por alvo: o corpo é multipart e não tem e-mail, então o tracker por alvo se pula
+ * sozinho. Vinte por hora é folga larga sobre trocar a própria foto de perfil.
+ */
+export const LimitarEnvioDeFoto = (): MethodDecorator & ClassDecorator =>
+  Throttle({ [LIMITE_IP]: { limit: 20, ttl: 60 * MINUTO } });
 
 /**
  * Renovação: teto alto de propósito, e sem alvo — não há e-mail no corpo, então a contagem por

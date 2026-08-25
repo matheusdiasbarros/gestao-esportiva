@@ -17,14 +17,14 @@ Escopo do MVP em [`docs/product/mvp.md`](docs/product/mvp.md).
 
 ## Estado atual
 
-**Fases 0, 1 e 2 concluídas. Fase 3 (perfil profissional) em andamento** — o modelo e a API
-estão de pé; faltam a foto, as telas e a página pública.
+**Fases 0, 1 e 2 concluídas. Fase 3 (perfil profissional) em andamento** — o servidor está
+inteiro; faltam as telas (Epic 3.4) e a página pública crescer (Epic 3.7).
 
 Funciona hoje: criar conta de profissional ou de aluno, entrar, sair, recuperar senha,
 confirmar e trocar e-mail, convidar alunos, o link público "treine comigo" do professor, a
 autorização por papel e propriedade, e o painel protegido — na web e no aplicativo. Pela API,
-o profissional monta o perfil: bio, modalidades com preço em centavos, e locais de atendimento.
-Não existe ainda nada de agenda, aluno como funcionalidade, ou pagamento.
+o profissional monta o perfil inteiro: bio, modalidades com preço em centavos, locais de
+atendimento e foto. Não existe ainda nada de agenda, aluno como funcionalidade, ou pagamento.
 
 O roadmap de 20 fases está em [`TODO.md`](TODO.md) — é o documento que manda.
 
@@ -52,7 +52,7 @@ pnpm --filter @gestao/api seed            # dados de desenvolvimento, idempotent
 pnpm dev                                  # API :3333 · web :3000
 
 pnpm lint && pnpm typecheck && pnpm test  # 92 testes de unidade
-pnpm test:e2e                             # 96 testes contra o sistema inteiro (ver DT-010)
+pnpm test:e2e                             # 112 testes contra o sistema inteiro (ver DT-010)
 
 pnpm --filter @gestao/api test -- health.service   # um teste específico
 pnpm exec playwright test cadastro                 # um arquivo de tela

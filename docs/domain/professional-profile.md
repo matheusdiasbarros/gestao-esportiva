@@ -423,6 +423,23 @@ completo (galeria, S3, redimensionamento em fila) é pós-MVP.
 **Não há redimensionamento em fila (BullMQ) nesta fase.** Uma imagem de perfil processa em
 milissegundos; a fila existe para lote e para vídeo. Ela entra junto com a nuvem, na Fase 18.
 
+**Uma correção que a implementação obrigou, em 2026-08-25.** A regra acima dizia que o tipo é
+decidido pelo conteúdo, e isso está certo — mas "pedir para a biblioteca abrir e ver se dá
+certo" **não** cumpre a regra. Conferido com sharp 0.35.3: ele decodifica GIF sem reclamar, e
+decodifica **SVG bem formado, com `<script>` dentro**. Um SVG servido do nosso domínio seria
+script rodando na origem da plataforma, com acesso ao que aquela origem tem.
+
+Então a regra tem duas partes, e as duas são obrigatórias:
+
+| Parte | O que faz |
+| --- | --- |
+| Lista de permissão sobre o formato que o decodificador **relatou** — `jpeg`, `png`, `webp` | fecha a porta para tudo que a biblioteca abre e nós não queremos |
+| Reconversão para **um** formato de saída (WebP) | o que fica no disco nunca é o que chegou, e a rota que serve tem um tipo de conteúdo só, sem nada a negociar |
+
+A mesma ideia vale para o nome do arquivo na rota que serve: validado por lista de permissão —
+32 hexadecimais e a extensão —, não por lista de proibição. Enumerar formas de escrever `..` é
+uma corrida contra a criatividade de quem ataca.
+
 ### 8.1 Duas regras que tornam a troca para nuvem barata
 
 A ADR-005 proíbe construir camada de abstração de provedor antes de existir um segundo, e está

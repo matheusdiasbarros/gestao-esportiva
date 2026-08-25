@@ -7,6 +7,7 @@ import { ehViolacaoDeUnicidade } from '../../../common/database/violacao-de-unic
 import { UpdateProfileDto } from '../dto/profile.dto';
 import { ProfessionalProfile } from '../entities/professional-profile.entity';
 import { calcularCompletude } from './completude';
+import { urlDaFoto } from './foto-url';
 import { LocationsService } from './locations.service';
 import { ProfessionalSportsService } from './professional-sports.service';
 
@@ -41,13 +42,10 @@ export class ProfessionalProfileService {
     return {
       bio: perfil?.bio ?? null,
       credentials: perfil?.credentials ?? null,
-      /**
-       * A foto é o Epic 3.3. Enquanto o envio não existe, `photo_path` é nulo em toda linha e
-       * este campo é nulo por construção. Quando a foto entrar, é **aqui** que o caminho em
-       * disco vira endereço — ele nunca sai daqui cru, porque caminho de disco não é URL e
-       * publicá-lo entregaria a estrutura de pastas do servidor.
-       */
-      photoUrl: null,
+      // O caminho em disco nunca sai daqui cru: ele vira o endereço da **nossa** rota. Publicar
+      // o caminho entregaria a estrutura de pastas do servidor e amarraria as duas telas ao
+      // armazenamento de hoje.
+      photoUrl: urlDaFoto(perfil?.photoPath ?? null, perfil?.photoUpdatedAt ?? null),
       sports: modalidades,
       locations: locais,
       completeness: calcularCompletude({

@@ -158,6 +158,19 @@ export class EnvironmentVariables {
   /** Remetente no formato `Nome <endereco@dominio>`. */
   @IsString()
   RESEND_FROM: string = 'Gestao Esportiva <onboarding@resend.dev>';
+
+  /**
+   * Onde as fotos de perfil ficam gravadas, no disco da máquina que roda a API.
+   *
+   * Caminho relativo é resolvido a partir do diretório de trabalho do processo — que é
+   * `apps/api` em desenvolvimento. O padrão fica fora do versionamento de propósito: foto de
+   * pessoa não entra no repositório.
+   *
+   * **Isto é DT-009.** Em container publicado, o diretório vive só enquanto o container vive, e
+   * as fotos somem a cada reinício. A nuvem entra na Fase 18, junto com a hospedagem (ADR-008).
+   */
+  @IsString()
+  API_PHOTOS_DIR: string = './dados/fotos';
 }
 
 /**

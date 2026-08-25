@@ -204,9 +204,9 @@ dois provedores antes de existir o segundo (ADR-005).
 ### DT-010 — A suíte de ponta a ponta gasta 66 dos 100 cadastros por hora que o IP tem
 
 **O que:** cada teste de tela cria a própria conta, de propósito (`e2e/apoio.ts` explica por
-quê), e todos saem de `127.0.0.1`. Uma execução limpa da suíte consome **cerca de 66** dos 100
-cadastros por hora que `LimitarCadastro` permite por IP. Uma execução cabe; **duas na mesma hora
-não cabem.**
+quê), e todos saem de `127.0.0.1`. Uma execução limpa da suíte consome **74** dos 100 cadastros
+por hora que `LimitarCadastro` permite por IP — medido em 2026-08-25, com 112 testes. Uma
+execução cabe; **duas na mesma hora não cabem.**
 
 **Como isso aparece:** não como "limite estourado". Aparece como meia dúzia de testes de
 arquivos diferentes falhando em `expect(page).toHaveURL('/painel')`, porque o formulário de
@@ -220,10 +220,25 @@ com motivo escrito, e afrouxá-lo para acomodar teste seria trocar produção po
 CI. Compartilhar conta entre testes desfaria o isolamento que `apoio.ts` documenta. No CI o
 problema não existe: cada execução sobe um Redis limpo.
 
-**Dispara correção:** quando uma execução limpa passar de ~85 cadastros — o que vai acontecer,
-porque toda fase acrescenta testes. Aí a saída certa **não** é subir o teto: é a suíte apagar os
-contadores de limite no `globalSetup`, que é o Redis de desenvolvimento e é dela. Medir antes de
-decidir; o número de hoje está no comentário de `LimitarCadastro`.
+**O que já foi feito para adiar:** o bloco de recusas de `foto-de-perfil.spec.ts` compartilha
+**uma** conta em vez de criar sete — nenhum daqueles testes grava nada, então não há estado
+para um contaminar no outro, e o padrão já existia em `autorizacao.spec.ts`. Isso devolveu 6
+cadastros. **É o remédio barato, e ele não escala**: todo bloco de recusa que existir pode ser
+convertido, e depois disso acaba.
+
+**Dispara correção:** quando uma execução limpa passar de ~90 cadastros — o que vai acontecer,
+porque toda fase acrescenta testes. Aí a saída **não** é subir o teto: é a suíte apagar os
+contadores no `globalSetup`, que é o Redis de desenvolvimento e é dela. Isso resolve "duas
+execuções na mesma hora"; se um dia **uma** execução sozinha passar de 100, aí sim o teto
+precisa ser rediscutido — e com número medido, não com estimativa. Medir assim:
+
+```bash
+docker exec gestao-redis sh -c 'redis-cli --scan --pattern "{*}:*" | xargs -r redis-cli del'
+pnpm test:e2e
+docker exec gestao-redis sh -c 'redis-cli --scan --pattern "*:ip}*" | while read k; do echo "$(redis-cli get $k) $(redis-cli ttl $k)s"; done' | sort -rn
+```
+
+O contador do cadastro é o de janela longa — TTL perto de 3600 segundos.
 
 ---
 
@@ -249,6 +264,7 @@ Não são débito — são erros que custaram tempo e que a documentação agora
 | **`next build` e `next dev` na mesma pasta fazem toda rota menos a raiz devolver 404**, sem erro no terminal. Resolvido com pastas de saída separadas | `apps/web/next.config.ts`, `distDir` |
 | **Rodar `pnpm test:e2e` com o `pnpm dev` no ar derruba os dois.** A suíte sobe a própria API e web nas mesmas portas; as instâncias disputam, o servidor de desenvolvimento morre no meio e a suíte falha em massa por um motivo que não tem nada a ver com a mudança em análise | `docs/sistema/fase-02-identidade-e-acesso.md` §6 |
 | **O Playwright reaproveita o servidor que já estiver na porta, mesmo de um build velho.** `reuseExistingServer: !ehCI` existe para não subir tudo de novo a cada execução — e o efeito colateral é que uma correção recém-compilada simplesmente não entra, sem nenhum aviso. O sintoma é a mudança "não fazer efeito"; a checagem é `Get-NetTCPConnection -LocalPort 3333,3000` e olhar o `StartTime` do processo | `playwright.config.ts` |
+| **"O sharp conseguiu abrir" NÃO é validação de imagem.** Ele decodifica GIF sem reclamar e decodifica **SVG bem formado, com `<script>` dentro** — conferido com sharp 0.35.3. Servir esse SVG do nosso domínio seria XSS armazenado. A validação precisa ser lista de permissão sobre `metadata().format`, e a reconversão para um formato só é a segunda tranca | `profile-photo.service.ts`, `e2e/foto-de-perfil.spec.ts` |
 | **O modo estrito do React dispara duas vezes o efeito que consome um token de uso único.** A primeira montagem gasta o token, a segunda recebe o erro — e é a segunda que a tela mostra | `apps/web/src/app/verificar-email/page.tsx` |
 | **O `router.d.ts` do expo-router pode encher de rotas falsas.** O arquivo gerado chegou a listar caminhos de `apps/api` e `apps/web` — arquivos criados enquanto um servidor Expo estava no ar, que vigia a raiz do monorepo. O sintoma é `tsc` recusar todo `href` válido. Não é versionado: apagar `.expo/types` e deixar o Expo gerar de novo resolve | `apps/mobile/.expo/types/` |
 | **`react` e `react-dom` precisam ser a MESMA versão, exata.** O `bundledNativeModules` do Expo indicava 19.2.3 e o projeto usa 19.2.8; a página abria em branco, e o motivo só aparecia no console do navegador — nada no terminal do Metro | `apps/mobile/package.json` |
