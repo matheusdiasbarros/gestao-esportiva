@@ -324,6 +324,11 @@ Contas de exemplo depois de `pnpm --filter @gestao/api seed`, todas com senha
 | `carlos@exemplo.local` | responsável que acessa a ficha de uma menor |
 | `admin@gestao.local` | administrador — senha `trocar-esta-senha`, de `SEED_ADMIN_PASSWORD` |
 
+**A cadeia inteira — cadastro, verificação, login, renovação, logout — foi provada à mão nas
+duas peles em 2026-08-24**, e as duas importam porque são caminhos de código diferentes na API:
+o navegador recebe cookie `httpOnly` e **nenhum** token no corpo; o aplicativo recebe token no
+corpo e **nenhum** cookie. Quem mexer em `sessao-http.ts` refaz as duas, não só uma.
+
 `autorizacao.spec.ts` e `renovacao.spec.ts` são testes de **API**, não de tela, e é deliberado:
 a regra que eles protegem mora no servidor. Cobrir só a interface provaria que o botão está
 escondido — e botão escondido não é autorização. O token de renovação da web, então, vive num

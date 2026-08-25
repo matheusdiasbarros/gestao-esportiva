@@ -650,7 +650,11 @@ Todas resolvidas em 2026-08-20. Registro completo em [`docs/domain/iam.md`](docs
 
 ### Critérios de conclusão
 
-- [ ] Cadastro → verificação → login → renovação → logout funcionando ponta a ponta
+- [x] Cadastro → verificação → login → renovação → logout funcionando ponta a ponta — provado
+      em 2026-08-24 nas **duas peles**, porque são caminhos de código diferentes na API: no
+      navegador, com cookie `httpOnly` e sem token no corpo; no aplicativo, com token no corpo e
+      sem cookie nenhum. A verificação usou o link real do e-mail, e a rotação foi verificada
+      junto com a detecção de reuso derrubando a família. 30 conferências, todas passando
 - [x] Aceite de convite funciona **inteiramente no navegador** — verificado à mão e pela API em
       2026-08-24. O teste Playwright do aceite fica para a Fase 5: aceitar consome a única ficha
       sem conta que existe, e criar ficha pela interface é da Fase 5. Ver DT-005
