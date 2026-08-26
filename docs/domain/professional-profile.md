@@ -580,12 +580,21 @@ Legenda idêntica à do `iam.md`.
 | | ver bairro, cidade e UF | sim | sim | dono | sim |
 | | ver nome, endereço completo e como chegar | **não** | part. | dono | sim |
 
-Duas células merecem destaque:
+Três células merecem destaque:
 
 - **"aprovar/mesclar no catálogo: não" para profissional.** O catálogo é compartilhado; um
   profissional editando o nome de uma modalidade muda a página de todos os outros.
 - **Recurso de outro dono responde 404, não 403** (`iam.md` §7.1). Vale para local, para preço
   e para a modalidade do profissional, sem exceção.
+- **"ler o catálogo: não" para visitante.** `GET /sports` nasceu `@Public()`, e a revisão de
+  segurança da Fase 3 pegou a divergência contra esta linha (achado #5). O argumento para abrir
+  era uma tela de cadastro que pergunta o que a pessoa ensina — **e essa tela não existe**. O
+  código foi fechado para bater com a tabela, em 2026-08-26; no dia em que a tela existir, é a
+  tabela que muda primeiro, e a linha explica por quê.
+
+**Esta tabela é a régua, e o código é que se ajusta a ela.** Divergência entre as duas resolve-se
+decidindo qual está certa e mudando a outra **no mesmo commit** — matriz normativa que não bate
+com o sistema é matriz que a próxima fase para de consultar.
 
 ## 12. Casos que precisam funcionar
 

@@ -62,6 +62,33 @@ let email: string;
 let idDaConta: string;
 
 /**
+ * Monta uma parte do perfil e **confere que a gravação deu certo**.
+ *
+ * A conferência não é zelo: sem ela o arquivo inteiro mente. As asserções de vazamento procuram
+ * **ausência**, e ausência é o que se obtém de graça quando o dado nunca chegou ao banco. Um 422
+ * de um validador mais estrito, um 429 do teto de envio de foto ou um `sportId` de seed que
+ * mudou deixariam os dez testes verdes sem testar coisa nenhuma — o detector desarmado, e o
+ * desarme aparecendo como sucesso.
+ *
+ * Foi assim que a revisão de segurança da Fase 3 encontrou o buraco (achado #2): sabotando a
+ * montagem para quatro dos cinco valores privados nunca chegarem ao banco, os dez testes
+ * continuaram passando.
+ */
+async function montar(
+  caminho: string,
+  dados: Record<string, unknown>,
+  esperado = 201,
+): Promise<void> {
+  const metodo = esperado === 200 ? 'patch' : 'post';
+  const resposta = await dono.request[metodo](`${API}${caminho}`, { data: dados });
+
+  expect(
+    resposta.status(),
+    `a montagem do perfil falhou em ${caminho} — sem ela os testes de vazamento não provam nada: ${await resposta.text()}`,
+  ).toBe(esperado);
+}
+
+/**
  * Um profissional com o perfil **cheio**, montado uma vez para o arquivo inteiro.
  *
  * Cheio é o ponto: um perfil vazio passaria em qualquer teste de vazamento por não ter nada
@@ -81,45 +108,39 @@ test.beforeAll(async ({ browser }) => {
   idDaConta = eu.id;
   slug = eu.signupSlug;
 
-  await dono.request.patch(`${API}/professionals/me`, {
-    data: {
-      bio: 'Dou aula de beach tennis em Jurerê há dez anos.',
-      credentials: PRIVADO.credenciais,
-    },
-  });
+  await montar(
+    '/professionals/me',
+    { bio: 'Dou aula de beach tennis em Jurerê há dez anos.', credentials: PRIVADO.credenciais },
+    200,
+  );
 
-  await dono.request.post(`${API}/professionals/me/photo`, {
+  const foto = await dono.request.post(`${API}/professionals/me/photo`, {
     multipart: { photo: { name: 'f.jpg', mimeType: 'image/jpeg', buffer: JPEG_COM_EXIF } },
   });
+  expect(foto.status(), 'a foto não subiu — o teste da URL pública ficaria vacuoso').toBe(201);
 
-  await dono.request.post(`${API}/professionals/me/sports`, {
-    data: {
-      sportId: '01a10000-0000-7000-8000-000000000001',
-      experienceSinceYear: 2016,
-      prices: [{ sessionFormat: 'INDIVIDUAL', amountCents: PRIVADO.precoEmCentavos }],
-    },
+  await montar('/professionals/me/sports', {
+    sportId: '01a10000-0000-7000-8000-000000000001',
+    experienceSinceYear: 2016,
+    prices: [{ sessionFormat: 'INDIVIDUAL', amountCents: PRIVADO.precoEmCentavos }],
   });
 
-  await dono.request.post(`${API}/professionals/me/locations`, {
-    data: {
-      name: PRIVADO.nomeDoLocal,
-      kind: 'PARTNER_VENUE',
-      streetAddress: PRIVADO.endereco,
-      accessNotes: PRIVADO.comoChegar,
-      neighborhood: 'Jurerê',
-      city: 'Florianópolis',
-      state: 'SC',
-    },
+  await montar('/professionals/me/locations', {
+    name: PRIVADO.nomeDoLocal,
+    kind: 'PARTNER_VENUE',
+    streetAddress: PRIVADO.endereco,
+    accessNotes: PRIVADO.comoChegar,
+    neighborhood: 'Jurerê',
+    city: 'Florianópolis',
+    state: 'SC',
   });
 
-  await dono.request.post(`${API}/professionals/me/locations`, {
-    data: {
-      name: 'Domicílio',
-      kind: 'STUDENT_HOME',
-      neighborhood: 'Centro',
-      city: 'São José',
-      state: 'SC',
-    },
+  await montar('/professionals/me/locations', {
+    name: 'Domicílio',
+    kind: 'STUDENT_HOME',
+    neighborhood: 'Centro',
+    city: 'São José',
+    state: 'SC',
   });
 });
 
@@ -134,6 +155,25 @@ async function lerComoEstranho(request: APIRequestContext): Promise<PerfilPublic
 }
 
 test.describe('A resposta da API', () => {
+  /**
+   * **O detector está armado?** Este teste vem primeiro, e o arquivo roda em série, porque todos
+   * os que vêm depois dependem dele.
+   *
+   * Um teste que só sabe procurar ausência não distingue "protegido" de "inexistente". Antes de
+   * afirmar que o dado privado **não saiu**, é preciso afirmar que ele **está lá** — lido pela
+   * rota do dono, que é quem tem direito de ver tudo.
+   */
+  test('os dados privados estão mesmo no perfil — sem isto, o resto é vacuoso', async () => {
+    const meuPerfil = await (await dono.request.get(`${API}/professionals/me`)).text();
+
+    for (const [rotulo, valor] of Object.entries(PRIVADO)) {
+      expect(
+        meuPerfil,
+        `${rotulo} não chegou ao banco: os testes de vazamento abaixo passariam sem provar nada`,
+      ).toContain(String(valor));
+    }
+  });
+
   test('tem exatamente os campos da lista fechada', async ({ request }) => {
     const perfil = await lerComoEstranho(request);
     expect(Object.keys(perfil).sort()).toEqual(CAMPOS_PUBLICOS);

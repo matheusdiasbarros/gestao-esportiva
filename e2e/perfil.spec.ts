@@ -98,8 +98,15 @@ test.describe('Quem pode chegar ao perfil', () => {
 });
 
 test.describe('O catálogo de modalidades', () => {
-  test('é público, e traz só as aprovadas', async ({ request }) => {
-    const resposta = await request.get(`${API}/sports`);
+  test('exige sessão — a matriz do §11 diz "visitante: não"', async ({ request }) => {
+    // Nasceu `@Public()` por uma tela de cadastro que **não existe**. Enquanto o único
+    // consumidor for o editor de perfil, a rota fica fechada — achado #5 da revisão da Fase 3.
+    expect((await request.get(`${API}/sports`)).status()).toBe(401);
+  });
+
+  test('para quem está logado, traz só as aprovadas', async ({ page }) => {
+    await cadastrar(page);
+    const resposta = await page.request.get(`${API}/sports`);
     expect(resposta.status()).toBe(200);
 
     const catalogo = (await resposta.json()) as { id: string; name: string; status: string }[];

@@ -100,11 +100,19 @@ export class ProfilePhotoService {
       throw this.recusar('Formato não aceito. Use JPEG, PNG ou WebP.');
     }
 
-    return original
-      .rotate()
-      .resize(LADO, LADO, { fit: 'cover', position: 'attention' })
-      .webp({ quality: 82 })
-      .toBuffer();
+    try {
+      return await original
+        .rotate()
+        .resize(LADO, LADO, { fit: 'cover', position: 'attention' })
+        .webp({ quality: 82 })
+        .toBuffer();
+    } catch {
+      // Ler o cabeçalho e decodificar os pixels são duas coisas: um arquivo cortado no meio pelo
+      // envio tem cabeçalho válido e corpo incompleto, então passa no `metadata()` e falha aqui.
+      // Sem este `catch` o erro subia como 500 — a pessoa lia "erro interno" por uma foto ruim, e
+      // o log enchia de `ERROR` que esconde incidente de verdade.
+      throw this.recusar('Não consegui ler essa imagem até o fim. Tente enviar de novo.');
+    }
   }
 
   /** Aponta o perfil para a foto nova e devolve o nome da antiga, se havia uma. */

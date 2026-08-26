@@ -201,12 +201,15 @@ dois provedores antes de existir o segundo (ADR-005).
 
 ---
 
-### DT-010 — A suíte de ponta a ponta gasta 66 dos 100 cadastros por hora que o IP tem
+### DT-010 — A suíte de ponta a ponta gasta 81 dos 100 cadastros por hora que o IP tem
 
 **O que:** cada teste de tela cria a própria conta, de propósito (`e2e/apoio.ts` explica por
-quê), e todos saem de `127.0.0.1`. Uma execução limpa da suíte consome **74** dos 100 cadastros
-por hora que `LimitarCadastro` permite por IP — medido em 2026-08-25, com 112 testes. Uma
+quê), e todos saem de `127.0.0.1`. Uma execução limpa da suíte consome **81** dos 100 cadastros
+por hora que `LimitarCadastro` permite por IP — medido em 2026-08-26, com 131 testes. Uma
 execução cabe; **duas na mesma hora não cabem.**
+
+O número sobe a cada fase, e o histórico é o aviso: 66 na primeira medição, 74 com 112 testes,
+**81 com 131**. Quem acrescentar teste que cadastra mede de novo e atualiza este título.
 
 **Como isso aparece:** não como "limite estourado". Aparece como meia dúzia de testes de
 arquivos diferentes falhando em `expect(page).toHaveURL('/painel')`, porque o formulário de
@@ -242,6 +245,42 @@ O contador do cadastro é o de janela longa — TTL perto de 3600 segundos.
 
 ---
 
+### DT-011 — A suíte gasta 18 dos 20 envios de foto por hora, e ninguém tinha medido
+
+**O que:** irmão do DT-010, com folga muito menor. `LimitarEnvioDeFoto` permite **20 por hora
+por IP**, e uma execução limpa da suíte gasta **18** — 90% do teto. Medido em 2026-08-26:
+16 envios em `foto-de-perfil.spec.ts`, 1 em `pagina-publica.spec.ts` e 1 em
+`editor-de-perfil.spec.ts`, pela tela.
+
+**Como isso aparece:** como `Expected: 201 / Received: 429`, em testes que não têm nada a ver
+com limite. Nada na saída menciona bloqueio. É a mesma armadilha do DT-010, e por isso está
+escrita aqui antes de custar a primeira hora de investigação.
+
+**Por que não está corrigido agora:** **não se sobe este teto.** Vinte por hora é folga larga
+sobre trocar a própria foto de perfil, e o número existe porque decodificar 5 MB de JPEG é a
+operação autenticada mais cara do sistema — o teto global de 120/min significaria 7.200 dessas
+por hora, o que derruba a API sem precisar de ataque. Afrouxar produção para acomodar teste é
+exatamente a troca que o DT-010 recusou.
+
+**Dispara correção:** **o próximo teste que enviar foto.** Com 18 de 20, sobram dois — a margem
+já é menor do que um teste novo. A saída é a mesma do DT-010: a suíte apagar os contadores no
+`globalSetup`, que é o Redis de desenvolvimento e é dela. Enquanto isso não existir, teste novo
+de foto precisa **reaproveitar um envio existente** em vez de fazer o seu.
+
+Medir, com os contadores zerados antes:
+
+```bash
+docker exec gestao-redis sh -c 'redis-cli --scan --pattern "{*}:*" | xargs -r redis-cli del'
+pnpm test:e2e
+docker exec gestao-redis sh -c 'for k in $(redis-cli --scan --pattern "{*}:*"); do
+  echo "$(redis-cli get "$k") ttl=$(redis-cli ttl "$k")"; done' | sort -rn
+```
+
+Os dois maiores contadores de janela longa (TTL perto de 3600) são o cadastro, perto de 81, e o
+envio de foto, perto de 18. Encontrado pela revisão de segurança da Fase 3 (achado #6).
+
+---
+
 ## Armadilhas já resolvidas (não repetir)
 
 Não são débito — são erros que custaram tempo e que a documentação agora previne.
@@ -250,7 +289,8 @@ Não são débito — são erros que custaram tempo e que a documentação agora
 | --- | --- |
 | `consistent-type-imports` quebra a injeção de dependência do NestJS | `packages/config/eslint.config.mjs` |
 | `ConfigService.get()` devolve string: `'false'` é verdadeiro | `apps/api/src/config/config.module.ts` |
-| `enableImplicitConversion` transforma `'false'` em `true` | `apps/api/src/config/env.validation.ts` |
+| `enableImplicitConversion` transforma `'false'` em `true` | `apps/api/src/config/env.validation.ts` e — **de novo, nos DTOs** — `apps/api/src/common/validation/boolean-estrito.ts` |
+| `@Transform` roda **depois** da conversão implícita: desfazê-la exige ler `obj[key]`, não `value` | `apps/api/src/common/validation/boolean-estrito.ts` |
 | PostgreSQL nativo na máquina ocupa a 5432 e sequestra a conexão | `docker-compose.yml`, `.env.example` |
 | `ts-node` procura o tsconfig a partir do arquivo de entrada `.js` | script `typeorm` em `apps/api/package.json` |
 | Jest precisa de `reflect-metadata` no `setupFiles` | `apps/api/jest.config.js` |

@@ -1,14 +1,7 @@
 import { MINIMUM_PASSWORD_LENGTH } from '@gestao/types';
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  Equals,
-  IsBoolean,
-  IsDateString,
-  IsEmail,
-  IsOptional,
-  IsString,
-  Length,
-} from 'class-validator';
+import { Equals, IsDateString, IsEmail, IsOptional, IsString, Length } from 'class-validator';
+import { BooleanEstrito } from '../../../common/validation/boolean-estrito';
 import { Trim } from '../../../common/validation/trim';
 
 export class SignupProfessionalDto {
@@ -36,8 +29,15 @@ export class SignupProfessionalDto {
   @Length(MINIMUM_PASSWORD_LENGTH, 200)
   password: string;
 
+  /**
+   * O aceite é a **base legal** do tratamento, e o banco carimba data e versão a partir dele.
+   *
+   * `@BooleanEstrito()` e não `@IsBoolean()`: com a conversão implícita ligada, `"false"` — a
+   * string — virava `true` antes de qualquer validador rodar, e as duas defesas caíam juntas.
+   * O registro de consentimento passava a dizer o contrário do que o pedido dizia.
+   */
   @ApiProperty({ example: true, description: 'Aceite dos Termos e da Política de Privacidade.' })
-  @IsBoolean()
+  @BooleanEstrito({ message: 'É preciso aceitar os Termos de Uso e a Política de Privacidade.' })
   @Equals(true, { message: 'É preciso aceitar os Termos de Uso e a Política de Privacidade.' })
   acceptedTerms: boolean;
 }

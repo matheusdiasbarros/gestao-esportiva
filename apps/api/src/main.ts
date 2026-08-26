@@ -1,5 +1,4 @@
 import 'reflect-metadata';
-import { UnprocessableEntityException, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -8,7 +7,7 @@ import { Logger } from 'nestjs-pino';
 import { API_PREFIX } from '@gestao/types';
 import { AppModule } from './app.module';
 import { ProblemDetailsFilter } from './common/filters/problem-details.filter';
-import { flattenValidationErrors } from './common/validation/flatten-validation-errors';
+import { criarValidationPipe } from './common/validation/validation-pipe';
 import { EnvironmentVariables, NodeEnv } from './config/env.validation';
 
 async function bootstrap(): Promise<void> {
@@ -54,20 +53,7 @@ async function bootstrap(): Promise<void> {
     credentials: true,
   });
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      // Campo não declarado no DTO é descartado, e a requisição é rejeitada se vier algum.
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      transformOptions: { enableImplicitConversion: true },
-      // 422 e não 400: a requisição está bem formada, o conteúdo é que não passa na regra.
-      exceptionFactory: (errors) =>
-        new UnprocessableEntityException({
-          validationErrors: flattenValidationErrors(errors),
-        }),
-    }),
-  );
+  app.useGlobalPipes(criarValidationPipe());
 
   app.useGlobalFilters(new ProblemDetailsFilter());
 

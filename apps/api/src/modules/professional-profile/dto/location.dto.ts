@@ -1,7 +1,8 @@
 import { LocationKind, UFS_DO_BRASIL } from '@gestao/types';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsEnum, IsIn, IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import { IsEnum, IsIn, IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import { BooleanEstrito } from '../../../common/validation/boolean-estrito';
 import { Trim } from '../../../common/validation/trim';
 
 /** "sc" e " SC " são a mesma UF. Normalizar aqui evita duas grafias na mesma coluna. */
@@ -23,10 +24,15 @@ export class CreateLocationDto {
    * Primeiro local vira principal sozinho — ver `LocationsService`. Mandar `true` aqui troca o
    * principal na mesma transação; mandar `false` não desmarca nada, porque um perfil com
    * locais e nenhum principal é o estado que a Fase 6 não sabe usar.
+   *
+   * `@BooleanEstrito()` e não `@IsBoolean()`: a conversão implícita transformava `"false"` — a
+   * string — em `true`, e o local virava principal contra o que o pedido dizia, rebaixando o que
+   * o profissional havia escolhido. A partir da Fase 6 o principal é o pré-selecionado da
+   * agenda, então o estrago sai da tela de perfil e entra no dia de trabalho.
    */
   @ApiProperty({ required: false, description: 'Marcar como o local principal.' })
   @IsOptional()
-  @IsBoolean()
+  @BooleanEstrito()
   isPrimary?: boolean;
 
   @ApiProperty({

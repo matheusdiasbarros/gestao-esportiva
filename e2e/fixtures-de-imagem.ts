@@ -47,6 +47,14 @@ export const PNG = Buffer.from(PNG_B64, 'base64');
 export const GIF = Buffer.from(GIF_B64, 'base64');
 
 /**
+ * A mesma PNG, cortada no meio: cabeçalho íntegro, pixels incompletos.
+ *
+ * É o que um envio interrompido pela rede produz, e é o caso que separa **ler o cabeçalho** de
+ * **decodificar a imagem** — o `metadata()` do sharp passa, e a decodificação falha depois.
+ */
+export const PNG_CORTADO = PNG.subarray(0, Math.floor(PNG.length * 0.6));
+
+/**
  * Um SVG bem formado, com dimensões e script dentro.
  *
  * **O sharp aceita este arquivo** — conferido em 2026-08-25, com sharp 0.35.3, e é a razão de a

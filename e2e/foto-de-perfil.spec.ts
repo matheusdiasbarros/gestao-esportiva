@@ -10,6 +10,7 @@ import {
   GIF,
   JPEG_COM_EXIF,
   PNG,
+  PNG_CORTADO,
   SONDA_DE_EXIF,
   SVG_COM_SCRIPT,
   TEXTO_DISFARCADO,
@@ -162,6 +163,14 @@ test.describe('O que o servidor recusa', () => {
 
   test('arquivo vazio', async () => {
     expect((await enviar(aba.request, Buffer.alloc(0))).status()).toBe(422);
+  });
+
+  test('imagem cortada no meio é recusa, não erro interno', async () => {
+    // Cabeçalho válido e pixels incompletos — o que um envio interrompido pela rede produz. O
+    // `metadata()` passa e a decodificação falha depois; antes do conserto isso subia como 500,
+    // e a pessoa lia "erro interno" por uma foto ruim enquanto o log enchia de ERROR.
+    const resposta = await enviar(aba.request, PNG_CORTADO, 'cortada.png', 'image/png');
+    expect(resposta.status()).toBe(422);
   });
 
   test('acima de 5 MB é cortado no recebimento, não depois', async () => {
