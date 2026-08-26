@@ -6,7 +6,6 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  NotFoundException,
   Param,
   Post,
   Req,
@@ -82,17 +81,17 @@ export class AuthController {
     return this.sessoes.responder(sessao, req, res);
   }
 
-  @Public()
-  @Get('signup-link/:slug')
-  @ApiOperation({ summary: 'Quem é o dono de um link público, para a tela dizer o nome dele' })
-  async donoDoLink(@Param('slug') slug: string): Promise<{ professionalName: string }> {
-    const dono = await this.auth.donoDoLinkPublico(slug);
-    // 404 e não 200 com nulo: link que não vale é recurso que não existe, e a tela já sabe
-    // tratar "não encontrado" sem precisar inspecionar o corpo.
-    if (!dono) throw new NotFoundException('Este link de cadastro não é mais válido.');
-    return { professionalName: dono.fullName };
-  }
-
+  /**
+   * A leitura de um link público **saiu daqui** na Fase 3, e virou
+   * `GET /professionals/link/:slug`, no módulo de perfil.
+   *
+   * Ela devolvia só o nome do profissional, e passou a devolver foto, modalidades e bairros —
+   * que é perfil, não autenticação. Duas rotas públicas para o mesmo link seriam duas
+   * superfícies para a revisão de segurança conferir, e a segunda é sempre a que fica para trás.
+   *
+   * O que continua aqui é a **ação**: entrar para a carteira de alguém é identidade. As duas
+   * usam o mesmo slug e vivem em módulos diferentes porque respondem a perguntas diferentes.
+   */
   @Post('signup-link/:slug/join')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Quem já tem conta vira aluno do dono do link' })

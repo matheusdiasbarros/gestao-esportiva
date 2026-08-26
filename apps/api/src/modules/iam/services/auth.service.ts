@@ -151,24 +151,6 @@ export class AuthService {
   }
 
   /**
-   * Nome do profissional dono de um link público, para a tela poder dizer "Treine com Rodrigo".
-   *
-   * Devolve `null` em vez de erro quando o link não vale — a tela precisa distinguir "link
-   * inválido, mostre uma explicação" de "deu ruim no servidor", e as duas coisas não podem
-   * chegar do mesmo jeito.
-   */
-  async donoDoLinkPublico(slug: string): Promise<{ fullName: string } | null> {
-    const professional = await this.professionals.findOne({
-      where: { signupSlug: slug, signupLinkEnabled: true },
-      relations: { user: true },
-      select: { id: true, user: { fullName: true, status: true } },
-    });
-
-    if (!professional || professional.user.status !== UserStatus.Active) return null;
-    return { fullName: professional.user.fullName };
-  }
-
-  /**
    * Cadastro de aluno.
    *
    * Duas portas na mesma função. **Com** o link público do profissional, a conta já nasce com

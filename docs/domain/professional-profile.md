@@ -747,12 +747,17 @@ Lembrete de `tech-debt.md`: **`migration:generate` apaga índice parcial e `CHEC
 eles não existem no modelo de entidades. Toda migration gerada precisa ser podada antes de
 entrar.
 
-**API.** A rota pública que já existe — `GET /auth/signup-link/:slug` — passa a carregar foto,
-modalidades e bairros. Ela mora no módulo `iam` por herança da Fase 2, e o perfil não é assunto
-de autenticação; se ela deve mudar de lugar é decisão de `backend`/`architect`, não deste
-documento. O que é regra de domínio: **uma rota pública só, montada por um tipo de saída
-próprio** (§9.1). Uma segunda rota pública é uma segunda superfície para a revisão de segurança
-conferir.
+**API.** A rota pública passa a carregar foto, modalidades e bairros. A regra de domínio é
+**uma rota pública só, montada por um tipo de saída próprio** (§9.1) — uma segunda seria uma
+segunda superfície para a revisão de segurança conferir.
+
+*Resolvido em 2026-08-25:* ela **saiu** de `GET /auth/signup-link/:slug` e virou
+`GET /professionals/link/:slug`, no módulo de perfil. Perfil não é assunto de autenticação, e
+manter as duas teria criado exatamente a segunda superfície que o parágrafo acima proíbe. A
+tradução de slug para carteira continua sendo de `iam`, atrás de
+`AccessService.profissionalDoLinkPublico` — a porta que a ADR-005 §7 previu. A **ação** de
+entrar para a carteira (`POST /auth/signup-link/:slug/join`) fica onde estava: virar aluno de
+alguém é identidade.
 
 **Telas (web, profissional).** Editor de perfil com quatro blocos — sobre mim, modalidades e
 preços, locais, foto —, cada um salvável sozinho, e a lista de completude apontando para o

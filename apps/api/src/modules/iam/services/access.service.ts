@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Professional } from '../entities/professional.entity';
 import { Student } from '../entities/student.entity';
+import { UserStatus } from '../entities/user.entity';
 
 /**
  * As duas relações que a matriz de permissões usa, num lugar só.
@@ -35,6 +36,34 @@ export class AccessService {
       select: { id: true },
     });
     return professional?.id ?? null;
+  }
+
+  /**
+   * Quem está por trás de um link "treine comigo" — a tradução de slug para carteira.
+   *
+   * **É a porta que a ADR-005 §7 previu**, e ela existe aqui porque o slug é da âncora de
+   * identidade: `professionals.signup_slug` mora em `iam`, e nenhum outro módulo lê essa tabela.
+   * O módulo de perfil chama isto, recebe o identificador e monta a página pública com os dados
+   * dele — sem nunca tocar a identidade.
+   *
+   * Devolve `null` quando o link não vale, e **link desligado é indistinguível de inexistente**.
+   * Distinguir os dois transformaria a rota num verificador de slug, que é a mesma razão pela
+   * qual o slug é aleatório em vez de derivado do nome.
+   */
+  async profissionalDoLinkPublico(
+    slug: string,
+  ): Promise<{ professionalId: string; fullName: string } | null> {
+    const professional = await this.professionals.findOne({
+      where: { signupSlug: slug, signupLinkEnabled: true },
+      relations: { user: true },
+      select: { id: true, user: { fullName: true, status: true } },
+    });
+
+    // Conta suspensa ou anonimizada não tem página pública: a suspensão precisa tirar a pessoa
+    // de circulação, e uma página que continua no ar não faz isso.
+    if (!professional || professional.user.status !== UserStatus.Active) return null;
+
+    return { professionalId: professional.id, fullName: professional.user.fullName };
   }
 
   /**

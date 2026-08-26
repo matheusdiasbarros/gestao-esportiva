@@ -773,10 +773,16 @@ privado — verificar a resposta, não só a tela ·
   - [x] Tipos: local próprio, academia/clube, espaço público, casa do aluno. **Casa do aluno não
         aceita endereço** — o campo some da tela, e o banco recusa se alguém insistir
   - [ ] Só bairro e cidade saem em resposta pública; o endereço exato, nunca — é o Epic 3.7
-- [ ] **Epic 3.7 — A página "treine comigo" cresce** 🔁 *(acrescentado em 2026-08-25)*
-  - [ ] `/treine-com/:slug` passa a mostrar foto, modalidades e locais por bairro e cidade
-  - [ ] Teste que prova que a **resposta da API** não devolve dado privado — não basta a tela
-        não mostrar
+- [x] **Epic 3.7 — A página "treine comigo" cresce** 🔁 ✅ 2026-08-25
+  - [x] `/treine-com/:slug` passa a mostrar foto, modalidades e locais por bairro e cidade
+  - [x] Teste que prova que a **resposta da API** não devolve dado privado — não basta a tela
+        não mostrar. A conferência é contra uma **lista fechada**, e ela foi verificada
+        acrescentando um campo indevido de propósito: três testes quebraram
+  - [x] Uma superfície pública só. `GET /auth/signup-link/:slug` **deixou de existir** e virou
+        `GET /professionals/link/:slug`, no módulo de perfil — duas rotas públicas para o mesmo
+        link seriam duas superfícies para a revisão conferir, e a segunda fica para trás
+  - [x] Os bairros saem distintos e ordenados pelo conteúdo: uma entrada por local revelaria
+        **quantos locais** ele tem, e a ordem das linhas diria qual é o principal
 - [ ] **Epic 3.6 — Perfil público mínimo** *(fora do MVP; primeiro item pós-MVP)*
   - [ ] Rota pública `/{slug}` com SSR e metadados sociais
   - [ ] Botão de contato/interesse (sem agendamento ainda)
@@ -811,6 +817,16 @@ Tomadas na abertura, em 2026-08-25.
       marketplace não há vitrine para moderar
 - [ ] ~~Certificações são verificadas, e por quem?~~ → **adiada** para a Fase 12. Nesta fase são
       texto livre, e a tela precisa dizer que ninguém conferiu
+
+> **Lacuna encontrada na implementação, em 2026-08-25.** A decisão §14.2 do documento de domínio
+> — **pausar** o link público e **trocar** o slug são duas ações separadas — foi tomada nesta
+> fase e **não tem épico em fase nenhuma**. A coluna `signup_link_enabled` existe desde a Fase 2
+> e **nada a escreve**: o link nasce ligado e só se desliga por SQL. Isso não é do administrador,
+> é do próprio profissional — são duas ações no painel dele, e o lugar natural é junto do bloco
+> "Seu link para captar alunos".
+>
+> O que já está pronto para o dia em que a ação existir: a rota pública respeita a coluna, e
+> responde a link pausado exatamente como a slug inexistente. Falta só quem escreva nela.
 
 ### Tecnologias
 

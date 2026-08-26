@@ -173,7 +173,20 @@ saber o que mostrar; o serviço vai ao banco.
 
 `iam` não ganha rota sob `/professionals`. O perfil público da Epic 3.6 fica de fora do MVP; no
 dia em que existir, ele mora em `professional-profile` e precisa de uma porta nova em `iam` para
-traduzir slug → `professionalId`, porque o slug é da âncora. **Essa porta não é criada agora.**
+traduzir slug → `professionalId`, porque o slug é da âncora. ~~**Essa porta não é criada
+agora.**~~
+
+> **O "dia em que existir" foi o mesmo dia, 2026-08-25.** A Epic 3.7 fez a página
+> `/treine-com/:slug` crescer, e ela precisa exatamente disso. A porta existe e se chama
+> `AccessService.profissionalDoLinkPublico(slug)`, no serviço que `iam` já exportava.
+>
+> Junto veio uma consequência que a ADR não tinha previsto: a rota pública **saiu** de `iam`.
+> `GET /auth/signup-link/:slug` deixou de existir e virou `GET /professionals/link/:slug`.
+> Mantê-la onde estava exigiria `iam` ler tabelas de perfil — a inversão que esta ADR inteira
+> evita —, e criar uma segunda rota pública ao lado dela daria duas superfícies para a revisão
+> de segurança conferir, que o documento de domínio proíbe em §15. A **ação** de entrar para a
+> carteira (`POST /auth/signup-link/:slug/join`) ficou em `iam`: virar aluno de alguém é
+> identidade, não perfil.
 
 Contratos compartilhados em `packages/types/src/professional-profile.ts` e
 `packages/types/src/sports.ts`, um arquivo por domínio, como já é a convenção.

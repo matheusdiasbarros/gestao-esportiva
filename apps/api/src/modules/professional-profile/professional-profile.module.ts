@@ -11,12 +11,14 @@ import { LocationsController } from './locations.controller';
 import { PhotosController } from './photos.controller';
 import { ProfessionalProfileController } from './professional-profile.controller';
 import { ProfessionalSportsController } from './professional-sports.controller';
+import { PublicProfileController } from './public-profile.controller';
 import { LocationsService } from './services/locations.service';
 import { PhotoStorage } from './services/photo-storage';
 import { ProfessionalProfileService } from './services/professional-profile.service';
 import { ProfessionalSportsService } from './services/professional-sports.service';
 import { ProfilePhotoService } from './services/profile-photo.service';
 import { ProfissionalAtual } from './services/profissional-atual';
+import { PublicProfileService } from './services/public-profile.service';
 
 /**
  * O perfil profissional: bio, modalidades, preços, locais e foto.
@@ -51,6 +53,7 @@ import { ProfissionalAtual } from './services/profissional-atual';
     ProfessionalSportsController,
     LocationsController,
     PhotosController,
+    PublicProfileController,
   ],
   providers: [
     ProfissionalAtual,
@@ -59,6 +62,7 @@ import { ProfissionalAtual } from './services/profissional-atual';
     LocationsService,
     PhotoStorage,
     ProfilePhotoService,
+    PublicProfileService,
   ],
 })
 export class ProfessionalProfileModule {}

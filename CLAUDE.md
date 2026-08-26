@@ -17,14 +17,15 @@ Escopo do MVP em [`docs/product/mvp.md`](docs/product/mvp.md).
 
 ## Estado atual
 
-**Fases 0, 1 e 2 concluídas. Fase 3 (perfil profissional) em andamento** — falta a página
-pública crescer (Epic 3.7) e a revisão de segurança obrigatória, que é sobre ela.
+**Fases 0, 1 e 2 concluídas. Fase 3 (perfil profissional) em andamento** — todos os épicos do
+MVP estão fechados; faltam a revisão de segurança obrigatória e o manual da fase.
 
 Funciona hoje: criar conta de profissional ou de aluno, entrar, sair, recuperar senha,
 confirmar e trocar e-mail, convidar alunos, o link público "treine comigo" do professor, a
 autorização por papel e propriedade, e o painel protegido — na web e no aplicativo. Em
 `/painel/perfil`, o profissional monta o perfil inteiro pela tela: foto, apresentação,
-modalidades com preço em centavos e locais de atendimento. Não existe ainda nada de agenda,
+modalidades com preço em centavos e locais de atendimento — e a página `/treine-com/:slug`
+mostra foto, modalidades e bairros para quem recebe o link. Não existe ainda nada de agenda,
 aluno como funcionalidade, ou pagamento.
 
 O roadmap de 20 fases está em [`TODO.md`](TODO.md) — é o documento que manda.
@@ -52,8 +53,8 @@ pnpm --filter @gestao/api migration:run
 pnpm --filter @gestao/api seed            # dados de desenvolvimento, idempotente
 pnpm dev                                  # API :3333 · web :3000
 
-pnpm lint && pnpm typecheck && pnpm test  # 92 testes de unidade
-pnpm test:e2e                             # 118 testes contra o sistema inteiro (ver DT-010)
+pnpm lint && pnpm typecheck && pnpm test  # 101 testes de unidade
+pnpm test:e2e                             # 128 testes contra o sistema inteiro (ver DT-010)
 
 pnpm --filter @gestao/api test -- health.service   # um teste específico
 pnpm exec playwright test cadastro                 # um arquivo de tela
