@@ -748,12 +748,17 @@ negociar:
 | A resposta é montada **campo a campo por um tipo de saída próprio**, nunca por serialização da entidade | é o que impede `private_notes` de vazar no dia em que alguém acrescentar um campo. Mesma regra da §9.1 do `professional-profile.md`, e pelo mesmo motivo |
 | Existem **duas** formas de saída da ficha: a do dono e a do participante | a do participante nasce sem `private_notes`. Filtro condicional dentro de um objeto só é a construção que erra quando alguém mexe com pressa |
 
-**Uma tensão de fronteira para o `architect`, não para mim.** A ADR-005 §5 diz que `students`
-vira módulo próprio nesta fase. Mas `InviteService` e `AuthService`, que moram em `iam`, leem e
-escrevem `students` hoje — e o marcador da §9.1 precisa cruzar ficha com `users`, tabela de
-`iam`. Ou o convite vai junto para o módulo novo, ou `students` fica onde está, ou nasce mais
-uma porta em `AccessService`. **Recomendo uma ADR curta — ou uma emenda à ADR-005 — e a decisão
-é sua**, não minha.
+**A tensão de fronteira — 🔒 resolvida em 2026-08-26, pela emenda §8 da ADR-005.** A pergunta
+era se `students` sai de `iam` para um módulo próprio, como a ADR-005 afirmava em dois lugares.
+**Não sai.** O motivo é o mesmo que mantém `professionals` lá: `RolesService.describe()` faz
+`students.exists({ userId })` a cada login e a cada renovação para derivar `Role.Student`, e
+papel derivado do dado é invariante do sistema. A ADR tinha aplicado esse raciocínio a
+`professionals` e esquecido a tabela irmã.
+
+Mover levaria a `iam` consultando tabela de outro módulo — o que a §5 proíbe — ou a um ciclo
+entre os dois. **A Fase 5 constrói dentro de `iam`.** O que nasce fora é o dado que não é
+identidade: quando existir anamnese, avaliação física ou histórico de treino, esse dado vai
+para módulo próprio, com FK para `students` e sem consultá-la.
 
 **Telas (web, profissional).** Lista da carteira com busca, filtro por estado (padrão:
 `ACTIVE` + `PAUSED`), marcador "já tem conta" com botão de convidar e marcador de possível

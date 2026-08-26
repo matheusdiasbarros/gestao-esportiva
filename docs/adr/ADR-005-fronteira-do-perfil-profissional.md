@@ -1,6 +1,6 @@
 # ADR-005 — Fronteira do perfil profissional
 
-- Status: aceita
+- Status: aceita, **emendada em 2026-08-26** (§8 — `students` fica em `iam`)
 - Data: 2026-08-25
 - Fase: 3
 
@@ -20,8 +20,9 @@ disso hoje:
   regra que toda rota de profissional vai usar da Fase 5 em diante;
 - `AuthService.cadastrarProfissional()` cria conta, senha e a linha de `professionals` **na
   mesma transação** — sem isso existiria conta que perdeu o papel no meio do cadastro;
-- `students.professional_id` é chave estrangeira para ela, e `students` vira módulo próprio na
-  Fase 5.
+- `students.professional_id` é chave estrangeira para ela. ~~e `students` vira módulo próprio na
+  Fase 5.~~ **Corrigido pela emenda da §8**: `students` fica em `iam`, pelo mesmo motivo que
+  `professionals` fica — o papel de aluno é derivado da existência da ficha.
 
 O comentário do topo de `iam.module.ts` declara a fronteira mais forte do repositório: *nenhum
 outro módulo importa as entidades daqui nem consulta as tabelas de identidade direto*. Essa
@@ -136,8 +137,9 @@ integridade referencial, e é o que faz "PostgreSQL é a única fonte de verdade
 alguma coisa. Sem ela, apagar uma conta deixa perfil, preço e local órfãos — e a exclusão de
 conta é obrigação de LGPD (decisão D8b), não hipótese.
 
-Isto não é novidade introduzida aqui: `students.professional_id` já é essa FK, e `students`
-vira módulo próprio na Fase 5. A regra estava sendo aplicada sem estar escrita.
+Isto não é novidade introduzida aqui: `students.professional_id` já é essa FK. A regra estava
+sendo aplicada sem estar escrita. ~~e `students` vira módulo próprio na Fase 5.~~ — ver a
+emenda da §8, que descobriu na abertura da Fase 5 que essa parte estava errada.
 
 O que a FK **não** autoriza: escrever na tabela do outro, ler a tabela do outro, ou declarar
 `@ManyToOne` para uma entidade do outro módulo. `professional_profiles.professionalId` é
@@ -191,6 +193,40 @@ agora.**~~
 Contratos compartilhados em `packages/types/src/professional-profile.ts` e
 `packages/types/src/sports.ts`, um arquivo por domínio, como já é a convenção.
 
+### 8. Emenda de 2026-08-26 — `students` **fica** em `iam`
+
+Esta ADR afirma em dois lugares que "`students` vira módulo próprio na Fase 5", e a seção de
+consequências chega a listar isso como vantagem: *"Fases 5, 6, 8 e 9 não obrigam a mover nada:
+`students` sai de `iam` para o módulo dele levando a mesma FK"*.
+
+**Está errado, e o argumento que o derruba é o desta própria ADR.** O Contexto acima explica
+por que `professionals` mora em `iam`: a existência da linha é o que faz `RolesService` derivar
+o papel. **`students` é exatamente o mesmo caso** — `RolesService.describe()` faz
+`students.exists({ userId })` para derivar `Role.Student`, a cada login e a cada renovação
+(`roles.service.ts:62`). A ADR aplicou o raciocínio a uma tabela e não à irmã dela.
+
+Medido antes de decidir, e é o que fecha a questão: **84 referências a `Student` em 17 arquivos
+de `iam`** — `roles.service.ts`, `access.service.ts`, `invite.service.ts` (18 sozinho),
+`auth.service.ts`, `papeis.guard`, `jwt.strategy`. Não é mover arquivo.
+
+Mover levaria a uma de duas saídas, e as duas quebram algo que esta ADR protege:
+
+| Saída | O que quebra |
+| --- | --- |
+| `iam` continua consultando `students` no módulo novo | viola a §5 — **FK atravessa a fronteira, consulta não**. Seria a inversão que a ADR inteira existe para evitar |
+| `RolesService` chama uma porta do módulo novo | `iam` → `students`, e `students` → `iam` (precisa de `users` e da regra de propriedade). **Ciclo** — e "nenhum ciclo entre módulos" está listado como consequência positiva desta ADR |
+
+**Decisão: `students` e `student_invites` ficam em `iam`.** Não por conveniência — por
+definição: a ficha é uma das duas coisas de que o papel é derivado, e papel é identidade.
+
+O que isso **não** significa: que a Fase 5 inteira mora em `iam`. Quando a ficha ganhar dado que
+não é identidade — anamnese, avaliação física, histórico de treino —, esse dado nasce em módulo
+próprio, com FK para `students` e sem consultá-la. É a §5 aplicada na direção certa.
+
+**Como saber que esta emenda envelheceu:** no dia em que `RolesService` deixar de derivar papel
+a partir de `students` — porque o vínculo passou a ser outra coisa, ou porque papel virou dado
+explícito, o que ADR-004 §4 proíbe hoje. Fora isso, a decisão se sustenta sozinha.
+
 ## Alternativas consideradas
 
 **Tudo em `iam`, o módulo cresce.** É o caminho de menor atrito nesta fase e o mais caro nas
@@ -238,8 +274,10 @@ consumidor só, hoje, e extração barata amanhã. Ver §4.
   do próprio módulo.
 - Nenhum ciclo entre módulos. `professional-profile` → `iam`, `professional-profile` →
   `sports`, e nada de volta.
-- Fases 5, 6, 8 e 9 não obrigam a mover nada: `students` sai de `iam` para o módulo dele levando
-  a mesma FK; sessão e turma apontam para `sports` e `locations` sem passar por identidade.
+- Fases 5, 6, 8 e 9 não obrigam a mover nada: sessão e turma apontam para `sports` e `locations`
+  sem passar por identidade. ~~`students` sai de `iam` para o módulo dele levando a mesma FK~~ —
+  **essa metade estava errada, e a emenda da §8 a corrige.** `students` fica em `iam`. A
+  consequência positiva continua valendo pela outra metade: nada precisa ser movido.
 - A regra de FK entre módulos passa a estar escrita, e vale para as próximas cinco fases sem
   precisar ser rediscutida em cada uma.
 

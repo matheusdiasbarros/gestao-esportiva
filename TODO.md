@@ -1089,6 +1089,62 @@ e essa regra não pode ser escrita antes de as tabelas de crédito existirem.
 > primeira fase que grava dado pessoal de gente que **não é usuária da plataforma** — a pendência
 > sai de "pré-requisito de lançamento" e vira **pré-requisito do primeiro usuário real**.
 
+### Modelo, rotas e fronteira
+
+Definidos na abertura. O detalhe está em [`students.md`](docs/domain/students.md) §5 e §16.
+
+**Onde o código mora: dentro de `iam`.** A ADR-005 dizia que `students` viraria módulo próprio
+nesta fase; a **emenda §8**, de 2026-08-26, corrige isso. `RolesService.describe()` consulta
+`students` a cada login e a cada renovação para derivar o papel de aluno — mover a tabela faria
+`iam` consultar módulo alheio (proibido pela §5) ou criar um ciclo entre os dois. O que nasce
+fora é o dado que **não** é identidade, quando ele existir.
+
+**Banco: nenhuma tabela nova.** Quatro colunas em `students` — `goals`, `private_notes`,
+`guardian_name`, `ended_at` — e dois `CHECK` que tornam o estado inválido não representável:
+
+```sql
+CHECK ((access_holder = 'GUARDIAN') = (guardian_name IS NOT NULL))
+CHECK ((status = 'ENDED')          = (ended_at      IS NOT NULL))
+```
+
+Nenhum índice novo: a carteira tem dezenas de linhas e `ix_students_professional` já a atende.
+**A migration precisa ser podada à mão** — `migration:generate` apaga `CHECK` e índice parcial,
+que não existem no modelo de entidades (`tech-debt.md`).
+
+**API**: listar a carteira com busca e filtro, criar, ver, editar, mudar estado, transferir o
+acesso do menor e apagar — sob `/students`, com propriedade resolvida por `AccessService`. Duas
+regras que a implementação **não negocia**:
+
+- a resposta é montada **campo a campo por um tipo de saída próprio**, nunca por serialização da
+  entidade — é o que impede `private_notes` de vazar no dia em que alguém acrescentar um campo;
+- existem **duas** formas de saída: a do dono e a do participante, e a do participante **nasce
+  sem** `private_notes`. Filtro condicional dentro de um objeto só é a construção que erra
+  quando alguém mexe com pressa.
+
+### Estratégia de testes
+
+O risco desta fase é diferente dos anteriores. Na Fase 2 era deixar alguém **entrar**; na 3, era
+deixar dado privado **sair** para um estranho. Aqui é **o dado de uma pessoa que nunca usou a
+plataforma**, digitado por outra — e o vazamento tem destinatário conhecido: o próprio titular,
+o administrador, ou o profissional errado.
+
+- **Unidade**: as transições de estado do vínculo e a regra do responsável, sem banco.
+- **API**: as dez células "não" da matriz (`students.md` §10.2). As duas primeiras são as que
+  mais importam e são **de API, não de tela** — a resposta que o aluno recebe e a que o
+  administrador recebe não podem conter `private_notes`. Campo escondido no HTML não é
+  autorização, pela mesma razão que `autorizacao.spec.ts` é teste de API.
+- **Tela**: criar ficha, convidar, pausar, encerrar e reativar; e os quatro textos obrigatórios
+  da §16 presentes onde devem estar.
+- **Regressão**: o aceite de convite **não** pode mais alterar `access_holder` nem `status` — é
+  teste antes do conserto, porque é defeito conhecido (Epic 5.0).
+- **O que não dá para testar aqui**: o convite endereçado continua dependendo de caixa de
+  entrada (DT-005). O **avulso** passa a ser testável ponta a ponta a partir do Epic 5.1, porque
+  aí existe como criar ficha pela tela — a URL dele volta uma vez na resposta.
+
+> **Orçamento:** a suíte já gasta 81 dos 100 cadastros por hora (DT-010) e 18 dos 20 envios de
+> foto (DT-011). Esta fase acrescenta testes que cadastram. **Medir antes de fechar a fase**, e
+> se passar de ~90, a saída é a suíte zerar os contadores no `globalSetup` — não subir o teto.
+
 ### Tecnologias
 
 - NestJS, TypeORM, PostgreSQL, Next.js.
@@ -1096,7 +1152,8 @@ e essa regra não pode ser escrita antes de as tabelas de crédito existirem.
 ### Aprendizados
 
 - modelagem de identidades parciais (aluno sem conta) e reconciliação;
-- dados sensíveis sob LGPD;
+- dados pessoais de quem **não é usuário** da plataforma, e as bases legais que não são
+  consentimento;
 - padrões de convite e aceite.
 
 ### Critérios de conclusão
