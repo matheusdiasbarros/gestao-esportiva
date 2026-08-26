@@ -122,7 +122,7 @@ participante · `próprio` = só sobre a própria conta.
 | **Aluno (ficha)** | criar | não | não | dono | não |
 | | listar a carteira | não | não | dono | sim |
 | | ver a própria ficha | não | part. | dono | sim |
-| | editar contato da ficha | não | part. (só a sua) | dono | não |
+| | editar contato da ficha | não | **não — ver nota** | dono | não |
 | | ver/editar observações privadas | não | **não, nunca** | dono | não |
 | | encerrar o vínculo | não | part. (sai) | dono | não |
 | | arquivar / excluir a ficha | não | não | dono | não |
@@ -146,6 +146,18 @@ participante · `próprio` = só sobre a própria conta.
 | | pagar | não | part. | — | não |
 | | dar baixa manual | não | não | dono | não |
 | | estornar | não | não | dono | não |
+
+> **Nota — "editar contato da ficha" mudou de `part.` para `não`**, decidido em 2026-08-26 na
+> abertura da Fase 5. A ficha é do profissional, e ele é o **controlador** do que ela diz
+> (`students.md` §3.1): correção nela passa por ele, que é para onde a lei aponta. O direito de
+> correção do aluno continua atendido pela **conta**, que é auto-serviço desde a Fase 2.
+>
+> O motivo prático pesou tanto quanto o jurídico: dois escritores na mesma linha, sem trilha de
+> auditoria, fazem o professor ver um telefone mudar sem saber quem mudou — e a carteira dele
+> deixa de ser confiável. A célula nunca chegou a ser exercitada, porque não existe tela de
+> aluno até a Fase 11: mudar agora não quebra nada, e mudar depois quebraria.
+>
+> A justificativa longa, com os dois lados, está em `students.md` §10.1.
 
 ## 7. Regras transversais
 
@@ -308,9 +320,11 @@ aluno, abre o app.
 | --- | --- |
 | Termos de Uso e Política de Privacidade **não existem** e são pré-requisito de D8a e do lançamento | Trabalho jurídico, não de programação. Sem dono definido |
 | "Painel administrativo mínimo" está no MVP e **não tem épico em nenhuma fase** | Precisa entrar no roadmap, ou o papel de administrador nasce sem tela |
-| Base legal do cadastro de aluno sem consentimento; o que o aluno pode fazer sobre observações privadas | Fase 5 |
-| Regras do responsável de menor: o que vê, o que pode fazer | Fase 5 |
-| Regra fina do fim de vínculo e retenção do histórico do aluno | Fase 5 |
+| ~~Base legal do cadastro de aluno sem consentimento; o que o aluno pode fazer sobre observações privadas~~ | ✅ `students.md` §3 e §6 |
+| ~~Regras do responsável de menor: o que vê, o que pode fazer~~ | ✅ `students.md` §8 |
+| ~~Regra fina do fim de vínculo e retenção do histórico do aluno~~ | ✅ `students.md` §7 |
 | Superfície web do aluno além do aceite do convite | Fase 11 |
-| Mesclar fichas duplicadas na carteira do próprio profissional | Backlog da Fase 5 |
+| Mesclar fichas duplicadas na carteira do próprio profissional | **Fase 7**, não Fase 5 — mesclar só é problema de verdade quando as fichas carregam saldo e extrato (`students.md` §9.2). A Fase 5 entrega a **detecção** |
+| Se o aceite do convite pelo responsável basta como **consentimento parental** (art. 14, §1) | **Advogado.** `students.md` §15.2 |
+| Se a plataforma é **operadora** ou **controladora conjunta** quanto ao conteúdo da ficha | **Advogado.** `students.md` §15.3 |
 | Promover uma conta a administrador é operação manual no banco | Enquanto não houver painel |

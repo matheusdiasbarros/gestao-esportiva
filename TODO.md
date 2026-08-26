@@ -982,10 +982,30 @@ profissional cadastra aluno que não consentiu ·
 
 ### Épicos e tarefas
 
+- [ ] **Epic 5.0 — O que precisa vir antes** 🟨 *(descoberto na abertura)*
+
+  > **Bloqueador com prazo escrito.** O DT-008 diz que `POST /invites` precisa de teto **antes
+  > do primeiro épico que criar ficha pela tela** — e esse épico é o 5.1. Sem o teto, a rota
+  > vira canhão de e-mail com assunto escolhido por quem emite.
+
+  - [ ] Teto por IP e por alvo em `POST /invites` (DT-008), com o mesmo formato de
+        `LimitarTrocaDeEmail` — que já existe justamente para rota que manda e-mail a endereço
+        escolhido por quem chama
+  - [ ] O aceite de convite **para de sobrescrever** `access_holder` e `status`
+        (`invite.service.ts:305`). Hoje a ficha de um menor vira "o próprio aluno acessa" no
+        exato momento em que o responsável entra, e uma ficha pausada volta a ativa porque
+        alguém clicou num link. O aceite preenche `user_id`, e só
+  - [ ] `entrarPeloLinkPublico` deixa de responder 204 em silêncio para ficha `ENDED`
+        (`auth.service.ts:288`) — a ex-aluna acha que voltou e o professor não fica sabendo.
+        Reativar é do profissional (`students.md` §7.3)
 - [ ] **Epic 5.1 — Cadastro de alunos**
   - [ ] Aluno criado pelo profissional (sem conta na plataforma)
   - [ ] Aluno com conta própria
   - [ ] Reconciliação quando o aluno cria conta depois
+  - [ ] O aviso fixo na tela de criar ficha, sem checkbox: *"Você está cadastrando dados de
+        outra pessoa"* — é o que a base legal de `students.md` §3.3 exige em troca do legítimo
+        interesse. **Checkbox por ficha foi recusado**: vira clique automático na quinta e não
+        muda a responsabilidade, que já é do profissional pelos Termos
 - [ ] **Epic 5.2 — Vínculo profissional↔aluno**
   - [ ] Convite por link/e-mail e aceite
   - [ ] Estados do vínculo (ativo, pausado, encerrado)
@@ -993,26 +1013,81 @@ profissional cadastra aluno que não consentiu ·
   - [ ] **A lista de alunos marca as fichas cujo e-mail já tem conta**, com botão de convidar —
         sem isso, o aluno que se cadastrou sozinho fica esperando indefinidamente por um convite
         que o profissional não sabe que deveria mandar
-  - [ ] Decidir se o aluno pode **reivindicar** fichas existentes, com e-mail confirmado e
-        aprovação do profissional — o porquê de nada ser automático está em `iam.md` §9.4
+  - [x] ~~Decidir se o aluno pode **reivindicar** fichas existentes~~ → **não entra** (decisão
+        O3). O marcador do lado do profissional fecha o mesmo buraco sem criar um caminho novo
+        pelo qual alguém pede acesso a ficha alheia
+  - [ ] Transições de estado com o que muda para cada lado, e a revogação do convite de pé
+        quando o vínculo encerra — `students.md` §7
 - [ ] **Epic 5.3 — Ficha do aluno**
   - [ ] Dados de contato e informações básicas
-  - [ ] Observações privadas do profissional
-  - [ ] Objetivos e anamnese/restrições
+  - [ ] Observações privadas do profissional, com o texto *"escreva o que você mostraria se ela
+        pedisse"* ao lado — o campo **nunca** sai em resposta de API que o aluno ou o
+        administrador recebem, e isso é teste de API, não de tela
+  - [ ] Objetivos ~~e anamnese/restrições~~ — **saúde ficou fora do MVP** (decisão O1)
+  - [ ] Marcar responsável de menor e transferir o acesso aos 18 — nada muda sozinho
   - [ ] Histórico (preenchido pelas fases 6–9)
 - [ ] **Epic 5.4 — Listagem e organização**
-  - [ ] Busca, filtros por status e tags
-  - [ ] Importação simples (CSV) — avaliar necessidade
+  - [ ] Busca e filtro por estado do vínculo — ~~tags~~ ficam para quando alguém pedir: busca
+        por nome mais filtro por estado dão conta de 40 alunos, e tag é um segundo vocabulário
+        que alguém mantém para sempre
+  - [ ] Detecção de ficha duplicada na própria carteira. **Só detecção** — mesclar é Fase 7
+  - [ ] ~~Importação simples (CSV)~~ — **quando alguém pedir**, como o `mvp.md` já dizia
 
 ### Decisões da fase
 
-- [ ] O profissional pode cadastrar um aluno sem consentimento dele? (LGPD — base legal e aviso)
-- [ ] Quem é o "dono" do dado do aluno quando o vínculo é encerrado?
-- [ ] Observações privadas são realmente invisíveis ao aluno? Sempre?
-- [ ] Dados de saúde (anamnese, lesões) são dados sensíveis — armazenar? criptografar? evitar?
-- [ ] Aluno menor de idade: responsável obrigatório?
-- [ ] O que acontece com o histórico quando o aluno pede exclusão da conta?
-- [ ] Status do aluno é manual ou derivado de atividade?
+Tomadas na abertura, em 2026-08-26. O detalhe e o porquê de cada uma estão em
+[`docs/domain/students.md`](docs/domain/students.md).
+
+- [x] Dados de saúde (anamnese, lesões) → **fora do MVP**, nem como campo nem como tabela. Saúde
+      é dado sensível e exige consentimento **específico e destacado do titular** — e quem digita
+      é o professor, que não consente pela aluna. A tela avisa para não escrever isso no campo
+      livre. *(O documento registra uma discordância: o professor de reabilitação vai anotar a
+      lesão no campo livre de qualquer jeito. O gatilho para reabrir está no §14 de lá.)*
+- [x] Observações privadas são invisíveis ao aluno? → **invisíveis na tela, com o limite
+      escrito**. Nenhuma resposta de API que o aluno recebe carrega o campo; pedido formal do
+      titular é atendido à mão. Sigilo absoluto seria prometer o que a lei não deixa cumprir
+- [x] O profissional pode cadastrar aluno sem consentimento dele? → **pode, e a base legal não é
+      consentimento** — é execução de contrato para contato e data de nascimento, legítimo
+      interesse para objetivos e observações, e obrigação legal para o histórico depois do fim
+      do vínculo. Consentimento é revogável, e uma agenda que some porque alguém revogou deixaria
+      o profissional sem o registro do serviço que prestou
+- [x] Quem é o "dono" do dado quando o vínculo é encerrado? → **a pergunta não tem resposta
+      porque o termo não existe em LGPD.** Ninguém muda de papel: o profissional continua
+      controlador, a plataforma operadora, a aluna titular. O que encolhe é a **finalidade**
+- [x] Aluno menor de idade: responsável obrigatório? → **sim quando há data de nascimento e ela
+      diz que é menor**; `birth_date` continua opcional, porque exigir travaria o cadastro no
+      campo mais chato. Nada muda sozinho aos 18: a ficha avisa e o profissional transfere
+- [x] O que acontece com o histórico quando o aluno pede exclusão da conta? → a conta anonimiza
+      (D8b), **a ficha sobrevive** — ela é do profissional, e o histórico financeiro dele tem
+      base legal própria. A rota de exclusão não existe; esta fase escreve a regra do lado da
+      ficha para quem construir não decidir sozinho
+- [x] Status do aluno é manual ou derivado de atividade? → **manual.** Estado derivado de
+      atividade discorda do professor no pior momento: o aluno que viajou dois meses não está
+      encerrado, e o sistema não tem como saber a diferença
+- [x] O aluno pode reivindicar ficha existente? → **não.** Só o lado do profissional: a lista
+      marca as fichas cujo e-mail já tem conta, com botão de convidar
+- [x] O aluno pode editar o contato da própria ficha? → **não.** Divergia do `iam.md` §6, que
+      dizia `part.`; a matriz de lá foi corrigida no mesmo commit. Dois escritores na mesma linha
+      sem trilha de auditoria tornam a carteira do professor não confiável
+
+**Reposicionada:** mesclar fichas duplicadas sai do backlog desta fase e vai para a **Fase 7**.
+Aqui a fase entrega a **detecção**. Mesclar duas fichas de nome e telefone é apagar a errada, o
+que já é possível; a mescla só vira problema de verdade quando as duas carregam saldo e extrato,
+e essa regra não pode ser escrita antes de as tabelas de crédito existirem.
+
+**Ainda sem resposta, e não é minha nem sua** — está no §15 de `students.md`:
+
+- Se o aceite do convite pelo responsável basta como **consentimento parental** (art. 14, §1).
+  Vale para todo aluno menor de 12. **Pergunta de advogado**
+- Se a plataforma é **operadora** ou **controladora conjunta** quanto ao conteúdo da ficha. Muda
+  quem responde a um pedido do titular e quem responde num incidente. **Pergunta de advogado**
+- O que acontece com a carteira quando **o profissional** exclui a conta — depende de existir um
+  exportador, que não existe
+
+> **Isto torna urgente uma pendência antiga.** Termos de Uso e Política de Privacidade **não
+> existem** (`iam.md` §11) e o aceite é gravado com versão `v0-desenvolvimento`. Esta é a
+> primeira fase que grava dado pessoal de gente que **não é usuária da plataforma** — a pendência
+> sai de "pré-requisito de lançamento" e vira **pré-requisito do primeiro usuário real**.
 
 ### Tecnologias
 
@@ -1029,7 +1104,12 @@ profissional cadastra aluno que não consentiu ·
 - [ ] Profissional cadastra, edita e arquiva alunos
 - [ ] Convite e aceite testados ponta a ponta
 - [ ] Aluno sem conta que se cadastra depois é vinculado corretamente
-- [ ] Regras e base legal em `docs/domain/students.md`
+- [x] Regras e base legal em `docs/domain/students.md`
+- [ ] As dez células "não" da matriz têm teste — `students.md` §10.2. As duas primeiras são de
+      **API**: a resposta que o aluno recebe e a que o administrador recebe não podem conter
+      `private_notes`. Campo escondido no HTML não é autorização
+- [ ] Revisão de segurança obrigatória registrada em `docs/security/`
+- [ ] Manual de manutenção em `docs/sistema/fase-05-alunos.md`
 
 ---
 

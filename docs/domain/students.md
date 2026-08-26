@@ -546,12 +546,12 @@ nunca · `dono` = só o profissional dono da carteira · `part.` = só a conta q
 **Recurso de outro dono responde 404, nunca 403** (`iam.md` §7.1). Vale para toda linha acima,
 sem exceção — e é o que `AccessService.fichaComoDono` já garante numa consulta só.
 
-### 10.1 Uma célula do `iam.md` §6 que eu proponho mudar **(precisa do dono)**
+### 10.1 Uma célula do `iam.md` §6 mudou — 🔒 **decidido em 2026-08-26**
 
-O `iam.md` §6 diz hoje: *"editar contato da ficha | não | **part. (só a sua)** | dono | não"*.
-**Proponho `não` para o aluno**, e a divergência precisa ser resolvida decidindo qual está
-certa e mudando a outra no mesmo commit — a regra que o `professional-profile.md` §11
-estabeleceu.
+O `iam.md` §6 dizia *"editar contato da ficha | não | **part. (só a sua)** | dono | não"*.
+**Passou a `não` para o aluno**, e a matriz de lá foi corrigida no mesmo commit — a regra que o
+`professional-profile.md` §11 estabeleceu, para documento normativo não divergir de documento
+normativo. A tabela abaixo é o raciocínio que sustentou a decisão.
 
 | A favor de deixar o aluno editar | A favor de `não` |
 | --- | --- |
@@ -560,8 +560,9 @@ estabeleceu.
 | | A célula **nunca foi exercitada**: não existe tela de aluno até a Fase 11. Mudar agora não quebra nada; mudar depois quebra |
 | | Uma superfície de escrita a menos do aluno para dentro do registro de outra pessoa |
 
-Se o dono mantiver `part.`, a regra precisa ganhar junto: **o que ele edita e o que não edita**
-(nome, não; contato, sim), e um registro de quem alterou.
+O direito de correção do aluno (art. 18, III) continua atendido por dois caminhos: a **conta**
+é auto-serviço desde a Fase 2, e a correção da **ficha** vai ao controlador. O que ele perde é
+o auto-serviço sobre o registro de outra pessoa — que nunca chegou a existir.
 
 ### 10.2 As células "não" que precisam de teste
 
@@ -678,7 +679,9 @@ conta não ativa; a regra continua valendo depois desta fase.
 
 ## 15. O que precisa do dono — e eu não decidi
 
-Além da célula do `iam.md` §6 na §10.1, três coisas.
+A célula do `iam.md` §6 saiu daqui: foi decidida em 2026-08-26 e está fechada na §10.1. Restam
+três — e **duas delas não são do dono, são de um advogado**. Elas estão aqui porque alguém
+precisa contratá-lo, e essa parte é dele.
 
 ### 15.1 O que acontece com a carteira quando **o profissional** exclui a conta
 
