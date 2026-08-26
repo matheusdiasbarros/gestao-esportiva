@@ -694,7 +694,7 @@ Todas resolvidas em 2026-08-20. Registro completo em [`docs/domain/iam.md`](docs
 
 ---
 
-## Fase 3 — Perfil profissional ⬜
+## Fase 3 — Perfil profissional ✅
 
 **Objetivo:**
 Permitir que o profissional construa um perfil completo: modalidades, bio, especialidades,
@@ -762,17 +762,14 @@ privado — verificar a resposta, não só a tela ·
         reais ou um e cinquenta
   - [x] Os dois textos que o documento de domínio exige: **"por aluno, por aula"** ao lado do
         preço e **"seu endereço não aparece no link público"** ao lado do local
-- [ ] **Epic 3.5 — Locais de atendimento 🔁** 🟨 *(absorvido da Fase 4 — decidido na Fase 0)*
-
-  > A API está de pé e testada. Falta a tela (Epic 3.4) e falta o recorte público (Epic 3.7) —
-  > e é o recorte público que a revisão de segurança obrigatória da fase confere.
-
+- [x] **Epic 3.5 — Locais de atendimento 🔁** ✅ 2026-08-25 *(absorvido da Fase 4 — decidido na Fase 0)*
   - [x] Cadastro de locais com endereço em texto, sem mapa nem geolocalização — API e tela
   - [x] Múltiplos locais por profissional, com local principal. Exatamente um, garantido por
         índice único parcial; excluir o principal promove o mais antigo dos que ficaram
   - [x] Tipos: local próprio, academia/clube, espaço público, casa do aluno. **Casa do aluno não
         aceita endereço** — o campo some da tela, e o banco recusa se alguém insistir
-  - [ ] Só bairro e cidade saem em resposta pública; o endereço exato, nunca — é o Epic 3.7
+  - [x] Só bairro e cidade saem em resposta pública; o endereço exato, nunca — entregue pelo
+        Epic 3.7, com os bairros **agregados**: uma entrada por local revelaria quantos ele tem
 - [x] **Epic 3.7 — A página "treine comigo" cresce** 🔁 ✅ 2026-08-25
   - [x] `/treine-com/:slug` passa a mostrar foto, modalidades e locais por bairro e cidade
   - [x] Teste que prova que a **resposta da API** não devolve dado privado — não basta a tela
@@ -828,6 +825,21 @@ Tomadas na abertura, em 2026-08-25.
 > O que já está pronto para o dia em que a ação existir: a rota pública respeita a coluna, e
 > responde a link pausado exatamente como a slug inexistente. Falta só quem escreva nela.
 
+> **Segunda lacuna, do mesmo formato, encontrada pela revisão de segurança em 2026-08-26.**
+> **A exclusão de conta não existe em épico nenhum.** A decisão D8b está no `iam.md` desde a
+> Fase 2 — "anonimiza a conta, mantém o histórico", com prazo de 15 dias e 7 de arrependimento
+> —, o `UserStatus.Anonymized` está no enum, o `jwt.strategy.ts` já derruba a sessão de conta
+> anonimizada, e **nada escreve nele**.
+>
+> Vira problema desta fase por uma razão nova: a Fase 3 é a primeira que grava dado pessoal
+> **fora do banco**. O §8 do documento de domínio promete que excluir a conta apaga o arquivo da
+> foto, e não há quem apague. Pior, a ADR-005 proíbe `iam` alcançar `professional-profile` — se
+> a exclusão nascer dentro de `iam`, a foto fica no disco por omissão de fronteira, e anonimizar
+> deixando o rosto da pessoa em disco não é anonimizar.
+>
+> Quem construir a exclusão precisa varrer **tudo que é dado pessoal fora de `users`**, e a foto
+> é o primeiro item dessa lista. Não é para resolver aqui: é para não descobrir tarde.
+
 ### Tecnologias
 
 - NestJS, TypeORM, PostgreSQL, S3, BullMQ, Next.js (SSR), Tailwind.
@@ -856,14 +868,18 @@ deixar alguém **entrar**; aqui é deixar um dado privado **sair**.
 
 ### Critérios de conclusão
 
-- [ ] Profissional cria e edita o perfil completo pela web
-- [ ] Upload da foto funcionando, com validação de tipo e tamanho **no servidor**
-- [ ] A resposta pública devolve **apenas** os campos da lista fechada — verificado por teste
-      contra a API, não contra a tela
-- [ ] Preço gravado em centavos, e nenhum ponto flutuante em nenhuma camada
-- [ ] Regras do domínio em `docs/domain/professional-profile.md`
-- [ ] Revisão de segurança obrigatória registrada
-- [ ] Manual de manutenção em `docs/sistema/fase-03-perfil-profissional.md`
+- [x] Profissional cria e edita o perfil completo pela web
+- [x] Upload da foto funcionando, com validação de tipo e tamanho **no servidor**
+- [x] A resposta pública devolve **apenas** os campos da lista fechada — verificado por teste
+      contra a API, não contra a tela. A lista fechada foi **conferida quebrando de propósito**:
+      um campo indevido acrescentado ao contrato derrubou três testes
+- [x] Preço gravado em centavos, e nenhum ponto flutuante em nenhuma camada
+- [x] Regras do domínio em `docs/domain/professional-profile.md`
+- [x] Revisão de segurança obrigatória registrada — `docs/security/revisao-fase-03.md`, e o
+      resumo na §9 do manual da fase. **Veredito: passa.** A resposta pública devolve só os seis
+      campos, conferida no corpo cru contra a API no ar. Cinco achados corrigidos antes de a fase
+      fechar, dois registrados como débito
+- [x] Manual de manutenção em `docs/sistema/fase-03-perfil-profissional.md`
 
 ---
 

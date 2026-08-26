@@ -17,8 +17,8 @@ Escopo do MVP em [`docs/product/mvp.md`](docs/product/mvp.md).
 
 ## Estado atual
 
-**Fases 0, 1 e 2 concluídas. Fase 3 (perfil profissional) em andamento** — todos os épicos do
-MVP estão fechados; faltam a revisão de segurança obrigatória e o manual da fase.
+**Fases 0, 1, 2 e 3 concluídas.** A próxima do MVP é a Fase 5 (alunos) — a Fase 4 saiu do
+escopo e roda junto da 12.
 
 Funciona hoje: criar conta de profissional ou de aluno, entrar, sair, recuperar senha,
 confirmar e trocar e-mail, convidar alunos, o link público "treine comigo" do professor, a
@@ -41,7 +41,7 @@ apps/web      site
 apps/mobile   aplicativo: aluno, e o que o profissional faz em quadra
 packages/     types (contratos compartilhados) e config (tsconfig, ESLint)
 e2e/          testes em navegador, contra o sistema inteiro
-docs/         product · domain · adr · sistema · tech-debt.md
+docs/         product · domain · adr · sistema · security · tech-debt.md
 ```
 
 ## Comandos
@@ -53,8 +53,8 @@ pnpm --filter @gestao/api migration:run
 pnpm --filter @gestao/api seed            # dados de desenvolvimento, idempotente
 pnpm dev                                  # API :3333 · web :3000
 
-pnpm lint && pnpm typecheck && pnpm test  # 101 testes de unidade
-pnpm test:e2e                             # 128 testes contra o sistema inteiro (ver DT-010)
+pnpm lint && pnpm typecheck && pnpm test  # 123 testes de unidade
+pnpm test:e2e                             # 131 testes (ver DT-010 e DT-011: uma vez por hora)
 
 pnpm --filter @gestao/api test -- health.service   # um teste específico
 pnpm exec playwright test cadastro                 # um arquivo de tela
@@ -100,6 +100,7 @@ suposição razoável e errada.
 | Chave primária é UUID v7 gerado na aplicação | ADR-003 |
 | Horário é `timestamptz` em UTC; dinheiro é inteiro em centavos | ADR-003 |
 | Configuração vem do objeto **tipado**, nunca de `ConfigService.get()` | `'false'` é verdadeiro |
+| Booleano em DTO usa `@BooleanEstrito()`, nunca `@IsBoolean()` sozinho | `Boolean('false')` também |
 | Erro sai em `application/problem+json`; 500 nunca expõe a causa | RFC 9457 |
 | Toda rota nasce **protegida**; pública só com `@Public()` | omissão segura |
 | O banco guarda hash, nunca o valor — senha, token, link de e-mail | |

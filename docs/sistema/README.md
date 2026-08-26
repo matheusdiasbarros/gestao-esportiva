@@ -2,7 +2,7 @@
 
 Documentação de manutenção, escrita **para quem chega sem contexto** — pessoa ou IA.
 
-Última atualização: 2026-08-21
+Última atualização: 2026-08-25
 
 ---
 
@@ -13,6 +13,7 @@ Documentação de manutenção, escrita **para quem chega sem contexto** — pes
 | `docs/product/` | **o que** o produto faz e para quem |
 | `docs/domain/` | **as regras de negócio** e o vocabulário |
 | `docs/adr/` | **por que** cada decisão técnica foi tomada |
+| `docs/security/` | **o que foi atacado e o que resistiu**, fase a fase |
 | **`docs/sistema/`** | **como o sistema funciona hoje**, para conseguir mexer nele sem quebrar |
 
 Um ADR explica por que escolhemos argon2id. Este manual diz onde o hash é calculado, o que
@@ -23,8 +24,10 @@ acontece se você mudar aquele arquivo, e como saber se quebrou.
 Leia **nesta ordem**, e não pule:
 
 1. **`CLAUDE.md`**, na raiz — o resumo de uma página, carregado em toda sessão.
-2. **A fase relevante** aqui nesta pasta. Cada arquivo tem as mesmas sete seções, sempre na
-   mesma ordem, para você achar o que precisa sem ler tudo.
+2. **A fase relevante** aqui nesta pasta. Cada arquivo tem as mesmas seções, sempre na mesma
+   ordem, para você achar o que precisa sem ler tudo: o que a fase entregou, o mapa dos
+   arquivos, as invariantes, as armadilhas, como verificar, o que **não** existe, e o que olhar
+   antes de mexer. Fase com revisão de segurança obrigatória fecha com o resultado dela.
 3. **`docs/domain/glossary.md`** — o vocabulário é obrigatório. Sinônimo novo para conceito
    existente é bug.
 4. **`docs/tech-debt.md`** — a tabela de armadilhas já descobertas. Vários erros deste projeto
@@ -60,3 +63,4 @@ mesmo commit. Documento por fase envelhece se ninguém fizer isso — e document
 | 0 | Descoberta e definição do produto | sem código — ver [`docs/product/`](../product/) |
 | 1 | Fundação técnica | [fase-01-fundacao-tecnica.md](fase-01-fundacao-tecnica.md) |
 | 2 | Identidade e acesso | [fase-02-identidade-e-acesso.md](fase-02-identidade-e-acesso.md) |
+| 3 | Perfil profissional | [fase-03-perfil-profissional.md](fase-03-perfil-profissional.md) |
