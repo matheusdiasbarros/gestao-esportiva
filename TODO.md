@@ -997,16 +997,22 @@ profissional cadastra aluno que não consentiu ·
   > nos Epics 5.1 e 5.2. Escrever teste com repositório dublado contrariaria o padrão do
   > projeto, que reserva unidade para função pura e cobre o resto ponta a ponta. **Os testes
   > entram junto com os épicos que criam a máquina**, e estão listados lá
-- [ ] **Epic 5.1 — Cadastro de alunos**
+- [x] **Epic 5.1 — Cadastro de alunos** ✅ 2026-08-27
+  - [x] Aluno criado pelo profissional (sem conta na plataforma) — API e tela. Quatro colunas em
+        `students`, nenhuma tabela nova, e dois `CHECK` exercitados contra o banco
+  - [x] Aluno com conta própria — o marcador **"já tem conta"** na lista. Nada é ligado
+        automaticamente: o marcador acende um botão, e quem decide é o profissional
+  - [x] Reconciliação quando o aluno cria conta depois — mesmo marcador, calculado a cada
+        leitura. Derivado, nunca guardado: coluna ficaria mentindo no dia em que a pessoa criasse
+        conta, e ninguém recalcularia as linhas antigas
+  - [x] Detecção de possível duplicata na carteira. **Só detecção** — mesclar é Fase 7
+  - [x] Os quatro textos que a base legal exige (`students.md` §16), **testados como
+        funcionalidade**: se alguém apagar um por achar que é ruído visual, a suíte quebra.
+        **Checkbox por ficha foi recusado** — vira clique automático na quinta e não muda a
+        responsabilidade, que já é do profissional pelos Termos
   - [ ] **Dívida do Epic 5.0:** teste de que o aceite de convite **não** altera `access_holder`
-        nem `status` — ficha `GUARDIAN` continua `GUARDIAN`, ficha `PAUSED` continua `PAUSED`
-  - [ ] Aluno criado pelo profissional (sem conta na plataforma)
-  - [ ] Aluno com conta própria
-  - [ ] Reconciliação quando o aluno cria conta depois
-  - [ ] O aviso fixo na tela de criar ficha, sem checkbox: *"Você está cadastrando dados de
-        outra pessoa"* — é o que a base legal de `students.md` §3.3 exige em troca do legítimo
-        interesse. **Checkbox por ficha foi recusado**: vira clique automático na quinta e não
-        muda a responsabilidade, que já é do profissional pelos Termos
+        nem `status` — ficha `GUARDIAN` continua `GUARDIAN`, ficha `PAUSED` continua `PAUSED`.
+        Depende de `PAUSED`, que nasce no Epic 5.2
 - [ ] **Epic 5.2 — Vínculo profissional↔aluno**
   - [ ] Convite por link/e-mail e aceite
   - [ ] Estados do vínculo (ativo, pausado, encerrado)

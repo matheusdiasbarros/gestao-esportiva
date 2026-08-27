@@ -88,6 +88,22 @@ export default async function Painel() {
         </section>
       ) : null}
 
+      {sessao.professionalId ? (
+        <section className="rounded-xl border border-(--color-border) bg-(--color-surface-muted) p-6">
+          <h2 className="text-sm font-medium">Seus alunos</h2>
+          <p className="mt-1 text-sm text-(--color-ink-muted)">
+            A sua carteira. O aluno não precisa ter conta para você cadastrá-lo — a conta dele entra
+            depois, pelo convite.
+          </p>
+          <Link
+            href="/painel/alunos"
+            className="mt-4 inline-block rounded-lg border border-(--color-border) px-3 py-1.5 text-xs font-medium"
+          >
+            Ver alunos
+          </Link>
+        </section>
+      ) : null}
+
       {sessao.signupSlug ? (
         <section className="rounded-xl border border-(--color-border) bg-(--color-surface-muted) p-6">
           <h2 className="mb-3 text-sm font-medium">Seu link para captar alunos</h2>
