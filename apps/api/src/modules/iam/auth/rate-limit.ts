@@ -112,6 +112,32 @@ export const LimitarTrocaDeEmail = (): MethodDecorator & ClassDecorator =>
   });
 
 /**
+ * Emissão de convite: **60 por hora por IP** e **3 por endereço de destino**.
+ *
+ * O DT-008 marcou esta rota com prazo, não com "quando der": ela manda e-mail para um endereço
+ * escolhido por quem chama, com o **nome do profissional dentro do assunto**. Na Fase 2 não era
+ * explorável porque não havia como criar ficha pela interface, e sem ficha não há convite. O
+ * Epic 5.1 cria fichas — e o prazo venceu junto.
+ *
+ * **Por que o teto por IP é alto, e não baixo como o da troca de e-mail.** Convidar em lote é o
+ * caso de uso normal: o professor que chega à plataforma com quarenta alunos convida os quarenta
+ * na mesma tarde. Um teto de 10 transformaria o dia da adoção em erro. Sessenta cobre a carteira
+ * inteira com folga e ainda limita o estrago a sessenta mensagens por hora.
+ *
+ * **O teto por alvo tem um buraco conhecido, e ele está escrito de propósito.** A contagem por
+ * destino lê `body.email`, e o convite endereçado **pode vir sem esse campo** — aí o destino é o
+ * e-mail que já está na ficha, que o contador não enxerga. Fechar exigiria carregar a ficha
+ * antes de contar, e o limite roda **antes** da autenticação de propósito (ver `iam.module.ts`).
+ * Quem cobre esse caminho é o teto por IP. O de alvo cobre o caminho explícito, que é o que
+ * permite martelar um endereço sem ter ficha para ele.
+ */
+export const LimitarConvite = (): MethodDecorator & ClassDecorator =>
+  Throttle({
+    [LIMITE_IP]: { limit: 60, ttl: 60 * MINUTO },
+    [LIMITE_ALVO]: { limit: 3, ttl: 60 * MINUTO },
+  });
+
+/**
  * Envio de foto: **20 por hora por IP**.
  *
  * É a operação autenticada mais cara do sistema. Decodificar 5 MB de JPEG, endireitar,

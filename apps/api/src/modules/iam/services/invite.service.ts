@@ -1,12 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import {
-  AccessHolder,
-  InviteDetails,
-  InviteIssued,
-  InviteKind,
-  InviteRow,
-  StudentStatus,
-} from '@gestao/types';
+import { InviteDetails, InviteIssued, InviteKind, InviteRow } from '@gestao/types';
 import {
   ConflictException,
   ForbiddenException,
@@ -299,10 +292,22 @@ export class InviteService {
     if (gasto.affected !== 1) throw this.conviteMorto();
 
     try {
+      // **Só `user_id`.** Aceitar um convite responde uma pergunta — "que conta acessa esta
+      // ficha?" — e não pode responder as outras duas por tabela.
+      //
+      // Antes daqui saíam também `status: ACTIVE` e `accessHolder: SELF`, e os dois estavam
+      // errados pelo mesmo motivo: quem declarou aquilo foi o profissional, e o convite não
+      // sabe mais do que ele. Uma ficha `PAUSED` voltava a ativa porque alguém clicou num link;
+      // e a ficha de um menor virava "o próprio aluno acessa" **no exato momento em que o
+      // responsável entrava** — contradizendo a decisão D9 justamente onde ela importa.
+      //
+      // Os dois eixos são independentes e estão descritos em `students.md` §7.1: `status`
+      // responde "esta pessoa treina com este profissional?" e `user_id`, "existe conta ligada
+      // a esta ficha?". Nenhuma regra pode assumir que um diz algo sobre o outro.
       const ligada = await manager.update(
         Student,
         { id: student.id, userId: IsNull() },
-        { userId, status: StudentStatus.Active, accessHolder: AccessHolder.Self },
+        { userId },
       );
       // Alguém aceitou outro convite para esta mesma ficha no meio do caminho. Raro, mas o
       // resultado silencioso seria pior: convite gasto e ficha ligada a outra conta.

@@ -313,9 +313,21 @@ web nas portas 3000 e 3333. Com o ambiente de desenvolvimento no ar, as duas ins
 disputam a porta, o servidor de desenvolvimento morre no meio, e a suíte falha em massa com
 erros que não têm nada a ver com a mudança em análise. No Windows, `parar.bat` resolve.
 
-Localmente o Playwright roda em paralelo, e vários cadastros ao mesmo tempo estouram o limite
-por IP. Um punhado de falhas em `cadastrar` costuma ser isso, não regressão: confirme com
-`pnpm exec playwright test --workers=1`, que é como o CI roda.
+**Localmente o Playwright roda em paralelo, e um punhado de falhas em `cadastrar` e `entrar`
+costuma ser isso, não regressão.** Confirme com `pnpm exec playwright test --workers=1`, que é
+como o CI roda — `playwright.config.ts` usa um worker só quando detecta CI.
+
+**A causa não é o limite por IP**, apesar de esta linha ter dito isso até 2026-08-27. Medido:
+uma execução paralela que falhou 7 testes tinha **zero respostas 429** na saída e o contador de
+cadastro em **77 de 100**. O sintoma real é outro, e a captura de tela do erro o entrega: o
+botão fica em **"Aguarde…", desabilitado**, e o alerta vazio. A requisição não foi recusada —
+ela **não voltou** dentro dos 5 segundos do `expect`.
+
+O que satura é **CPU**. Cada login e cada cadastro custa um argon2 de centenas de milissegundos,
+de propósito (ADR-004 §5); com vários workers pedindo hash ao mesmo tempo, a fila cresce e
+requisições legítimas passam de 5 s. Confundir isso com o teto por IP leva à conclusão errada —
+"vou subir o limite" —, que não conserta nada e enfraquece uma defesa real. Foi o que quase
+aconteceu no DT-010.
 
 Contas de exemplo depois de `pnpm --filter @gestao/api seed`, todas com senha
 `desenvolvimento1`:

@@ -17,6 +17,7 @@ import { alerta, entrar } from './apoio';
  * descartar a própria ficha. Está registrado no `TODO.md`.
  */
 const PROFESSOR = { email: 'rodrigo@exemplo.local', senha: 'desenvolvimento1' };
+const API = 'http://localhost:3333/api/v1';
 
 /**
  * Uma sessão só para o arquivo inteiro, e **em série**.
@@ -98,6 +99,41 @@ test.describe('Convidar alunos', () => {
     await expect(aba.getByRole('tab', { name: 'Criar conta' })).toBeVisible();
     await expect(aba.getByRole('tab', { name: 'Já tenho conta' })).toBeVisible();
     await visitante.close();
+  });
+
+  /**
+   * O teto por destinatário — DT-008, que tinha prazo e venceu na abertura da Fase 5.
+   *
+   * A rota manda e-mail para um endereço escolhido por quem chama, com o nome do profissional
+   * dentro do **assunto**. Sem teto por destino, uma conta vira ferramenta para encher a caixa
+   * de entrada de terceiros com mensagens saindo do nosso domínio — o que, além do incômodo,
+   * queima a reputação de envio do produto inteiro.
+   *
+   * O endereço é novo a cada execução, pelo mesmo motivo de `limite-tentativas.spec.ts`: um
+   * alvo fixo faria o bloqueio de uma hora derrubar a execução seguinte, e o teste passaria a
+   * falhar por causa de si mesmo.
+   */
+  test('não dá para martelar o mesmo endereço com convite', async () => {
+    const carteira = (await (await painel.request.get(`${API}/invites`)).json()) as {
+      studentId: string;
+      studentName: string;
+    }[];
+    const joao = carteira.find((ficha) => ficha.studentName.includes('João'));
+    expect(joao, 'a ficha sem conta da seed sumiu — ver o cabeçalho deste arquivo').toBeDefined();
+
+    const alvo = `spam-${randomUUID()}@exemplo.local`;
+    const convidar = () =>
+      painel.request.post(`${API}/invites`, {
+        data: { studentId: joao?.studentId, kind: 'ADDRESSED', email: alvo },
+      });
+
+    for (let tentativa = 1; tentativa <= 3; tentativa++) {
+      expect((await convidar()).status(), `a ${tentativa}ª ainda deveria passar`).toBe(201);
+    }
+
+    const quarta = await convidar();
+    expect(quarta.status()).toBe(429);
+    expect(Number(quarta.headers()['retry-after'])).toBeGreaterThan(0);
   });
 });
 

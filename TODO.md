@@ -982,23 +982,24 @@ profissional cadastra aluno que não consentiu ·
 
 ### Épicos e tarefas
 
-- [ ] **Epic 5.0 — O que precisa vir antes** 🟨 *(descoberto na abertura)*
+- [x] **Epic 5.0 — O que precisa vir antes** ✅ 2026-08-27 *(descoberto na abertura)*
+  - [x] Teto em `POST /invites` (DT-008): **60/hora por IP e 3/hora por destinatário**. O teto
+        por IP é alto de propósito — convidar em lote é o caso normal, e o professor que chega
+        com quarenta alunos convida os quarenta na mesma tarde. Teste prova o 429 no quarto
+        convite ao mesmo endereço, e foi **verificado quebrando**: sem o decorator, ele falha
+  - [x] O aceite de convite **para de sobrescrever** `access_holder` e `status`. Ele preenche
+        `user_id`, e só — os dois eixos são independentes (`students.md` §7.1)
+  - [x] `entrarPeloLinkPublico` deixa de responder em silêncio para ficha `ENDED`: responde 409
+        dizendo para falar com o professor. Reativar é dele (`students.md` §7.3)
 
-  > **Bloqueador com prazo escrito.** O DT-008 diz que `POST /invites` precisa de teto **antes
-  > do primeiro épico que criar ficha pela tela** — e esse épico é o 5.1. Sem o teto, a rota
-  > vira canhão de e-mail com assunto escolhido por quem emite.
-
-  - [ ] Teto por IP e por alvo em `POST /invites` (DT-008), com o mesmo formato de
-        `LimitarTrocaDeEmail` — que já existe justamente para rota que manda e-mail a endereço
-        escolhido por quem chama
-  - [ ] O aceite de convite **para de sobrescrever** `access_holder` e `status`
-        (`invite.service.ts:305`). Hoje a ficha de um menor vira "o próprio aluno acessa" no
-        exato momento em que o responsável entra, e uma ficha pausada volta a ativa porque
-        alguém clicou num link. O aceite preenche `user_id`, e só
-  - [ ] `entrarPeloLinkPublico` deixa de responder 204 em silêncio para ficha `ENDED`
-        (`auth.service.ts:288`) — a ex-aluna acha que voltou e o professor não fica sabendo.
-        Reativar é do profissional (`students.md` §7.3)
+  > **Os dois últimos ficaram sem teste automatizado, e é decisão consciente.** Exercitá-los
+  > exige criar ficha `GUARDIAN`/`PAUSED` e encerrar vínculo pela API — as duas coisas nascem
+  > nos Epics 5.1 e 5.2. Escrever teste com repositório dublado contrariaria o padrão do
+  > projeto, que reserva unidade para função pura e cobre o resto ponta a ponta. **Os testes
+  > entram junto com os épicos que criam a máquina**, e estão listados lá
 - [ ] **Epic 5.1 — Cadastro de alunos**
+  - [ ] **Dívida do Epic 5.0:** teste de que o aceite de convite **não** altera `access_holder`
+        nem `status` — ficha `GUARDIAN` continua `GUARDIAN`, ficha `PAUSED` continua `PAUSED`
   - [ ] Aluno criado pelo profissional (sem conta na plataforma)
   - [ ] Aluno com conta própria
   - [ ] Reconciliação quando o aluno cria conta depois
@@ -1018,6 +1019,8 @@ profissional cadastra aluno que não consentiu ·
         pelo qual alguém pede acesso a ficha alheia
   - [ ] Transições de estado com o que muda para cada lado, e a revogação do convite de pé
         quando o vínculo encerra — `students.md` §7
+  - [ ] **Dívida do Epic 5.0:** teste de que a ex-aluna clicando de novo no link público recebe
+        409 com a mensagem de falar com o professor, e **não** volta a ser aluna sozinha
 - [ ] **Epic 5.3 — Ficha do aluno**
   - [ ] Dados de contato e informações básicas
   - [ ] Observações privadas do profissional, com o texto *"escreva o que você mostraria se ela

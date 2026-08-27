@@ -282,10 +282,26 @@ export class AuthService {
 
     // Clicar duas vezes não pode virar duas fichas. Diferente do caso acima, aqui a ficha já
     // aponta para esta conta — não há dúvida sobre de quem ela é.
-    const jaVinculado = await this.students.exists({
+    //
+    // O `status` é lido junto, e não é detalhe: antes daqui bastava `exists`, e **vínculo
+    // encerrado caía no mesmo silêncio**. A ex-aluna clicava de novo no link do professor,
+    // recebia 204 e ia embora achando que tinha voltado; ele não ficava sabendo de nada.
+    const ficha = await this.students.findOne({
       where: { professionalId: professional.id, userId },
+      select: { status: true },
     });
-    if (jaVinculado) return;
+
+    if (ficha?.status === StudentStatus.Ended) {
+      // Reativar é **só do profissional** (`students.md` §7.3). Encerrar é o direito de deixar
+      // de ser aluno de alguém e não precisa de autorização; recomeçar é uma relação comercial,
+      // e é de quem dá a aula. Um "voltar a ser aluno" no link público também seria o jeito
+      // mais barato de encher a carteira alheia de ruído.
+      throw new ConflictException(
+        'Seu vínculo com este profissional foi encerrado. Fale com ele para voltar a treinar.',
+      );
+    }
+
+    if (ficha) return;
 
     const user = await this.users.findOneByOrFail({ id: userId });
 

@@ -291,6 +291,7 @@ Não são débito — são erros que custaram tempo e que a documentação agora
 | `ConfigService.get()` devolve string: `'false'` é verdadeiro | `apps/api/src/config/config.module.ts` |
 | `enableImplicitConversion` transforma `'false'` em `true` | `apps/api/src/config/env.validation.ts` e — **de novo, nos DTOs** — `apps/api/src/common/validation/boolean-estrito.ts` |
 | `@Transform` roda **depois** da conversão implícita: desfazê-la exige ler `obj[key]`, não `value` | `apps/api/src/common/validation/boolean-estrito.ts` |
+| Falha em massa de `cadastrar`/`entrar` no Playwright local é **CPU saturada por argon2**, não o teto por IP — o botão fica em "Aguarde…" e não há 429 nenhum | `docs/sistema/fase-02-identidade-e-acesso.md` §6 |
 | PostgreSQL nativo na máquina ocupa a 5432 e sequestra a conexão | `docker-compose.yml`, `.env.example` |
 | `ts-node` procura o tsconfig a partir do arquivo de entrada `.js` | script `typeorm` em `apps/api/package.json` |
 | Jest precisa de `reflect-metadata` no `setupFiles` | `apps/api/jest.config.js` |

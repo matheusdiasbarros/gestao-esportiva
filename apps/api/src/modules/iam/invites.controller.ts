@@ -15,7 +15,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { CurrentUser } from './auth/current-user.decorator';
 import { Public } from './auth/public.decorator';
-import { LimitarCadastro } from './auth/rate-limit';
+import { LimitarCadastro, LimitarConvite } from './auth/rate-limit';
 import { RespostaDeSessao, SessaoHttp, clienteDe, etiquetaDeAparelho } from './auth/sessao-http';
 import { AcceptInviteDto, CreateInviteDto } from './dto/invite.dto';
 import { InviteService } from './services/invite.service';
@@ -42,6 +42,7 @@ export class InvitesController {
   }
 
   @Post()
+  @LimitarConvite()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Convida uma ficha, por e-mail ou por link para copiar' })
   async criar(
