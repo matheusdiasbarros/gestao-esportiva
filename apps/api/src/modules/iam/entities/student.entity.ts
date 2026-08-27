@@ -77,6 +77,40 @@ export class Student extends BaseEntity {
   @Column({ type: 'enum', enum: AccessHolder, default: AccessHolder.Self })
   accessHolder: AccessHolder;
 
+  /**
+   * Quem responde pelo menor. **Obrigatório quando `accessHolder` é `GUARDIAN`**, e proibido
+   * quando não é — garantido por `CHECK`, não por checagem na aplicação.
+   */
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  guardianName: string | null;
+
+  /** O que o aluno quer alcançar. **O aluno vê** — `students.md` §6. */
+  @Column({ type: 'text', nullable: true })
+  goals: string | null;
+
+  /**
+   * As anotações do profissional sobre o aluno.
+   *
+   * **Nunca sai numa resposta que o aluno ou o administrador recebem.** Isso não é garantido por
+   * um `if` na hora de responder: existem duas formas de saída da ficha, e a do participante
+   * simplesmente não tem este campo. Ver `students.md` §6 e §16.
+   *
+   * Não é sigilo absoluto, e a tela diz isso ao profissional: a lei dá ao titular o direito de
+   * pedir o que está escrito sobre ele, e o pedido é atendido à mão.
+   */
+  @Column({ type: 'text', nullable: true })
+  privateNotes: string | null;
+
+  /**
+   * Quando o vínculo terminou. Preenchida **se e somente se** `status` é `ENDED` — `CHECK`.
+   *
+   * Reativar **apaga** esta data. Guardar "encerrou em março, voltou em maio" exigiria uma tabela
+   * de histórico de estado, que ninguém pediu; se um dia importar, a matéria-prima está no
+   * `updated_at` e nos logs, não aqui.
+   */
+  @Column({ type: 'timestamptz', nullable: true })
+  endedAt: Date | null;
+
   @OneToMany('StudentInvite', (invite: StudentInvite) => invite.student)
   invites: StudentInvite[];
 }

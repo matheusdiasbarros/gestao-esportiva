@@ -33,6 +33,8 @@ import { UserToken } from './entities/user-token.entity';
 import { UserIdentity } from './entities/user-identity.entity';
 import { User } from './entities/user.entity';
 import { InvitesController } from './invites.controller';
+import { StudentsController } from './students.controller';
+import { StudentsService } from './services/students.service';
 import { AccessService } from './services/access.service';
 import { AdminService } from './services/admin.service';
 import { AuthService } from './services/auth.service';
@@ -102,7 +104,7 @@ import { UserTokenService } from './services/user-token.service';
       UserToken,
     ]),
   ],
-  controllers: [AuthController, InvitesController, AdminController],
+  controllers: [AuthController, InvitesController, StudentsController, AdminController],
   providers: [
     PasswordService,
     RolesService,
@@ -112,6 +114,7 @@ import { UserTokenService } from './services/user-token.service';
     AccessService,
     AuthService,
     InviteService,
+    StudentsService,
     AdminService,
     AuditoriaDeLeitura,
     JwtStrategy,

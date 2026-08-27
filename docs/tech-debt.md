@@ -201,15 +201,17 @@ dois provedores antes de existir o segundo (ADR-005).
 
 ---
 
-### DT-010 — A suíte de ponta a ponta gasta 81 dos 100 cadastros por hora que o IP tem
+### DT-010 — A suíte de ponta a ponta gasta 84 dos 100 cadastros por hora que o IP tem
 
 **O que:** cada teste de tela cria a própria conta, de propósito (`e2e/apoio.ts` explica por
-quê), e todos saem de `127.0.0.1`. Uma execução limpa da suíte consome **81** dos 100 cadastros
-por hora que `LimitarCadastro` permite por IP — medido em 2026-08-26, com 131 testes. Uma
+quê), e todos saem de `127.0.0.1`. Uma execução limpa da suíte consome **84** dos 100 cadastros
+por hora que `LimitarCadastro` permite por IP — medido em 2026-08-27, com 148 testes. Uma
 execução cabe; **duas na mesma hora não cabem.**
 
 O número sobe a cada fase, e o histórico é o aviso: 66 na primeira medição, 74 com 112 testes,
-**81 com 131**. Quem acrescentar teste que cadastra mede de novo e atualiza este título.
+81 com 131, **84 com 148**. Quem acrescentar teste que cadastra mede de novo e atualiza este
+título. **Faltam 6 para o gatilho de correção** — `e2e/alunos.spec.ts` já compartilha uma conta
+para o arquivo inteiro justamente por isso, e o próximo arquivo da Fase 5 precisa fazer igual.
 
 **Como isso aparece:** não como "limite estourado". Aparece como meia dúzia de testes de
 arquivos diferentes falhando em `expect(page).toHaveURL('/painel')`, porque o formulário de

@@ -35,15 +35,35 @@ export function contaNova(): Conta {
   };
 }
 
-/** Preenche e envia o formulário de cadastro. Não afirma nada sobre o resultado. */
-export async function preencherCadastro(page: Page, conta: Conta): Promise<void> {
-  await page.goto('/criar-conta');
+/** Preenche e envia o formulário que já estiver aberto. Não navega e não afirma nada. */
+async function preencherFormulario(page: Page, conta: Conta): Promise<void> {
   await page.getByLabel('Nome completo').fill(conta.nome);
   await page.getByLabel('E-mail').fill(conta.email);
   await page.getByLabel('Data de nascimento').fill(conta.nascimento);
   await page.getByLabel('Senha').fill(conta.senha);
   await page.getByRole('checkbox').check();
   await page.getByRole('button', { name: 'Criar conta' }).click();
+}
+
+/** Preenche e envia o cadastro **de profissional**. Não afirma nada sobre o resultado. */
+export async function preencherCadastro(page: Page, conta: Conta): Promise<void> {
+  await page.goto('/criar-conta');
+  await preencherFormulario(page, conta);
+}
+
+/**
+ * Cria uma conta **de aluno** e confirma que caiu no painel.
+ *
+ * São duas telas diferentes, e a diferença não é cosmética: o cadastro de profissional cria a
+ * âncora que faz `RolesService` derivar `PROFESSIONAL`. Chamar `preencherCadastro` depois de
+ * navegar para `/criar-conta/aluno` **não** funciona — ele navega de volta para a tela do
+ * profissional, e a conta nasce com o papel errado sem ninguém perceber. Custou um teste aqui.
+ */
+export async function cadastrarAluno(page: Page, conta = contaNova()): Promise<Conta> {
+  await page.goto('/criar-conta/aluno');
+  await preencherFormulario(page, conta);
+  await expect(page).toHaveURL('/painel');
+  return conta;
 }
 
 /** Cria a conta e confirma que caiu no painel. Ponto de partida dos testes de área logada. */
