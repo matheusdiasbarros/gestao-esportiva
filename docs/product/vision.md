@@ -2,7 +2,7 @@
 
 Documento de Fase 0. Define o problema, para quem, e por que este produto existe.
 
-Última atualização: 2026-08-19
+Última atualização: 2026-08-28
 
 ---
 
@@ -26,12 +26,40 @@ O custo disso é tempo administrativo que ninguém paga e receita que escapa sem
 
 ## Para quem
 
-Profissionais esportivos autônomos que dão aula por conta própria, em qualquer modalidade:
+Profissionais esportivos que administram o próprio negócio de aulas, em qualquer modalidade:
 personal trainers, professores de tênis, beach tennis, padel, futebol, corrida, natação,
 lutas, dança e outros.
 
-O público **não** é academia, clube ou franquia — esses têm sistema próprio e outra estrutura
-de decisão. É o profissional que é, ao mesmo tempo, o serviço e a administração do serviço.
+São dois formatos do mesmo negócio, e o produto trata os dois com **um cadastro só**:
+
+| Quem | O que muda |
+| --- | --- |
+| **O autônomo** — persona primária | é, ao mesmo tempo, o serviço e a administração do serviço. Continua sendo quem define o recorte do MVP |
+| **O gestor e o clube pequeno** | tem professores dando aula por ele. O dono é dono de tudo — alunos, agenda e dinheiro — e cada professor enxerga só o que atende |
+
+O gestor sem quadra e o clube com quadra própria **são a mesma estrutura**: alguém que é dono do
+negócio e tem gente atendendo por ele. Por isso "clube" não é uma entidade no sistema — o clube
+**é** o cadastro do profissional que tem equipe.
+
+O público continua **não** sendo a academia de catraca nem a franquia. A academia vende acesso ao
+equipamento, com plano, fidelidade e controle de entrada; a franquia precisa de um negócio que
+sobreviva à troca do dono. Aqui o negócio é uma pessoa física âncora, e isso é uma escolha, com
+gatilho escrito para ser revista ([`../domain/staff.md`](../domain/staff.md) §12).
+
+> **Esta seção mudou em 2026-08-28, e o texto antigo fica registrado.** Ela dizia: *"O público
+> **não** é academia, clube ou franquia — esses têm sistema próprio e outra estrutura de decisão.
+> É o profissional que é, ao mesmo tempo, o serviço e a administração do serviço."*
+>
+> **Por que mudou.** O dono do produto trouxe o caso concreto: existe o gestor com professores
+> dando aula por ele, e existe o clube com professores próprios. A afirmação antiga não estava
+> errada sobre a academia de catraca — estava errada ao juntar "clube" no mesmo balde. A
+> diferença que importa não é o tamanho: é **se o negócio vende aula com hora marcada**. Quem
+> vende isso tem exatamente as dores da agenda, do pacote e da cobrança que este produto resolve.
+>
+> **O que isso custou, e foi aceito.** Uma fase inteira antes da agenda (Fase 5.5), o MVP
+> adiado, e a permissão granular que a `ADR-004` previa para a Fase 15 nascendo seis fases antes.
+> **O que isso não muda:** Rodrigo continua sendo a persona primária, e nenhuma tela nova aparece
+> para quem não tem equipe.
 
 ## Proposta de valor
 
@@ -48,11 +76,11 @@ aluno passa a resolver sozinho o que hoje consome mensagens.
 | --- | --- |
 | WhatsApp + planilha | grátis e universal, mas não tem estado: nada valida conflito, saldo ou pagamento |
 | Agenda do Google | resolve horário, ignora aluno, pacote, crédito e dinheiro |
-| Sistemas de academia | feitos para quem tem recepção e catraca; caros e pesados demais para um autônomo |
+| Sistemas de academia | feitos para quem tem recepção e catraca; caros e pesados demais para um autônomo — **e para o clube de aula marcada**, que paga por um módulo de plano e fidelidade que não usa |
 | Apps de treino | focam na prescrição do treino, não na administração do negócio |
 
-O espaço vago é exatamente o meio: administração de negócio de uma pessoa só, com o aluno
-participando.
+O espaço vago é exatamente o meio: administração de um negócio de aula — de uma pessoa só, ou de
+um punhado delas trabalhando junto — com o aluno participando.
 
 ## Estratégia de entrada
 
@@ -99,5 +127,8 @@ deve ser uma cidade, para que o suporte e as conversas com usuários sejam viáv
 
 - não é rede social de esporte (isso é Fase 14, e só se houver demanda real)
 - não é app de treino ou prescrição de exercício
-- não é sistema para academia
+- não é sistema de academia: sem catraca, sem plano de acesso, sem controle de entrada — o
+  que ele atende é o negócio de **aula com hora marcada**, tenha ele um professor ou seis
+- não é sistema de RH: não tem escala, ponto, folha nem repasse. O acerto entre o dono e o
+  professor acontece fora da plataforma, e é decisão deles ([`../domain/staff.md`](../domain/staff.md) §12)
 - não é meio de pagamento

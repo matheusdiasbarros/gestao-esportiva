@@ -2,7 +2,7 @@
 
 Documento de Fase 0. Define o que será construído antes do primeiro lançamento real.
 
-Última atualização: 2026-08-20
+Última atualização: 2026-08-28
 
 ---
 
@@ -16,6 +16,7 @@ Documento de Fase 0. Define o que será construído antes do primeiro lançament
 | 4 | Monetização (hipótese) | **Assinatura paga pelo profissional** |
 | 5 | Idioma | Código, tabelas e colunas em **inglês**; produto, docs e commits em **pt-BR** |
 | 6 | Tenancy | **Banco único**, profissional como entidade — sem isolamento multi-tenant |
+| 7 | **Equipe entra no MVP** — decidido em 2026-08-28 | O profissional pode ter professores dando aula por ele. **Sem entidade nova acima do profissional**: o clube é o cadastro do dono, e a decisão 6 continua valendo intacta |
 
 ## Princípio de recorte
 
@@ -24,6 +25,12 @@ A ficha de Rodrigo diz "mistura de individual, dupla e turma" — por isso turma
 menor produto, e não do próximo: sem ela, ele mantém a planilha para uma parte da agenda.
 Nada entra por ser interessante; entra por ser necessário para ele parar de usar o WhatsApp
 como sistema de agenda.
+
+**O princípio ganhou um segundo nome em 2026-08-28**, e a régua continua a mesma: o MVP é
+também o menor produto em que **Sérgio apaga a lousa da recepção** (persona §2). O que fez
+equipe entrar não foi "clube é um mercado maior" — foi que, sem ela, o Sérgio mantém a planilha
+por inteiro, exatamente como o Rodrigo manteria sem turmas. **Nada de equipe aparece para quem
+não tem equipe:** o autônomo não vê tela nova, não cadastra quadra e não é travado por nenhuma.
 
 ---
 
@@ -46,12 +53,20 @@ como sistema de agenda.
 - [ ] Ficha com contato, objetivos e observações privadas
 - [ ] Status do vínculo (ativo, pausado, encerrado)
 
+### Equipe — o profissional com professores dando aula por ele
+- [ ] Convidar professor por e-mail; quem aceita sem conta **nasce profissional completo**
+- [ ] Dois papéis fixos — dono e membro da equipe. **Sem tela de configuração de permissão**
+- [ ] Associar fichas a professores; um aluno pode ter mais de um
+- [ ] O professor vê e gerencia **só os alunos que atende**, e **nada** de financeiro
+- [ ] Quadras, salas e campos como espaços dentro dos locais que já existem
+- [ ] Sair da equipe pelos dois lados, preservando o histórico de quem deu as aulas
+
 ### Agenda — o núcleo
 - [ ] Disponibilidade semanal por local
 - [ ] Bloqueios e exceções
 - [ ] Aula individual e em dupla
 - [ ] Recorrência
-- [ ] Prevenção de conflito de horário
+- [ ] Prevenção de conflito de horário — **duas travas**: por professor e por espaço
 - [ ] Cancelamento e **remarcação**
 - [ ] Registro de presença, falta e aula realizada
 
@@ -107,6 +122,10 @@ como sistema de agenda.
 | Split de pagamento, KYC, nota fiscal | Fase 9 completa |
 | **Lista de espera de turma** (Epic 8.3) | logo após o MVP |
 | Importação de alunos por CSV | quando alguém pedir |
+| Terceiro papel de equipe (coordenador, recepcionista) | quando um dono pedir — `../domain/staff.md` §12 |
+| Repasse, comissão e split para o professor | o dinheiro é do dono, e o acerto acontece fora da plataforma |
+| Escala, ponto e folha | nunca, sem decisão explícita: é sistema de RH, não de aula |
+| Organização com CNPJ, sócios e sucessão | quando existir negócio que precise sobreviver à troca do dono |
 
 **Nota sobre a Fase 4:** o MVP precisa saber *onde* a aula acontece, não *quão perto* o
 profissional está de alguém. Localização vira campo de endereço dentro do cadastro de locais.
@@ -190,6 +209,13 @@ O MVP terá funcionado se, após 8 semanas de uso real:
 A segunda métrica é a que importa de verdade. Se o profissional registra só metade das aulas,
 ele está mantendo o WhatsApp em paralelo — e nesse caso o produto não substituiu nada.
 
+> **Pergunta aberta desde 2026-08-28, e ela é do dono do produto:** um clube com 6 professores
+> conta como **1** profissional ou como **6**? A tabela acima foi escrita quando só existia o
+> autônomo. Pela primeira leitura ele conta como 1 — o que subestima o uso — e pela segunda como
+> 6, o que infla o alvo com gente que não escolheu o produto nem paga por ele. **Minha
+> inclinação:** contar **negócios ativos** (donos com aula registrada na semana), e acompanhar
+> "professores ativos" como número separado, sem alvo. Não decidi.
+
 ---
 
 ## Fases que compõem o MVP
@@ -201,7 +227,8 @@ ele está mantendo o WhatsApp em paralelo — e nesse caso o produto não substi
 | 3 — Perfil profissional | reduzida | sem mídia elaborada, sem perfil público/SEO; **absorve locais como endereço** |
 | 4 — Localização e PostGIS | **não** | movida para junto da Fase 12 |
 | 5 — Gestão de alunos | integral | |
-| 6 — Agenda | integral | núcleo do produto |
+| **5.5 — Equipe** | integral | **acrescentada em 2026-08-28.** Adia o MVP, e foi aceito. O meio número evita renumerar catorze fases |
+| 6 — Agenda | integral | núcleo do produto — **a Fase 5.5 muda o modelo daqui**: `teacher_id`, `space_id` e duas travas |
 | 7 — Pacotes e créditos | integral | núcleo do produto |
 | 8 — Turmas | reduzida | **P1 resolvida: entram.** Sem lista de espera (Epic 8.3) |
 | 9 — Financeiro | parcial | PIX e baixa manual; sem split, KYC ou NF |

@@ -6,13 +6,13 @@ Vocabulário único do projeto. Produto e interface em **pt-BR**; código, tabel
 Regra: se um termo aparece aqui, é assim que ele se chama — na conversa, no documento, na
 tela e no código. Sinônimo novo para conceito existente é bug de vocabulário.
 
-Última atualização: 2026-08-20
+Última atualização: 2026-08-28
 
 ---
 
 ## Termos ambíguos — leia antes
 
-Quatro palavras do português significam mais de uma coisa neste domínio. Confundi-las gera
+Cinco palavras do português significam mais de uma coisa neste domínio. Confundi-las gera
 modelagem errada.
 
 ### "Aula"
@@ -48,6 +48,27 @@ profissional mantém sobre alguém, então o vínculo já é a existência da fi
 deste glossário; ele foi removido junto com a tabela que nunca chegou a existir. Razão em
 [`iam.md`](iam.md).
 
+> **"Vínculo" é do aluno, e de mais ninguém.** A relação de equipe entre dois profissionais
+> **não** se chama vínculo — chama-se **participação** (`staff_members.status`). O desenho da
+> Fase 5.5 proibiu a palavra e a usou seis vezes na sequência; se ela aparecer num documento ou
+> num nome de variável falando de equipe, é bug de vocabulário, não estilo.
+
+### "Professor"
+
+Três coisas diferentes, desde a Fase 5.5. Antes dela só existia uma, e por isso a palavra
+circulou solta em `students.md`.
+
+| Quando se diz "professor" | O que é | Código |
+| --- | --- | --- |
+| o profissional dono do negócio | a entidade | `Professional` |
+| quem dá aula **por** outro profissional | a relação de equipe | `StaffMember` |
+| quem atende aquela ficha, ou deu aquela aula | um papel numa relação | `student_teachers.professional_id` · `sessions.teacher_id` |
+
+Os três não coincidem: o dono pode ser professor de uma ficha sem ser membro de nada, e um
+membro pode não ser professor de ficha nenhuma. **Em código, `teacher` é sempre o terceiro
+sentido.** Não existe tabela `teachers`, e não deve existir — seria um quarto sinônimo de
+`professionals`.
+
 ### "Sessão"
 
 | Sentido em pt-BR | Vale neste projeto? | O que usar |
@@ -78,6 +99,27 @@ Detalhamento completo do modelo em [`iam.md`](iam.md).
 A mesma pessoa é aluna de dois profissionais tendo **duas fichas** que apontam para **uma
 conta**. Rodrigo nunca sabe que Ana existe.
 
+## Equipe
+
+Detalhamento completo em [`staff.md`](staff.md).
+
+| pt-BR | Código | Definição |
+| --- | --- | --- |
+| Equipe | `staff` | As pessoas que dão aula por um profissional. **Nunca `team`** — um clube vai querer *equipe de competição* algum dia, e a palavra precisa estar livre |
+| Membro da equipe | `StaffMember` | O profissional que dá aula por outro. **Não é papel novo**: ele já é profissional, com conta e carteira próprias. Estar na equipe de alguém não cria coluna nenhuma |
+| Professor do aluno | `StudentTeacher` | Quem atende aquela ficha. Uma ficha pode ter vários (E7), e um deles pode ser o próprio dono |
+| Participação | `staff_members.status` | O estado da relação de equipe: `ACTIVE` ou `ENDED`. **Nunca chamada de "vínculo"** — ver *Termos ambíguos* |
+| Convite de equipe | `StaffInvite` | Token de uso único que cria a participação. **Nada existe antes do aceite**: ninguém entra numa equipe à força |
+| Espaço | `Space` | Quadra, sala ou campo. Filho de um `Location`, **sem endereço próprio** — a sede já tem o dele |
+
+**Não existe entidade "clube".** O clube é o cadastro do profissional que tem equipe, e o chefe
+não ganha nome novo: ele é o **dono**, a mesma palavra que a regra de propriedade usa desde a
+Fase 2 (`iam.md` §5).
+
+**Palavras proibidas nesta área:** *funcionário*, *contratado*, *demitir*, *pedir demissão* — o
+produto não nomeia como emprego uma relação trabalhista que ele não conhece (`staff.md` §3.2).
+Também *chefe* (é **dono**) e *sede* (é **local**).
+
 ## Tokens de acesso
 
 | pt-BR | Código | Definição |
@@ -93,7 +135,7 @@ Nunca chamar nada disto de "sessão" — ver *Termos ambíguos*.
 | pt-BR | Código | Definição |
 | --- | --- | --- |
 | Modalidade | `Sport` | Esporte ou atividade oferecida. Ex.: beach tennis, natação, dança. Linha do catálogo, compartilhada — não pertence a nenhum profissional |
-| Local | `Location` | Onde a aula acontece. Um profissional pode ter vários |
+| Local | `Location` | Onde a aula acontece, com endereço. Um profissional pode ter vários. Subdivide-se em **espaços** — ver *Equipe* |
 | Perfil | `ProfessionalProfile` | Bio, credenciais e foto. **Não é `Professional`**, que é a âncora de identidade — ver ADR-005 |
 | Catálogo de modalidades | `sports` com `status = APPROVED` | O conjunto curado. Não é tabela separada |
 | Modalidade pendente | `Sport` com `status = PENDING` | Digitada pelo profissional porque não estava no catálogo. Funciona igual, para ele |
