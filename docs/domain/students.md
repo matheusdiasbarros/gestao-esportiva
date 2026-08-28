@@ -481,8 +481,8 @@ nesta fase:
 | Mitigação | Detalhe |
 | --- | --- |
 | Não existe rota de consulta livre "este e-mail tem conta?" | o marcador é calculado **só** sobre fichas que já existem na carteira |
-| Teto de fichas por profissional: **500** **(proposta)** | folga larguíssima sobre a persona (25 a 40). Enumeração em massa esbarra nele |
-| Limite de tentativas na criação de ficha | mesma família do que já existe em `rate-limit.ts` |
+| Teto de fichas por profissional: **500** ✅ implementado | folga larguíssima sobre a persona (25 a 40). Enumeração em massa esbarra nele. *Foi para 1000 por descuido no Epic 5.1 e voltou para 500 em 2026-08-28 — dobrar o teto enfraquecia pela metade a mitigação que esta linha descreve* |
+| Limite de tentativas na criação de ficha | ⚠️ **não implementado.** `POST /students` só tem o teto global de 120/min por IP, que não é uma mitigação deste oráculo — é o teto de tudo. Com o cap de 500, uma conta testa até 500 endereços; um teto por hora encareceria isso. **Pendente para a revisão de segurança da fase**, que é quem escolhe o número |
 | A plataforma já revela existência em dois pontos por decisão consciente | o 409 do cadastro de profissional (ADR-004 §9) e a troca de e-mail (`iam.md` §9.5). Isto não abre uma porta nova, mas **é a mais barata das três** — e por isso é a que precisa de teto |
 
 ### 9.2 Fichas duplicadas — decisão D6: **reposicionada**

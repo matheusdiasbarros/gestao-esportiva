@@ -15,6 +15,7 @@ import { Student } from '../entities/student.entity';
 import { User } from '../entities/user.entity';
 import { AccessService } from './access.service';
 import { fichaComoDono, type MarcadoresDaFicha } from './ficha-em-linha';
+import { menorPrecisaDeResponsavel } from './maioridade';
 import { mudancaDeVinculo } from './vinculo';
 
 /** Os estados que cada filtro da lista mostra. `CURRENT` é o padrão — `students.md` §7.2. */
@@ -103,6 +104,7 @@ export class StudentsService {
 
     const accessHolder = dto.accessHolder ?? AccessHolder.Self;
     const guardianName = this.responsavelCoerente(accessHolder, dto.guardianName ?? null);
+    this.idadeCoerente(dto.birthDate || null, accessHolder);
 
     const ficha = this.students.create({
       id: uuidv7(),
@@ -146,6 +148,14 @@ export class StudentsService {
     const guardianName = this.responsavelCoerente(
       accessHolder,
       enviouResponsavel ? dto.guardianName || null : atual.guardianName,
+    );
+    // Contra o resultado da edição, e não contra o que veio no corpo: trocar **só** a data de
+    // nascimento de uma ficha `SELF`, ou trocar **só** o tipo de acesso de uma ficha com data,
+    // chegam aqui com metade da informação em cada lado. Conferir a combinação final é o que
+    // impede a contradição entrar pela porta que ninguém olhou.
+    this.idadeCoerente(
+      dto.birthDate !== undefined ? dto.birthDate || null : atual.birthDate,
+      accessHolder,
     );
 
     await this.students.update(
@@ -212,6 +222,46 @@ export class StudentsService {
         );
       }
     });
+
+    return this.ver(userId, studentId);
+  }
+
+  /**
+   * Passar o acesso do responsável para o próprio aluno — `students.md` §8.3.
+   *
+   * **A ação existe porque nada acontece sozinho no aniversário de 18 anos.** Virar `SELF`
+   * automaticamente tiraria o acesso do pai que paga sem ninguém pedir, e é o arranjo familiar
+   * mais comum. Não fazer nada deixaria o pai com o dado de um adulto, que é exposição real. O
+   * produto escolheu o meio: **avisa e oferece**, e quem decide é o profissional, com o aluno do
+   * lado.
+   *
+   * Três gravações, e a terceira é a que importa: `user_id` **desliga**. A ficha fica pronta
+   * para um convite novo, agora para o e-mail do próprio aluno — e o acesso do responsável
+   * termina na hora, que é o objetivo. Não há caminho de volta por aqui: reverter é o
+   * profissional marcar `GUARDIAN` de novo, pela edição normal.
+   */
+  async transferirAcesso(userId: string, studentId: string): Promise<StudentRow> {
+    const ficha = await this.access.fichaComoDono(userId, studentId);
+
+    if (ficha.status === StudentStatus.Ended) {
+      throw this.recusar(
+        'accessHolder',
+        'Este vínculo está encerrado. Reative o aluno antes de mudar o acesso.',
+      );
+    }
+
+    if (ficha.accessHolder !== AccessHolder.Guardian) {
+      throw this.recusar('accessHolder', 'O acesso desta ficha já é do próprio aluno.');
+    }
+
+    // A mesma trava da gravação, e por isso ela mora numa função só: transferir o acesso de um
+    // menor **provado pela data** criaria exatamente o estado que a decisão D9 proíbe.
+    this.idadeCoerente(ficha.birthDate, AccessHolder.Self);
+
+    await this.students.update(
+      { id: ficha.id },
+      { accessHolder: AccessHolder.Self, guardianName: null, userId: null },
+    );
 
     return this.ver(userId, studentId);
   }
@@ -350,6 +400,23 @@ export class StudentsService {
       return `Este aluno já está ${NOME_DO_ESTADO[atual]}. Recarregue a lista.`;
     }
     return 'Um vínculo encerrado só volta como ativo. Reative primeiro, depois pause.';
+  }
+
+  /**
+   * A data de nascimento e o tipo de acesso combinam?
+   *
+   * A regra é a decisão D9 (`students.md` §8.1): abaixo de 18 não existe conta na plataforma,
+   * então quem acessa é o responsável. **Não é um `CHECK` no banco** porque depende da data de
+   * hoje — a linha viraria inválida sozinha no aniversário, sem ninguém gravar nada, e o banco
+   * passaria a recusar uma correção de telefone por uma restrição que ninguém violou.
+   */
+  private idadeCoerente(birthDate: string | null, accessHolder: AccessHolder): void {
+    if (menorPrecisaDeResponsavel(birthDate, accessHolder)) {
+      throw this.recusar(
+        'accessHolder',
+        'Menor de idade não tem conta na plataforma. Marque que quem acessa é um responsável.',
+      );
+    }
   }
 
   private recusar(field: string, message: string): UnprocessableEntityException {

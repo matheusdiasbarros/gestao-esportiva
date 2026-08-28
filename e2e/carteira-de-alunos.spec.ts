@@ -180,6 +180,54 @@ test('convidar é oferecido, e a tela diz o que falta para poder', async () => {
   await expect(ficha.getByText(/confirme seu e-mail/i)).toBeVisible();
 });
 
+test('a ficha de menor com acesso próprio é recusada, apontando a caixa', async () => {
+  await painel.getByRole('button', { name: 'Novo aluno' }).click();
+  await painel.getByLabel('Nome completo').fill('Menor sem responsável');
+  await painel.getByLabel('Data de nascimento').fill('2014-05-02');
+  await painel.getByRole('button', { name: 'Cadastrar aluno' }).click();
+
+  // A recusa chega no campo `accessHolder`, que na tela é a caixa "quem acessa é um responsável".
+  // Sem uma linha de erro ali, a mensagem não teria onde aparecer e o formulário pareceria não
+  // fazer nada.
+  await expect(alerta(painel)).toContainText(/Menor de idade não tem conta/i);
+  await expect(painel.getByLabel('Nome completo')).toHaveValue('Menor sem responsável');
+});
+
+test('o aluno que faz 18 anos ganha um aviso, e a transferência é um clique consciente', async () => {
+  // Fez 18 ontem, em qualquer dia que a suíte rode — uma data fixa passaria a mentir.
+  const ontem = new Date();
+  ontem.setUTCFullYear(ontem.getUTCFullYear() - 18);
+  ontem.setUTCDate(ontem.getUTCDate() - 1);
+
+  await painel.getByLabel('Nome completo').fill('Fez 18 ontem');
+  await painel.getByLabel('Data de nascimento').fill(ontem.toISOString().slice(0, 10));
+  await painel.getByLabel('Quem acessa é um responsável').check();
+  await painel.getByLabel('Nome do responsável').fill('Mãe do Aluno');
+  await painel.getByRole('button', { name: 'Cadastrar aluno' }).click();
+
+  const ficha = painel.getByRole('listitem').filter({ hasText: 'Fez 18 ontem' });
+  // O aviso é derivado da data a cada leitura. Nada aconteceu sozinho: o acesso continua sendo
+  // do responsável até alguém decidir o contrário.
+  await expect(ficha.getByText(/já tem 18 anos/i)).toBeVisible();
+  await expect(ficha.getByText('Responsável: Mãe do Aluno')).toBeVisible();
+
+  // A confirmação precisa dizer a consequência que não se vê: o acesso do responsável acaba na
+  // hora. Recusar não pode mudar nada.
+  painel.once('dialog', (dialogo) => {
+    expect(dialogo.message()).toMatch(/Mãe do Aluno perde o acesso na hora/i);
+    void dialogo.dismiss();
+  });
+  await ficha.getByRole('button', { name: 'Passar o acesso para ele' }).click();
+  await expect(ficha.getByText('Responsável: Mãe do Aluno')).toBeVisible();
+
+  painel.once('dialog', (dialogo) => void dialogo.accept());
+  await ficha.getByRole('button', { name: 'Passar o acesso para ele' }).click();
+
+  // O aviso apaga porque o motivo dele deixou de existir, e o responsável some da ficha.
+  await expect(ficha.getByText(/já tem 18 anos/i)).toHaveCount(0);
+  await expect(ficha.getByText(/^Responsável:/)).toHaveCount(0);
+});
+
 test('apagar tira da lista, e a confirmação é obrigatória', async () => {
   const ficha = painel.getByRole('listitem').filter({ hasText: 'Lucas, 12 anos' });
 

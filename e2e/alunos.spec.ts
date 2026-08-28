@@ -23,6 +23,7 @@ const API = 'http://localhost:3333/api/v1';
 const CAMPOS_DA_FICHA = [
   'accessHolder',
   'accountFound',
+  'adultUnderGuardian',
   'birthDate',
   'email',
   'endedAt',
@@ -68,6 +69,7 @@ interface Ficha {
   privateNotes: string | null;
   hasAccount: boolean;
   accountFound: boolean;
+  adultUnderGuardian: boolean;
   possibleDuplicate: boolean;
   invite: { kind: string; expiresAt: string } | null;
 }
@@ -202,6 +204,8 @@ test.describe('Menor de idade e responsável', () => {
     expect(ficha.guardianName).toBe('Carlos Souza');
     // Menor não tem conta (D9). Quem vai acessar é o responsável, e só depois do convite.
     expect(ficha.hasAccount).toBe(false);
+    // Ele tem 12: o aviso dos 18 anos não pode acender agora.
+    expect(ficha.adultUnderGuardian).toBe(false);
   });
 });
 
@@ -244,6 +248,130 @@ test.describe('A lista da carteira', () => {
     const marcadas = (await carteira('?busca=Ana')).filter((f) => f.possibleDuplicate);
     // Só detecção. **Mesclar é da Fase 7**, quando existir saldo para decidir qual sobrevive.
     expect(marcadas).toHaveLength(2);
+  });
+});
+
+/**
+ * A idade e a ficha — `students.md` §8.
+ *
+ * **Depois da lista, e não junto do resto de "menor de idade", por um motivo prático:** os
+ * testes daqui criam fichas, e a asserção da lista acima é sobre o conjunto exato de nomes.
+ * Uma ficha a mais criada antes dela quebraria um teste que não tem nada a ver com idade.
+ */
+test.describe('A idade e quem acessa a ficha', () => {
+  test('a data que prova menoridade recusa acesso próprio, na criação e na edição', async () => {
+    // §8.1: abaixo de 18 não existe conta na plataforma, então quem acessa é o responsável. Sem
+    // esta trava a ficha se contradiz — diria "nasceu em 2014" e "o próprio aluno acessa".
+    const naCriacao = await professor.request.post(`${API}/students`, {
+      data: { fullName: 'Menor com acesso próprio', birthDate: '2014-05-02' },
+    });
+    expect(naCriacao.status()).toBe(422);
+    expect(await naCriacao.text()).toContain('accessHolder');
+
+    // E pela porta lateral: uma ficha de adulto que ganha data de nascimento de menor. É o
+    // caminho que uma checagem feita só sobre o corpo da requisição deixaria passar, porque o
+    // tipo de acesso não vem nele.
+    const adulta = await criar({ fullName: 'Vai ganhar data de menor' });
+    const naEdicao = await professor.request.patch(`${API}/students/${adulta.id}`, {
+      data: { birthDate: '2014-05-02' },
+    });
+    expect(naEdicao.status()).toBe(422);
+
+    // E a outra metade: ficha de menor com responsável que tenta virar acesso próprio.
+    const doMenor = await criar({
+      fullName: 'Menor que tentou virar adulto',
+      birthDate: '2014-05-02',
+      accessHolder: 'GUARDIAN',
+      guardianName: 'Carlos Souza',
+    });
+    const viraSelf = await professor.request.patch(`${API}/students/${doMenor.id}`, {
+      data: { accessHolder: 'SELF', guardianName: null },
+    });
+    expect(viraSelf.status()).toBe(422);
+  });
+
+  test('sem data de nascimento, a regra de idade não fala nada', async () => {
+    // Limite conhecido e aceito. O campo é opcional de propósito — o professor não sabe a data
+    // do rapaz que joga às terças, e exigir travaria o cadastro no campo mais chato dele.
+    const ficha = await criar({ fullName: 'Idade desconhecida' });
+    expect(ficha.accessHolder).toBe('SELF');
+    expect(ficha.adultUnderGuardian).toBe(false);
+  });
+});
+
+/**
+ * O aniversário de 18 anos — `students.md` §8.3.
+ *
+ * **Nada acontece sozinho, e é a decisão inteira.** Virar acesso próprio automaticamente tiraria
+ * do pai que paga o acesso à ficha, sem ninguém pedir — e é o arranjo familiar mais comum. Não
+ * fazer nada deixaria o pai com o dado de um adulto, que é exposição real. O produto avisa e
+ * oferece a ação.
+ */
+test.describe('Transferir o acesso aos 18', () => {
+  /** Fez 18 anos ontem, em qualquer dia que a suíte rode. */
+  const RECEM_MAIOR = (() => {
+    const d = new Date();
+    d.setUTCFullYear(d.getUTCFullYear() - 18);
+    d.setUTCDate(d.getUTCDate() - 1);
+    return d.toISOString().slice(0, 10);
+  })();
+
+  test('a ficha do recém-maior acende o aviso, e a de quem ainda é menor não', async () => {
+    const maior = await criar({
+      fullName: 'Acabou de fazer 18',
+      birthDate: RECEM_MAIOR,
+      accessHolder: 'GUARDIAN',
+      guardianName: 'Mãe do Aluno',
+    });
+    expect(maior.adultUnderGuardian).toBe(true);
+
+    // O aviso é **derivado**, nunca guardado: nenhuma coluna diz "já avisei". Uma coluna assim
+    // discordaria da data no dia em que alguém corrigisse o nascimento.
+    const relida = (await (
+      await professor.request.get(`${API}/students/${maior.id}`)
+    ).json()) as Ficha;
+    expect(relida.adultUnderGuardian).toBe(true);
+  });
+
+  test('transferir vira acesso próprio, limpa o responsável e **desliga a conta**', async () => {
+    const ficha = exigir(
+      (await carteira()).find((f) => f.fullName === 'Acabou de fazer 18'),
+      'Acabou de fazer 18',
+    );
+
+    const resposta = await professor.request.post(`${API}/students/${ficha.id}/transfer-access`);
+    expect(resposta.status(), await resposta.text()).toBe(200);
+
+    const depois = (await resposta.json()) as Ficha;
+    expect(depois.accessHolder).toBe('SELF');
+    expect(depois.guardianName).toBeNull();
+    // O objetivo da ação: o acesso do responsável **termina na hora**. A ficha fica pronta para
+    // um convite novo, agora para o e-mail do próprio aluno.
+    expect(depois.hasAccount).toBe(false);
+    // E o aviso apaga, porque o motivo dele deixou de existir.
+    expect(depois.adultUnderGuardian).toBe(false);
+  });
+
+  test('transferir de novo é recusado, e ficha de menor nunca transfere', async () => {
+    const jaTransferida = exigir(
+      (await carteira()).find((f) => f.fullName === 'Acabou de fazer 18'),
+      'Acabou de fazer 18',
+    );
+    const denovo = await professor.request.post(
+      `${API}/students/${jaTransferida.id}/transfer-access`,
+    );
+    expect(denovo.status()).toBe(422);
+    expect(await denovo.text()).toContain('já é do próprio aluno');
+
+    // A trava de idade vale aqui também, e é o mesmo código: transferir o acesso de um menor
+    // **provado pela data** criaria exatamente o estado que a decisão D9 proíbe.
+    const doMenor = exigir(
+      (await carteira()).find((f) => f.fullName === 'Lucas, 12 anos'),
+      'Lucas, 12 anos',
+    );
+    const doZe = await professor.request.post(`${API}/students/${doMenor.id}/transfer-access`);
+    expect(doZe.status()).toBe(422);
+    expect(await doZe.text()).toContain('Menor de idade');
   });
 });
 

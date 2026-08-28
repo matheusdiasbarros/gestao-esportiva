@@ -33,6 +33,7 @@ describe('fichaComoDono', () => {
     expect(Object.keys(fichaComoDono(completa)).sort()).toEqual([
       'accessHolder',
       'accountFound',
+      'adultUnderGuardian',
       'birthDate',
       'email',
       'endedAt',
@@ -81,6 +82,37 @@ describe('fichaComoDono', () => {
   it('ficha sem conta é o caso normal, não pendência', () => {
     const semConta = fichaComoDono({ ...completa, userId: null });
     expect(semConta.hasAccount).toBe(false);
+  });
+
+  describe('o aviso dos 18 anos', () => {
+    const menor = {
+      ...completa,
+      birthDate: '2008-03-12',
+      accessHolder: AccessHolder.Guardian,
+      guardianName: 'Carlos Souza',
+    };
+
+    it('acende quando o aluno já é maior e o acesso continua do responsável', () => {
+      expect(fichaComoDono(menor, undefined, new Date('2026-03-12T00:00:00Z'))).toMatchObject({
+        adultUnderGuardian: true,
+      });
+    });
+
+    it('não acende na véspera do aniversário', () => {
+      // A data é o único dado, e ela muda de resposta sozinha. É por isso que o aviso é
+      // calculado a cada leitura, e não guardado numa coluna que ninguém recalcularia.
+      expect(fichaComoDono(menor, undefined, new Date('2026-03-11T12:00:00Z'))).toMatchObject({
+        adultUnderGuardian: false,
+      });
+    });
+
+    it('não depende dos marcadores — vem da própria linha', () => {
+      // Diferente de `accountFound` e `possibleDuplicate`, que dependem de consulta e por isso
+      // chegam desligados quando ninguém as fez. Este não pode chegar errado por omissão.
+      const semMarcadores = fichaComoDono(menor, undefined, new Date('2026-06-01T00:00:00Z'));
+      expect(semMarcadores.accountFound).toBe(false);
+      expect(semMarcadores.adultUnderGuardian).toBe(true);
+    });
   });
 
   it('os marcadores vêm desligados quando ninguém os calculou', () => {

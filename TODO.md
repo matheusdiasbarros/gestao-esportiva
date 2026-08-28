@@ -982,6 +982,14 @@ CRUD de alunos, convite/vínculo aluno↔profissional e ficha do aluno na web.
 profissional cadastra aluno que não consentiu ·
 `architect` ○ · `qa` ○
 
+> **Para a revisão de segurança, achado durante o Epic 5.3.** O `students.md` §9.1 lista quatro
+> mitigações do oráculo de existência de e-mail — o marcador "já tem conta" diz, por ficha, se
+> aquele endereço tem conta na plataforma. Três estão de pé; **a quarta não foi implementada:**
+> `POST /students` não tem teto próprio, só o global de 120/min por IP, que é o teto de tudo e
+> não uma mitigação disto. O cap de 500 fichas limita o oráculo a 500 endereços por conta. Não
+> inventei um número aqui de propósito: escolher o teto é decisão da revisão, que é quem pesa o
+> professor cadastrando quarenta alunos numa tarde contra o custo de varrer endereços.
+
 ### Épicos e tarefas
 
 - [x] **Epic 5.0 — O que precisa vir antes** ✅ 2026-08-27 *(descoberto na abertura)*
@@ -1037,14 +1045,20 @@ profissional cadastra aluno que não consentiu ·
         implementação fazia o contrário. A implementação está certa — pausado é aluno atual, e
         esconder quem o professor continua agendando é obrigá-lo a trocar de filtro. Texto
         corrigido no mesmo commit
-- [ ] **Epic 5.3 — Ficha do aluno**
-  - [ ] Dados de contato e informações básicas
-  - [ ] Observações privadas do profissional, com o texto *"escreva o que você mostraria se ela
+- [x] **Epic 5.3 — Ficha do aluno** ✅ 2026-08-28
+  - [x] Dados de contato e informações básicas — entregues no Epic 5.1
+  - [x] Observações privadas do profissional, com o texto *"escreva o que você mostraria se ela
         pedisse"* ao lado — o campo **nunca** sai em resposta de API que o aluno ou o
-        administrador recebem, e isso é teste de API, não de tela
-  - [ ] Objetivos ~~e anamnese/restrições~~ — **saúde ficou fora do MVP** (decisão O1)
-  - [ ] Marcar responsável de menor e transferir o acesso aos 18 — nada muda sozinho
-  - [ ] Histórico (preenchido pelas fases 6–9)
+        administrador recebem, e isso é teste de API, não de tela. A metade do **aluno** é
+        `ficha-em-linha.spec.ts` (tipo próprio, não campo escondido); a do **administrador**
+        entrou agora, em `autorizacao.spec.ts`: 403 na carteira, e a listagem de contas conferida
+        contra o texto inteiro da resposta
+  - [x] Objetivos ~~e anamnese/restrições~~ — **saúde ficou fora do MVP** (decisão O1)
+  - [x] Marcar responsável de menor e transferir o acesso aos 18 — **nada muda sozinho**.
+        Duas regras de idade, as duas em `maioridade.ts` e nenhuma no banco: elas dependem da
+        data de hoje, e um `CHECK` com `now()` viraria falso sozinho no aniversário
+  - [x] Histórico — **nada a fazer aqui.** Ele é preenchido pelas fases 6–9, e não existe tabela
+        nenhuma apontando para `students` ainda
 - [ ] **Epic 5.4 — Listagem e organização**
   - [ ] Busca e filtro por estado do vínculo — ~~tags~~ ficam para quando alguém pedir: busca
         por nome mais filtro por estado dão conta de 40 alunos, e tag é um segundo vocabulário
@@ -1161,7 +1175,7 @@ o administrador, ou o profissional errado.
   na resposta, e o teste cria e descarta a própria ficha. **DT-005 fechado em 2026-08-27.**
 
 > **Orçamento:** ~~81~~ **87 dos 100 cadastros por hora** (DT-010) e 18 dos 20 envios de foto
-> (DT-011), medido em 2026-08-27 com 173 testes. Faltam **3** para o gatilho. Se passar de ~90, a
+> (DT-011), medido em 2026-08-28 com 182 testes. Faltam **3** para o gatilho. Se passar de ~90, a
 > saída é a suíte zerar os contadores no `globalSetup` — não subir o teto.
 
 ### Tecnologias

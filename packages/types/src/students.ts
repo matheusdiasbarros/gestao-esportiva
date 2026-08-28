@@ -61,6 +61,17 @@ export interface StudentRow {
    * duas recebe uma regra nova.
    */
   invite: StandingInvite | null;
+  /**
+   * O aluno já completou 18 anos, e o acesso continua sendo do responsável — `students.md` §8.3.
+   *
+   * **Derivado da data, nunca guardado.** Uma coluna "já avisei" discordaria do dado no dia em
+   * que alguém corrigisse o nascimento, e ninguém recalcularia as linhas antigas.
+   *
+   * **Nada muda sozinho.** Virar `SELF` no aniversário tiraria o acesso do pai que paga sem
+   * ninguém pedir, quebrando o arranjo familiar mais comum. O produto avisa e oferece a ação.
+   * Sem `birthDate` nunca há aviso: o campo é opcional de propósito.
+   */
+  adultUnderGuardian: boolean;
 }
 
 /**
@@ -112,11 +123,18 @@ export const MAX_PRIVATE_NOTES_LENGTH = 4000;
 /**
  * Teto de fichas por profissional.
  *
- * Rede contra automação, não limite de mercado: o autônomo das personas tem dezenas de alunos, e
- * quem passar de mil está usando a plataforma para outra coisa. O número existe para que um laço
- * acidental — ou um importador mal escrito — não encha o banco antes de alguém perceber.
+ * Rede contra automação, não limite de mercado: o autônomo das personas tem entre 25 e 40 alunos,
+ * e quem passar de quinhentos está usando a plataforma para outra coisa.
+ *
+ * **O número é uma mitigação de segurança, e não só uma rede contra laço acidental.** O marcador
+ * "já tem conta" é um oráculo de existência de e-mail: cada ficha criada testa um endereço. Este
+ * teto é o que limita quantos endereços uma conta consegue testar — por isso ele é o **menor**
+ * número que não incomoda ninguém real, e não o maior que o banco aguenta.
+ *
+ * Estava 1000 até 2026-08-28, por descuido meu no Epic 5.1: o `students.md` §9.1 já dizia 500, e
+ * dizia **por quê**. Dobrar o teto enfraqueceu pela metade a mitigação sem que ninguém pedisse.
  */
-export const MAX_STUDENTS_POR_PROFISSIONAL = 1000;
+export const MAX_STUDENTS_POR_PROFISSIONAL = 500;
 
 /**
  * A idade a partir da qual a plataforma trata o aluno como maior.

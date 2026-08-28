@@ -100,6 +100,32 @@ export function Carteira({ emailVerificado }: { emailVerificado: boolean }) {
     }
   }
 
+  async function transferirAcesso(ficha: StudentRow): Promise<void> {
+    // A confirmação diz a consequência que a pessoa não vê: o acesso do responsável **acaba na
+    // hora**. Um pai que acompanhava as aulas do filho perde a tela sem aviso nenhum, e quem
+    // clicou precisa saber disso antes, não depois.
+    if (
+      !globalThis.confirm(
+        `Passar o acesso da ficha de ${ficha.fullName} para ele mesmo? ` +
+          `${ficha.guardianName ?? 'O responsável'} perde o acesso na hora, e você vai precisar ` +
+          'convidar o aluno com o e-mail dele.',
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await apiFetch(`/students/${ficha.id}/transfer-access`, { method: 'POST' });
+      await carregar();
+    } catch (falha) {
+      setErro(
+        falha instanceof ApiError
+          ? (falha.problem.detail ?? 'Não consegui transferir o acesso agora.')
+          : 'Não consegui transferir o acesso agora.',
+      );
+    }
+  }
+
   if (criando || editando) {
     return (
       <section className="rounded-xl border border-(--color-border) bg-(--color-surface-muted) p-6">
@@ -183,6 +209,7 @@ export function Carteira({ emailVerificado }: { emailVerificado: boolean }) {
               aoEditar={() => setEditando(ficha)}
               aoApagar={() => void apagar(ficha)}
               aoMudarEstado={(status) => void mudarEstado(ficha, status)}
+              aoTransferirAcesso={() => void transferirAcesso(ficha)}
             />
           ))}
         </ul>
@@ -197,9 +224,17 @@ interface PropsDaFicha {
   aoEditar: () => void;
   aoApagar: () => void;
   aoMudarEstado: (status: StudentStatus) => void;
+  aoTransferirAcesso: () => void;
 }
 
-function Ficha({ ficha, emailVerificado, aoEditar, aoApagar, aoMudarEstado }: PropsDaFicha) {
+function Ficha({
+  ficha,
+  emailVerificado,
+  aoEditar,
+  aoApagar,
+  aoMudarEstado,
+  aoTransferirAcesso,
+}: PropsDaFicha) {
   const encerrada = ficha.status === StudentStatus.Ended;
 
   return (
@@ -245,6 +280,19 @@ function Ficha({ ficha, emailVerificado, aoEditar, aoApagar, aoMudarEstado }: Pr
         {ficha.hasAccount ? <Etiqueta>Conta ligada</Etiqueta> : null}
         {ficha.possibleDuplicate ? <Etiqueta destaque>Possível duplicata</Etiqueta> : null}
       </div>
+
+      {/* O aviso dos 18 anos (§8.3). **Avisa e oferece** — não decide arranjo de família, e
+          também não finge que não viu. Virar `SELF` sozinho tiraria o acesso do pai que paga sem
+          ninguém pedir; não fazer nada deixaria o pai com o dado de um adulto. */}
+      {ficha.adultUnderGuardian && !encerrada ? (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-(--color-ok) p-3">
+          <p className="text-xs">
+            <strong>{ficha.fullName}</strong> já tem 18 anos. O acesso ainda é de{' '}
+            {ficha.guardianName}.
+          </p>
+          <Acao onClick={aoTransferirAcesso}>Passar o acesso para ele</Acao>
+        </div>
+      ) : null}
 
       {ficha.status === StudentStatus.Paused ? (
         <p className="mt-2 text-xs text-(--color-ink-muted)">

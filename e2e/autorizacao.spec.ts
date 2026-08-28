@@ -96,6 +96,43 @@ test.describe('Contas da plataforma — só o administrador lê', () => {
   });
 });
 
+/**
+ * A célula "administrador" da matriz de `students.md` §10.
+ *
+ * **O administrador da plataforma não é dono de ficha nenhuma, e não vira dono por ser
+ * administrador.** É a decisão mais fácil de erodir do sistema: o papel existe para resolver
+ * suporte — "esta conta consegue entrar?", "este e-mail foi confirmado?" — e a tentação de
+ * "deixa ele ver tudo para ajudar melhor" transformaria uma conta de operação na maior
+ * concentração de dado pessoal do produto, incluindo as observações que o profissional escreveu
+ * achando que ninguém mais leria.
+ */
+test.describe('A carteira de alunos — o administrador não alcança', () => {
+  test('403 na carteira, e nas rotas de item também', async () => {
+    const inventado = '01900000-0000-7000-8000-000000000001';
+
+    // 403 e não 404 na coleção: a área existe para todo mundo e não há identificador em jogo,
+    // então esconder a existência dela não protegeria nada (`iam.md` §7).
+    expect((await comoAdmin.get(`${API}/students`)).status()).toBe(403);
+    expect((await comoAdmin.post(`${API}/students`, { data: { fullName: 'X' } })).status()).toBe(
+      403,
+    );
+    // E nas rotas de item o papel barra antes da propriedade — ele nunca chega a existir a
+    // pergunta "de quem é esta ficha".
+    expect((await comoAdmin.get(`${API}/students/${inventado}`)).status()).toBe(403);
+    expect((await comoAdmin.delete(`${API}/students/${inventado}`)).status()).toBe(403);
+  });
+
+  test('a listagem de contas não traz nada da ficha, nem o nome do aluno', async () => {
+    const resposta = await comoAdmin.get(`${API}/admin/users?tamanho=50`);
+    const bruto = await resposta.text();
+
+    // Contra o texto inteiro, e não campo a campo: pega o dado que vaze dentro de um campo
+    // aninhado que ninguém pensou em conferir. A seed tem uma ficha de menor com responsável e
+    // uma ficha sem conta — se qualquer uma aparecer aqui, é vazamento.
+    expect(bruto).not.toMatch(/privateNotes|guardianName|accessHolder|João Pereira|Sofia Dias/);
+  });
+});
+
 test.describe('Suspender conta — só o administrador escreve', () => {
   test('aluno e profissional recebem 403', async ({ page }) => {
     await cadastrar(page);

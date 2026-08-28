@@ -99,6 +99,24 @@ export class StudentsController {
     return this.alunos.mudarEstado(user.id, id, dto.status);
   }
 
+  /**
+   * **`POST`, e não `PATCH`.** Isto não é "escrever um valor num campo": é uma ação com três
+   * efeitos que só fazem sentido juntos — o acesso vira do próprio aluno, o nome do responsável
+   * é apagado e a conta ligada **desliga**. Expor como campo convidaria alguém a mandar
+   * `accessHolder: SELF` num `PATCH` comum e conseguir metade do efeito.
+   *
+   * Sem corpo, porque não há o que escolher. O destino é sempre o mesmo.
+   */
+  @Post(':id/transfer-access')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Passa o acesso do responsável para o aluno. **Desliga a conta**' })
+  async transferirAcesso(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe({ version: '7' })) id: string,
+  ): Promise<StudentRow> {
+    return this.alunos.transferirAcesso(user.id, id);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Apaga a ficha. A conta do aluno sobrevive — ela nunca foi da ficha' })

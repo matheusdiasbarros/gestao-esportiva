@@ -5,6 +5,7 @@ import type {
   StudentRow,
   StudentStatus,
 } from '@gestao/types';
+import { adultoSobResponsavel } from './maioridade';
 
 /**
  * As **duas** formas de saída da ficha, montadas campo a campo.
@@ -69,6 +70,7 @@ const SEM_MARCADORES: MarcadoresDaFicha = {
 export function fichaComoDono(
   ficha: DadosDaFicha,
   marcadores: MarcadoresDaFicha = SEM_MARCADORES,
+  hoje = new Date(),
 ): StudentRow {
   return {
     id: ficha.id,
@@ -89,6 +91,10 @@ export function fichaComoDono(
     accountFound: marcadores.accountFound,
     possibleDuplicate: marcadores.possibleDuplicate,
     invite: marcadores.invite,
+    // Sai daqui, e não dos `marcadores`: depende só da própria linha, então não há consulta a
+    // esquecer. Um marcador que exige consulta pode chegar desligado de uma rota que não a fez;
+    // este não pode chegar errado, porque a ficha sempre carrega a resposta consigo.
+    adultUnderGuardian: adultoSobResponsavel(ficha.birthDate, ficha.accessHolder, hoje),
   };
 }
 

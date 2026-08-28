@@ -153,6 +153,9 @@ export function FichaForm({ ficha, aoSalvar, aoCancelar }: Props) {
           Menor de idade não tem conta na plataforma. Quem entra pela ficha é o responsável, com a
           conta dele.
         </p>
+        {/* A recusa por idade chega no campo `accessHolder`, e é a caixa acima. Sem esta linha a
+            mensagem não teria onde aparecer, e o formulário pareceria não fazer nada. */}
+        {erros.accessHolder ? <Erro>{erros.accessHolder}</Erro> : null}
 
         {comResponsavel ? (
           <label className="mt-3 flex flex-col gap-1 text-sm">
