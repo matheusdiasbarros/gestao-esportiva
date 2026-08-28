@@ -1246,10 +1246,16 @@ o administrador, ou o profissional errado.
 > para não quebrar a referência "iniciar Fase X", e renumerar catorze fases para caber uma seria
 > estrago desnecessário.
 >
-> O desenho completo, com as dezesseis decisões numeradas (E1 a E16), está em
+> O desenho completo, com as decisões numeradas (E1 a E19), está em
 > [`docs/superpowers/specs/2026-08-28-equipe-design.md`](docs/superpowers/specs/2026-08-28-equipe-design.md).
 > **Este roteiro não repete o porquê de cada decisão — ele executa.** Caso de borda que apareça
 > na implementação se responde lá, não por opinião nova.
+>
+> **A abertura da fase mudou este roteiro**, e não pouco. Os agentes `product` e `architect`
+> foram acionados sem o contexto da conversa em que o desenho nasceu, e acharam contradição no
+> próprio desenho, uma conta errada de pontos de entrada e três defeitos que sairiam de decisões
+> que eu tinha tomado. As decisões **E17, E18 e E19** nasceram daí. O detalhe está na ADR-006 e
+> em `docs/domain/staff.md`.
 
 **Objetivo:**
 Suportar o profissional que tem professores dando aula por ele — o gestor e o clube são a mesma
@@ -1257,9 +1263,9 @@ estrutura. O professor é um profissional completo, com carteira própria, que *
 para outro; e o dono continua sendo o dono de tudo que é do negócio.
 
 **Entregável esperado:**
-O dono convida professores, associa fichas a eles e encerra o vínculo; o professor vê e gerencia
-só os alunos que atende, e nada do financeiro. A agenda da Fase 6 encontra "professor" e
-"espaço" como conceitos prontos.
+O dono convida professores, associa fichas a eles e encerra a participação; o professor vê e
+gerencia só os alunos que atende, e nada do financeiro. A agenda da Fase 6 encontra "professor"
+e "espaço" como conceitos prontos.
 
 **Dependências:** Fases 2, 3 e 5.
 
@@ -1270,31 +1276,50 @@ por duas revisões de segurança —, e dá para prová-la inteira sem a agenda 
 **Ferramentas a instalar nesta fase:** nenhuma. Conferido no mapa de `AI-DEVELOPMENT.md` §6.9.
 
 **Agentes desta fase:**
-`product` ⬤ — as decisões de produto **já foram tomadas** com o dono em 2026-08-28 e estão na
-spec; o agente entra para escrever `docs/domain/staff.md` e as duas personas novas ·
-`architect` ⬤ ADR-006, e a fronteira de `staff` dentro do `iam` ·
+`product` ✅ 2026-08-28 — escreveu `docs/domain/staff.md`, duas personas (Sérgio e Bianca), o
+glossário, e reescreveu `vision.md` e `mvp.md` ·
+`architect` ✅ 2026-08-28 — escreveu a ADR-006 ·
 `backend` ⬤ · `web` ⬤ ·
 `security` ⬤ **revisão obrigatória** — a fase inteira é uma mudança de permissão, que é o
-gatilho literal do agente. Dois alvos nomeados: o convite de equipe como oráculo de conta, e a
-recusa por conflito de professor vazando a agenda de outro negócio ·
-`qa` ⬤ as quinze células "não pode" da matriz
+gatilho literal do agente. **Quatro alvos nomeados**: o convite de equipe como oráculo de conta;
+a recusa por conflito de professor vazando a agenda de outro negócio; o marcador de duplicata
+revelando ficha de colega; e os três tetos que foram calibrados para autônomo e não para clube ·
+`qa` ⬤ os vinte e quatro casos da matriz
+
+> **O que os dois primeiros derrubaram, e vale ler antes de implementar.**
+>
+> O `architect` recusou o argumento que eu tinha dado para as três tabelas ficarem no `iam` —
+> *"o `AccessService` consulta as três"* é **circular**: ele consulta o que está no `iam` porque
+> está no `iam`. Pelo mesmo critério a Fase 6 poria `sessions` lá e a Fase 9 poria `charges`. O
+> critério que vale é o da ADR-006 §1.
+>
+> O `product` achou que **a spec viola a própria regra**: ela proíbe chamar a relação de equipe
+> de "vínculo" e depois usa "vínculo de equipe" seis vezes. E recusou o vocabulário trabalhista
+> que eu tinha usado. Ver E17.
 
 ### Épicos e tarefas
 
-- [ ] **Epic 5.5.1 — O vínculo de equipe**
-  - [ ] **O vocabulário entra no `glossary.md` antes da migration.** "Equipe" vira `staff`, nunca
-        `team` — um clube vai querer *equipe de competição* algum dia, e a palavra precisa estar
-        livre. E **"vínculo" continua significando só a relação do aluno com o profissional**: a
-        relação de equipe não é chamada de vínculo em código nem em documento. Mesma palavra para
-        dois conceitos envenena tanto quanto duas palavras para um
+- [ ] **Epic 5.5.1 — A participação na equipe**
+  - [ ] **O vocabulário entra no `glossary.md` antes da migration** — o `product` já escreveu, e
+        aqui é conferir que o código obedece. Quatro regras: "equipe" vira `staff`, nunca `team`
+        (um clube vai querer *equipe de competição*); **"vínculo" continua sendo só a relação do
+        aluno com o profissional**, e a de equipe chama-se **participação**; **"professor"
+        nomeia três coisas** que não coincidem, então em código `teacher` é só *quem atende a
+        ficha* e **não existe tabela `teachers`**; e `Space` colide com `LocationKind.PublicSpace`
+        — praia e praça são *tipo de local*, quadra e sala são *parte de um local*
   - [ ] Migration com `staff_invites`, `staff_members` e `student_teachers` — revisada à mão e
         revertível. **Podar o que o `migration:generate` apaga**: `CHECK` e índice parcial não
         existem no modelo de entidades (`tech-debt.md`)
-  - [ ] `CHECK` que torna o auto-vínculo não representável: `owner_professional_id <> member_professional_id`
+  - [ ] `CHECK` que torna a auto-participação não representável: `owner_professional_id <> member_professional_id`
   - [ ] Estados `ACTIVE` e `ENDED` numa **função pura**, no padrão de `vinculo.ts` — testada em
         todas as combinações, e provada quebrando
-  - [ ] Ex-membro convidado de novo **reativa a mesma linha**, como a ficha encerrada do aluno
+  - [ ] Ex-membro convidado de novo **reativa a mesma linha**, como a ficha encerrada do aluno.
+        **Guardar as datas de cada entrada e saída** — sem isso o art. 18, VII ("quem teve acesso
+        aos meus dados, e quando") fica sem resposta. Custa uma coluna
   - [ ] `PAUSED` **não existe**, e o motivo fica escrito: quem afasta encerra, quem volta é reativado
+  - [ ] **O token de acesso não ganha claim de equipe** (ADR-006 §3). Se ganhasse, o ex-membro
+        manteria acesso por até 15 minutos, e a promessa de que o acesso some **no mesmo
+        instante** seria falsa. Custo aceito: uma consulta a mais por requisição
 - [ ] **Epic 5.5.2 — Convite e aceite**
   - [ ] `POST /staff/invites` — token de uso único guardado como **hash**, 7 dias, e-mail do dono
         verificado exigido, e o mesmo teto do convite de aluno reaproveitado
@@ -1309,6 +1334,8 @@ recusa por conflito de professor vazando a agenda de outro negócio ·
   - [ ] Revogar convite pendente; no máximo um válido por destinatário e por dono
   - [ ] **Nada existe antes do aceite** — o dono não pode adicionar ninguém à força. Teste que
         afirma a ausência de qualquer rota que crie membro sem token
+  - [ ] Convite para o e-mail do próprio dono: recusa **no aceite**, não na emissão — recusar na
+        emissão diria ao emissor de quem é aquele endereço. Mesma lógica do §7.2
 - [ ] **Epic 5.5.3 — Associação do aluno e a regra de acesso**
   - [ ] `student_teachers`: quais professores atendem cada ficha. **Tabela e não coluna**, porque
         um aluno pode ter vários (E7). O argumento ficou mais forte com a leitura do código em
@@ -1320,30 +1347,68 @@ recusa por conflito de professor vazando a agenda de outro negócio ·
         equipe deste dono com status `ACTIVE`, **e** estou associado a este recurso. Só a
         primeira entregaria a carteira inteira do clube
   - [ ] Não é decorator, pela mesma razão registrada no Epic 2.3: guard não conhece recurso
-  - [ ] **Rever as oito chamadas de `fichaComoDono`, uma a uma.** Hoje "dono" é a única porta de
-        entrada da ficha; abrir uma segunda obriga cada chamada a dizer se aceita o membro — ver
-        e editar aceitam, pausar, encerrar, apagar e transferir acesso não. O próprio comentário
-        do `invite.service.ts` já avisou disto: *"respondida em cada serviço, uma delas um dia
-        responde diferente — e a que responder diferente será a que vaza"*
+  - [ ] **Rever as NOVE portas de entrada da ficha, uma a uma.** Eu tinha escrito oito e contei
+        errado, porque `fichaComoDono` **existe duas vezes com significados diferentes** — método
+        de autorização no `AccessService` e função de formatação em `ficha-em-linha.ts`. São
+        **seis** com esse nome (`students.service` :105, :150, :235, :285, :321 e
+        `invite.service` :360) e **mais três que o grep não acha**, porque resolvem propriedade
+        por `carteiraDe` + `WHERE professional_id`: `StudentsService.listar`,
+        `StudentsService.criar` e `InviteService.listar`. As três invisíveis são justamente as
+        que **devolvem lista** — hoje um membro chamando `GET /invites` receberia a carteira
+        inteira do dono. O comentário do `invite.service.ts` já tinha avisado: *"respondida em
+        cada serviço, uma delas um dia responde diferente — e a que responder diferente será a
+        que vaza"*
+  - [ ] **Dois métodos nomeados, nunca um com bandeira `permitirMembro`.** Booleano em ponto de
+        chamada é invisível na revisão (ADR-006)
+  - [ ] **`StudentsService.marcadores()` vaza por outro caminho** (`students.service.ts:358-366`):
+        varre a carteira inteira do dono para calcular `possibleDuplicate`. Para um membro, isso
+        responde sobre fichas de colegas que ele não pode ver
+  - [ ] **Invariante novo, e é vazamento, não vocabulário:** uma ficha **nunca** pode ser
+        associada ao profissional que é a conta daquela ficha. Sem isso, o dono associa a ficha
+        da Marina à própria Marina quando ela vira membro, e ela lê as observações privadas
+        escritas sobre ela — furando a decisão O2 da Fase 5. Não dá `CHECK`: cruza três tabelas.
+        Regra de aplicação, com teste
   - [ ] A matriz de `iam.md` §6 ganha a coluna do membro, e `iam.md` §7.5 é **reescrita** — "não
         existe permissão granular" deixou de ser verdade
-  - [ ] As quinze células "não pode" com teste. As três que mais importam são de **API**: o
-        membro não alcança ficha que não é dele, não alcança **nada** de financeiro, e o
-        ex-membro não alcança contato
-- [ ] **Epic 5.5.4 — As telas dos dois papéis**
+  - [ ] **Vinte e quatro casos com teste**, não quinze: são catorze recusas e dez restrições, e
+        restrição precisa de dois testes — o que é permitido no que é meu, e o que é recusado no
+        que não é. A matriz completa está em `docs/domain/staff.md`, que fechou oito células que
+        a spec não tinha. As três que mais importam são de **API**: o membro não alcança ficha
+        que não é dele, não alcança **nada** de financeiro, e o ex-membro não alcança contato
+- [ ] **Epic 5.5.4 — As telas dos dois papéis, e o seletor de negócio**
+  - [ ] **O seletor de contexto** (decisão E18): um membro de dois clubes tem **três** carteiras —
+        a do clube A, a do clube B e a particular dele. O `iam.md` §10 fechou o MVP sem seletor,
+        e essa decisão caiu. Sem ele, ele cadastra aluno na carteira errada na primeira semana —
+        e **não tem conserto**, porque `professional_id` nunca muda. O §10 é reescrito junto
   - [ ] Painel da equipe do dono: convidar, ver pendentes, ver membros, associar e trocar o
         professor de uma ficha
   - [ ] A carteira do membro mostra **só as fichas associadas a ele** — e é filtro de consulta,
         nunca de tela
   - [ ] O membro cadastra ficha na carteira do negócio, e ela **nasce associada a ele** (E9)
+  - [ ] **Tratar a colisão que o E9 torna comum:** dois professores cadastram o mesmo aluno na
+        carteira do clube, e o segundo aceite bate em `uq_students_professional_user`. Hoje isso
+        é um 500 reproduzível esperando acontecer — precisa virar mensagem que diga o que fazer
+  - [ ] **Avisar o membro, antes de salvar, que a ficha é do clube.** O professor que traz o
+        próprio aluno o perde ao sair da equipe. É consequência correta do E2 com o E9, e é a que
+        mais vira briga se ninguém disser antes
   - [ ] Observações privadas são do negócio: dono e professor associado veem o mesmo campo (E10)
   - [ ] O membro vê os nomes da equipe e a ocupação dos espaços **com o nome do colega**, sem
         alcançar a ficha do aluno dele (E12)
   - [ ] Nada de financeiro aparece para o membro — **ausência na resposta**, não campo escondido
-- [ ] **Epic 5.5.5 — Encerramento**
-  - [ ] Qualquer um dos dois lados encerra: o dono remove, o professor pede demissão
+- [ ] **Epic 5.5.5 — Saída da equipe**
+  - [ ] Qualquer um dos dois lados encerra: o dono remove, o membro sai. **Nenhuma tela escreve
+        "funcionário", "demitir" ou "demissão"** — decisão E17, e o motivo está lá
+  - [ ] **A segurança do desligamento está na condição `status = ACTIVE`, não na limpeza das
+        associações.** Se a limpeza falhar, o ex-membro continua fora. A limpeza é produto — o
+        aviso "ficha sem professor" —, não trava (ADR-006)
   - [ ] Aulas que ele **já deu** ficam com o nome dele para sempre — o histórico do clube não
         pode ter buraco *(exercitável só quando a Fase 6 criar aulas; a regra nasce aqui)*
+  - [ ] **`teacher_id` das aulas FUTURAS vira nulo; das passadas, nunca.** Isto conserta um
+        defeito que saía de duas decisões minhas: se o identificador ficasse, a trava do
+        professor — que **atravessa negócios** — bloquearia as terças às 19h dele **no próprio
+        negócio dele**, para sempre, por causa de uma aula que o clube nunca reatribuiu. E a
+        recusa **não pode explicar por quê**, pelo requisito de sigilo do §7.2. Passado é fato,
+        futuro é plano
   - [ ] Fichas associadas a ele ficam **sem professor**, e o dono vê o aviso. Nada é reatribuído
         sozinho — mesmo padrão que a Fase 5 usa quando um aluno faz 18 anos
   - [ ] O ex-membro guarda **as aulas com o nome do aluno** (E15) e perde contato, objetivos e
@@ -1353,15 +1418,24 @@ recusa por conflito de professor vazando a agenda de outro negócio ·
   - [ ] Os alunos particulares do membro nunca aparecem para o dono, em momento nenhum
 - [ ] **Epic 5.5.6 — Espaços, e o que a Fase 6 herda**
   - [ ] `spaces` como filha de `locations`, dentro de `professional-profile`: nome da quadra,
-        sala ou campo, **sem endereço próprio** — a sede já tem o dele
+        sala ou campo, **sem endereço próprio** — o local já tem o dele. Com
+        **`UNIQUE (location_id, id)`**, senão a chave composta da Fase 6 não é sequer criável, e
+        com **exclusão lógica**, pelo mesmo motivo de `locations`
+  - [ ] `STUDENT_HOME` não aceita espaço, e o banco recusa — mesma forma do `CHECK` que a Fase 3
+        usa para o endereço
   - [ ] Tela: as quadras dentro do bloco de locais que a Fase 3 já entrega
   - [ ] Os espaços **não** saem em resposta pública. A lista fechada de campos da Fase 3 não muda,
         e o teste dela precisa continuar verde
-  - [ ] Escrever, para a Fase 6 receber pronto: `sessions` nasce com `teacher_id`,
+  - [ ] Escrever, para a Fase 6 receber pronto: `sessions` nasce com `teacher_id` **anulável**,
         `location_id` e `space_id`, com **chave estrangeira composta** entre os dois últimos —
-        aula na Quadra 1 da sede errada não é representável
+        aula na Quadra 1 do local errado não é representável
   - [ ] Escrever, para a Fase 6 receber pronto: **duas** travas de exclusão, uma por professor e
         outra por espaço, ambas **só para aula não cancelada**
+  - [ ] Escrever, para a Fase 6 receber pronto: **a disponibilidade é declarada por negócio**
+        (decisão E19). O `DETAIL` do erro `23P01` do PostgreSQL **carrega os valores da linha em
+        conflito** — período e professor da aula do outro clube. A tradução mora em
+        `common/database/`, ao lado de `ehViolacaoDeUnicidade`, e o detalhe **nunca** sai na
+        resposta
 
 ### Decisões da fase
 
@@ -1383,19 +1457,46 @@ cada uma, estão na spec §2. As que mais amarram a implementação:
 - [x] **A trava de espaço não pega o autônomo**, e não por regra escrita: ele nunca cadastra
       quadra, então nunca é travado. Quem quer a trava opta por ela cadastrando espaços
 
-**Ainda em aberto, e não bloqueiam a abertura:**
+**Tomadas na abertura, em 2026-08-28, depois do que os agentes apontaram:**
+
+- [x] **E17 — nenhuma tela escreve "funcionário", "demitir" ou "demissão".** A plataforma não
+      sabe qual é o arranjo — CLT, MEI, parceria, nada — e uma tela que diz "demitir professor"
+      é prova documental de subordinação numa reclamatória trabalhista **contra o próprio
+      cliente**. O sistema diz *membro da equipe*, *sair da equipe*, *encerrar a participação*
+- [x] **E18 — o seletor de negócio entra nesta fase.** Um membro de dois clubes tem três
+      carteiras e nenhum jeito de saber em qual está. Cadastrar na errada não tem conserto
+- [x] **E19 — a disponibilidade é declarada por negócio.** Fecha o oráculo de ocupação que a
+      mitigação anterior não fechava: esconder o *nome* do outro negócio na recusa não impede o
+      dono do clube A de mapear, hora a hora, a agenda inteira do professor em todo lugar.
+      Declarando "estou disponível para o Clube Arena às terças das 18h às 22h", A só enxerga e
+      só marca dentro do que foi declarado para A. **Cresce a Fase 6**
+
+**Ainda em aberto, e não bloqueiam a abertura. Todas são da revisão de segurança:**
 
 - [ ] **Teto de membros por equipe** — proposta: 50, pelo mesmo motivo que o de fichas é 500, que
-      é mitigação e não capacidade. **Quem decide é a revisão de segurança da fase**, como
-      aconteceu no Epic 5.0
-- [ ] Nomes exatos das duas personas novas — o dono de clube ou gestor, e o professor contratado
+      é mitigação e não capacidade
+- [ ] **O teto de 500 fichas é contado por `professional_id`** (`students.service.ts:113`). Um
+      clube com cinco professores divide as mesmas 500 — o número deixa de ser mitigação e vira
+      capacidade
+- [ ] **Os tetos de cadastro e de convite são 60/hora por IP.** Cinco professores no Wi-Fi da
+      mesma arena dividem a cota. A saída óbvia — chavear por conta — esbarra numa decisão que
+      existe: o limitador roda **antes** da autenticação, de propósito
+- [x] ~~Nomes das duas personas novas~~ → **Sérgio** (dono de clube ou gestor) e **Bianca**
+      (professora da equipe), em `docs/product/personas.md`
 
 ### Modelo, rotas e fronteira
 
-**Onde o código mora.** `staff_invites`, `staff_members` e `student_teachers` ficam **dentro do
-`iam`**, pela mesma razão da emenda §8 da ADR-005 que manteve `students` lá: `AccessService`
-consulta as três para resolver propriedade, e movê-las faria o `iam` consultar módulo alheio.
-`spaces` fica em `professional-profile`, junto de `locations`, que é quem já é dona do assunto.
+**Onde o código mora — e o critério mudou na abertura.** As três tabelas ficam **dentro do
+`iam`**, mas **não** porque "o `AccessService` consulta as três": esse argumento é circular, e o
+`architect` o recusou. Pelo mesmo critério a Fase 6 poria `sessions` no `iam` e a Fase 9 poria
+`charges`, já que `iam.md` §5 aplica a regra de dono às duas. **O critério que vale é o da
+ADR-006 §1 e §2:** toda coluna das três é âncora de identidade ou estado de acesso, e **nenhuma
+é dado de negócio** — e cada tabela leva escrito o gatilho que a tira de lá. `spaces` fica em
+`professional-profile`, junto de `locations`.
+
+**Nasce `AccessService.equipesDe(userId)`**, que devolve donos, não recursos. É o que impede o
+ciclo com `scheduling`: a Fase 6 filtra a própria tabela por essa lista, em vez de pedir ao `iam`
+um `sessaoComoMembro()`. A porta existe para tirar esse pedido da mesa antes de ele ser feito.
 
 **Banco: três tabelas em `iam`, uma em `professional-profile`, e nenhuma coluna nova em
 `students`.** A ficha do clube tem `professional_id` = o chefe; a ficha particular do professor
@@ -1425,14 +1526,16 @@ alguém mexe com pressa.
 O risco desta fase é diferente de todas as anteriores. Na Fase 2 era deixar alguém **entrar**; na
 3, deixar dado privado sair para um estranho; na 5, o dado de quem nunca usou a plataforma. Aqui
 é **dado que sai para alguém que tem acesso legítimo a uma parte e nenhum ao resto** — e o
-vazamento tem destinatário conhecido: o colega de equipe, o ex-funcionário, o clube concorrente.
+vazamento tem destinatário conhecido: o colega de equipe, o ex-membro, o clube concorrente.
 
-- **Unidade**: as transições do vínculo de equipe e a regra de acesso do membro, sem banco. É o
+- **Unidade**: as transições da participação e a regra de acesso do membro, sem banco. É o
   padrão de `vinculo.ts` e `maioridade.ts`, que funcionou.
-- **API**: as quinze células "não". As três de sempre são de API e não de tela — campo escondido
-  no HTML não é autorização.
-- **Segurança, dois testes nomeados**: o convite de equipe responde igual para e-mail com e sem
-  conta; e a recusa por conflito de professor não nomeia o outro negócio.
+- **API**: os vinte e quatro casos da matriz. As três de sempre são de API e não de tela — campo
+  escondido no HTML não é autorização.
+- **Segurança, quatro testes nomeados**: o convite de equipe responde igual para e-mail com e sem
+  conta; a recusa por conflito de professor não nomeia o outro negócio **nem devolve o `DETAIL`
+  do Postgres**; o marcador de duplicata não revela ficha de colega; e a ficha nunca é associada
+  ao profissional que é a conta daquela ficha.
 - **Tela**: convidar, aceitar, associar, encerrar, e o aviso de aluno que ficou sem professor.
 - **Concorrência**: fica na Fase 6, que é quem cria aulas. Dois professores na mesma quadra, e o
   mesmo professor marcado por dois clubes que não se enxergam — **o segundo não existiria sem
@@ -1458,11 +1561,16 @@ vazamento tem destinatário conhecido: o colega de equipe, o ex-funcionário, o 
 
 - [ ] O dono convida, o professor aceita, e ele passa a ver **só** os alunos associados a ele
 - [ ] O professor cadastra aluno do clube, e a ficha nasce na carteira do dono associada a ele
-- [ ] As quinze células "não pode" da matriz têm teste, e as três de API foram **verificadas
+- [ ] **Um membro de dois clubes sabe sempre em qual carteira está**, e não consegue cadastrar
+      na errada sem escolher
+- [ ] Os vinte e quatro casos da matriz têm teste, e as três de API foram **verificadas
       quebrando**
 - [ ] O convite de equipe responde igual para e-mail com e sem conta — provado, não afirmado
-- [ ] Encerrar o vínculo fecha a carteira na hora, deixa as fichas sem professor com aviso ao
-      dono, e preserva o histórico do ex-professor com o nome do aluno
+- [ ] Sair da equipe fecha a carteira na hora, tira o professor das aulas **futuras** sem tocar
+      nas passadas, deixa as fichas sem professor com aviso ao dono, e preserva o histórico do
+      ex-membro com o nome do aluno
+- [ ] **Nenhuma tela escreve "funcionário", "demitir" ou "demissão"** — teste que afirma a
+      ausência, como os quatro textos obrigatórios da Fase 5
 - [ ] O dono vê, **antes de confirmar o encerramento**, o que fica visível e o que some
 - [ ] Os alunos particulares do professor nunca aparecem para o dono
 - [ ] ADR-006 registrada; `docs/domain/staff.md` escrito; `iam.md` §6 e §7.5, `students.md`,

@@ -30,7 +30,7 @@ Todas as decisões abaixo são do dono do produto, tomadas em 2026-08-28.
 
 | # | Pergunta | Decisão |
 | --- | --- | --- |
-| E1 | O professor funcionário tem perfil próprio? | **Profissional com vínculo.** Conta e carteira próprias; trabalha para o chefe além disso |
+| E1 | O professor da equipe tem perfil próprio? | **Profissional com vínculo.** Conta e carteira próprias; trabalha para o chefe além disso |
 | E2 | De quem é o aluno do clube? | **Da carteira do chefe.** O professor recebe acesso às fichas que o chefe associou a ele. Alunos particulares do professor são dele |
 | E3 | Quem recebe o dinheiro? | **Só o dono.** O professor é pago fora da plataforma |
 | E4 | Quando isso existe? | **Agora, inteiro.** Antes da agenda, e dentro do MVP |
@@ -47,12 +47,34 @@ Todas as decisões abaixo são do dono do produto, tomadas em 2026-08-28.
 | E15 | O ex-professor guarda o nome do aluno? | **Sim**, nas aulas que ele deu |
 | E16 | Aula futura de quem saiu é cancelada? | **Não.** Fica esperando o dono trocar o professor |
 
+**Acrescentadas em 2026-08-28**, depois de os agentes `product` e `architect` abrirem a fase e
+acharem o que está no §14:
+
+| # | Pergunta | Decisão |
+| --- | --- | --- |
+| E17 | Como as telas chamam a relação? | **Nunca "funcionário", "demitir" ou "demissão".** *Membro da equipe*, *sair da equipe*, *encerrar a participação* |
+| E18 | O membro de dois clubes sabe em qual carteira está? | **Sim — o seletor de negócio entra nesta fase** |
+| E19 | Como fechar o oráculo de ocupação? | **A disponibilidade é declarada por negócio.** Cresce a Fase 6 |
+
+**E17 não é delicadeza.** A plataforma não sabe qual é o arranjo — CLT, MEI, parceria, nada — e
+uma tela que diz "demitir professor" vira prova documental de subordinação numa reclamatória
+trabalhista **contra o próprio cliente**.
+
+**E18 conserta um dado que não volta atrás.** Um membro de dois clubes tem três carteiras: a de
+cada clube e a particular dele. Sem saber em qual está, ele cadastra na errada na primeira
+semana — e `professional_id` nunca muda, então não há conserto.
+
+**E19 fecha o que a mitigação do §7.2 não fechava.** Esconder o *nome* do outro negócio na recusa
+não impede o dono do clube A de mapear, hora a hora, a agenda inteira do professor em todo lugar
+onde ele dá aula. Declarando disponibilidade por negócio, A só enxerga e só marca dentro do que
+o professor declarou para A.
+
 ## 3. A abordagem escolhida, e as duas recusadas
 
 **Escolhida — a equipe é uma relação entre profissionais.** Nenhuma entidade nova acima do
-profissional. O chefe continua sendo um profissional, e o clube **é** o cadastro dele. Nasce um
-vínculo de equipe ligando dois profissionais, uma associação ligando fichas a professores, e a
-aula passa a gravar quem a deu.
+profissional. O chefe continua sendo um profissional, e o clube **é** o cadastro dele. Nasce uma
+participação ligando dois profissionais, uma associação ligando fichas a professores, e a aula
+passa a gravar quem a deu.
 
 **Recusada — organização como entidade nova acima do profissional.** Um clube não é uma pessoa,
 e modelar assim seria honesto. Mas então toda tabela que hoje aponta para um profissional teria
@@ -129,7 +151,7 @@ Na Fase 6, a aula nasce com três colunas em vez de uma: **quem a deu** (`sessio
 duas últimas viajam juntas porque a chave estrangeira que garante a coerência entre elas é
 composta — ver o invariante 4.
 
-### 5.2 Estados do vínculo de equipe
+### 5.2 Estados da participação
 
 Dois, e só dois: `ACTIVE` e `ENDED`. Ex-membro convidado de novo **reativa a mesma linha**, como
 a ficha encerrada do aluno faz (`students.md` §7.3).
@@ -182,7 +204,7 @@ A matriz de `iam.md` §6 ganha a coluna *membro da equipe*. Ela nunca é "sim" s
 | --- | --- | :-: | :-: |
 | **Equipe** | convidar e remover membro | sim | não |
 | | associar / trocar o professor de uma ficha | sim | **não** |
-| | sair da equipe | sim (remove) | sim (pede demissão) |
+| | sair da equipe | sim (remove) | sim (sai) |
 | | ver os nomes da equipe | sim | sim |
 | **Aluno** | listar a carteira | inteira | **só as fichas dele** |
 | | criar ficha na carteira do negócio | sim | sim — nasce associada a ele (E9) |
@@ -202,7 +224,7 @@ A matriz de `iam.md` §6 ganha a coluna *membro da equipe*. Ela nunca é "sim" s
 | **Financeiro** | cobrança, pagamento, estorno, relatório | sim | **não, em nada** |
 | **Perfil** | editar o perfil do negócio | sim | não |
 
-**Cerca de quinze células "não pode".** O `iam.md` §7.6 exige teste para cada uma — célula sem
+**Vinte e quatro casos.** Catorze recusas e dez restrições, e restrição precisa de dois testes. O `iam.md` §7.6 exige teste para cada uma — célula sem
 teste é lacuna, não decisão. É trabalho real, e é o preço do "agora, inteiro" escolhido em E4.
 
 ## 7. A agenda com duas travas
@@ -290,8 +312,7 @@ Qualquer um dos dois lados encerra. O desenho separa **fato** de **plano**:
 | A carteira do clube | fecha na hora |
 | Alunos particulares dele | continuam dele. Nunca foram do clube |
 
-Aula futura não é cancelada sozinha porque aluno que pagou perder a aula por demissão do
-professor é pior que o problema. Ela espera o dono trocar o professor — ação que ele já tem.
+Aula futura não é cancelada sozinha porque aluno que pagou perder a aula porque o professor saiu da equipe é pior que o problema. Ela espera o dono trocar o professor — ação que ele já tem.
 
 Ficha sem professor não some nem é reatribuída sozinha. É o mesmo padrão que a Fase 5 já usa
 quando um aluno faz 18 anos: **nada muda sozinho, o sistema avisa e a pessoa decide.**
@@ -325,9 +346,9 @@ esta fase.
 
 ## 10. Como isso se prova
 
-- **Unidade** — a regra de acesso do membro e as transições do vínculo de equipe, como função
+- **Unidade** — a regra de acesso do membro e as transições da participação, como função
   pura, sem banco. É o padrão de `vinculo.ts` e `maioridade.ts`, que funcionou na Fase 5.
-- **API** — as quinze células "não". As três que mais importam: o membro não alcança ficha que
+- **API** — os vinte e quatro casos. As três que mais importam: o membro não alcança ficha que
   não é dele; o membro não alcança **nada** de financeiro; **o ex-membro não alcança contato**.
   São testes de API, não de tela — campo escondido no HTML não é autorização.
 - **Concorrência** (na Fase 6) — dois professores disputando a mesma quadra, e o mesmo professor
@@ -357,7 +378,7 @@ Fase X"*, e renumerar catorze fases para caber uma seria estrago desnecessário.
 4. A Fase 6 então encontra "professor" como conceito pronto, e só precisa gravar quem deu a aula
    e montar as duas travas.
 
-**Tamanho honesto:** quatro tabelas novas, quinze células de matriz com teste obrigatório e telas
+**Tamanho honesto:** quatro tabelas novas, vinte e quatro casos de matriz com teste obrigatório e telas
 para dois papéis. É uma fase do porte da Fase 5, não um épico. **Adia o MVP**, e isso foi aceito
 em E4.
 
@@ -371,7 +392,7 @@ foi o achado nº 1 da revisão da Fase 5.
 | `iam.md` §7.5 | *"Não existe permissão granular"* deixa de ser verdade. Reescrita, não emenda |
 | `iam.md` §6 | a matriz ganha a coluna do membro |
 | `ADR-004` | previu delegação na Fase 15. Registra que o dia chegou seis fases antes |
-| `students.md` | a matriz e a carteira ganham "professor". A linha *"duas pessoas administrando a mesma carteira (secretária, sócio)"*, hoje marcada **sem fase**, ganha uma |
+| `students.md` | a matriz e a carteira ganham "professor". A linha *"duas pessoas administrando a mesma carteira (secretária, sócio)"* **continua sem fase**, e só o motivo é atualizado — o `architect` corrigiu isto em 2026-08-28: pela matriz do §6, o membro não pausa, não encerra, não apaga ficha e não vê financeiro. Esta fase entrega **uma pessoa administrando e várias atendendo**, que é outra coisa. Documentar como resolvido o que não foi é pior que não documentar |
 | `professional-profile.md` | os espaços penduram nos locais |
 | `vision.md` | diz que o público não é clube. **Passa a ser** |
 | `personas.md` | duas personas novas: o dono de clube ou gestor, e o professor contratado |
@@ -385,7 +406,7 @@ foi o achado nº 1 da revisão da Fase 5.
 | **6 — Agenda** | disponibilidade por professor; duas travas; teste de concorrência dobrado; `sessions` nasce com `teacher_id` e `space_id` |
 | **8 — Turmas** | a turma tem professor, e trocar o professor da turma é ação do dono |
 | **9 — Financeiro** | **intacta.** É a economia de E3 |
-| **11 — App** | o professor funcionário usa o app em quadra. A fase já previa isso; agora tem mais gente |
+| **11 — App** | o professor da equipe usa o app em quadra. A fase já previa isso; agora tem mais gente |
 | **12 — Marketplace** | o clube aparece na busca como profissional. Nada especial a fazer |
 
 ### 11.4 A ADR toma um número emprestado
@@ -428,5 +449,32 @@ aluno não tem tela até a Fase 11.
 | O quê | Quem responde |
 | --- | --- |
 | Teto de membros por equipe — proposta: 50, pelo mesmo motivo que o de fichas é 500 (mitigação, não capacidade) | a revisão de segurança da fase |
+| O teto de 500 fichas é contado por profissional. Um clube com cinco professores divide as mesmas 500 — deixa de ser mitigação e vira capacidade | a revisão de segurança da fase |
+| Os tetos de cadastro e convite são 60/hora **por IP**, e cinco professores na mesma arena dividem a cota. Chavear por conta esbarra no limitador rodar antes da autenticação, de propósito | a revisão de segurança da fase |
 | O dono de clube também dá aula? Assumido **sim, opcional** — ele é um profissional | cai de graça, sem decisão |
-| A e B nas equipes um do outro | permitido. Só o auto-vínculo é proibido (§5.5) |
+| A e B nas equipes um do outro | permitido. Só a auto-participação é proibida (§5.5) |
+| O que acontece com a carteira e a equipe quando **o dono** exclui a conta | sem resposta, e acoplado a `students.md` §15.1, que já estava aberta |
+| Ninguém avisa o aluno de que mais uma pessoa passou a ler os dados dele (art. 10 §2) | resíduo aceito agora; a Fase 11 mostra quem é o professor |
+| Os Termos de Uso foram escritos para o autônomo e não cobrem quem aceita convite de equipe | o mesmo trabalho jurídico que já estava pendente |
+
+## 14. Emendas da abertura da fase
+
+Escrito em 2026-08-28, depois de os agentes `product` e `architect` lerem este desenho sem terem
+participado dele. **O que eles derrubaram vale mais do que o que confirmaram**, então fica só
+isso registrado:
+
+| O que | Quem achou |
+| --- | --- |
+| **Este documento viola a própria regra do §4**: proíbe chamar a relação de equipe de "vínculo" e depois usa "vínculo de equipe" seis vezes. Corrigido para **participação** | `product` |
+| **O vocabulário trabalhista era risco jurídico para o cliente.** Virou E17 | `product` |
+| **A aula futura órfã travaria a agenda própria do ex-membro para sempre**, com uma recusa que por desenho não pode explicar por quê. Sai de E16 mais a trava que atravessa negócios. `sessions.teacher_id` nasce anulável | `product` |
+| **O oráculo de ocupação continuava aberto** — eu protegi o nome, não o mapa. Virou E19 | `product` |
+| **Um membro de dois clubes não sabe em qual carteira está.** Virou E18 | `product` |
+| **A ficha da Marina podia ser associada à própria Marina** se ela virasse membro, e ela leria as observações escritas sobre ela. Virou invariante | `product` |
+| A matriz do §6 tinha **oito células faltando**, e "quinze células" era **vinte e quatro casos** | `product` |
+| **O motivo que eu dei para as três tabelas ficarem no `iam` era circular.** O critério correto está na ADR-006 §1 | `architect` |
+| **Nove portas de entrada da ficha, não oito** — e três delas devolvem lista e não aparecem no grep | `architect` |
+| **O token não pode carregar claim de equipe**, senão o acesso do ex-membro sobreviveria 15 minutos e a promessa do §8.3 seria falsa | `architect` |
+| **`Space` colide com `LocationKind.PublicSpace`** | `architect` |
+| **Um clube com dois sócios administradores não é representável** — segundo gatilho para reabrir a entidade "organização" | `architect` |
+| O `DETAIL` do erro `23P01` carrega os valores da linha em conflito, e vazaria a agenda do outro negócio pela porta dos fundos | `architect` |
