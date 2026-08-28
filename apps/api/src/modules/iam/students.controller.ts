@@ -15,7 +15,12 @@ import {
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from './auth/current-user.decorator';
 import { Papeis } from './auth/papeis.decorator';
-import { CreateStudentDto, ListStudentsQuery, UpdateStudentDto } from './dto/student.dto';
+import {
+  ChangeStudentStatusDto,
+  CreateStudentDto,
+  ListStudentsQuery,
+  UpdateStudentDto,
+} from './dto/student.dto';
 import { StudentsService } from './services/students.service';
 
 /**
@@ -76,6 +81,22 @@ export class StudentsController {
     @Body() dto: UpdateStudentDto,
   ): Promise<StudentRow> {
     return this.alunos.atualizar(user.id, id, dto);
+  }
+
+  /**
+   * **Só o profissional chega aqui hoje**, por causa do `@Papeis` da classe — e encerrar, pela
+   * §7.3, é dele **ou** do próprio aluno. Não é esquecimento: a tela do aluno é da Fase 11, e
+   * abrir a rota antes de existir quem a use seria autorização sem nada para autorizar. Quando
+   * ela nascer, o que muda é o papel aceito nesta rota, não a regra — que está em `vinculo.ts`.
+   */
+  @Patch(':id/status')
+  @ApiOperation({ summary: 'Pausa, encerra ou reativa o vínculo. Encerrar revoga o convite' })
+  async mudarEstado(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe({ version: '7' })) id: string,
+    @Body() dto: ChangeStudentStatusDto,
+  ): Promise<StudentRow> {
+    return this.alunos.mudarEstado(user.id, id, dto.status);
   }
 
   @Delete(':id')

@@ -35,7 +35,10 @@ export default async function AlunosDoProfissional() {
         </p>
       </header>
 
-      <Carteira />
+      {/* A verificação de e-mail vem da sessão, resolvida no servidor. Ela não impede nada aqui
+          dentro exceto convidar: enviar convite é a plataforma escrevendo em nome daquele
+          endereço, e endereço não provado é o que transforma o produto em ferramenta de spam. */}
+      <Carteira emailVerificado={sessao.emailVerified} />
     </main>
   );
 }

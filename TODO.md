@@ -595,9 +595,9 @@ ela ·
         identificador do alvo e **sem** o conteúdo
   - [x] Rotas de administração: listar contas, suspender/reativar, reenviar confirmação.
         **Sem tela** — o painel do administrador não tem épico em fase nenhuma
-- [x] **Epic 2.4 — Front-end de auth** ✅ 2026-08-24 — com **uma** tarefa adiada, e não esquecida:
-      o teste de tela do aceite de convite depende de criar ficha pela interface, que é da Fase 5.
-      Está em DT-005, com o gatilho escrito
+- [x] **Epic 2.4 — Front-end de auth** ✅ 2026-08-24 — teve **uma** tarefa adiada, e não
+      esquecida: o teste de tela do aceite de convite dependia de criar ficha pela interface, que
+      é da Fase 5. **Pago no Epic 5.2, em 2026-08-27** — DT-005 fechado
   - [x] Telas web de cadastro de profissional e login
   - [x] Painel protegido no servidor: quem não tem sessão é redirecionado antes de o HTML sair
   - [x] Sair
@@ -610,7 +610,9 @@ ela ·
         sessão em `expo-secure-store`, com renovação automática e compartilhada
   - [x] Playwright: Chromium instalado, cadastro/login/proteção de rota cobertos e rodando no CI
   - [x] Playwright: recuperação de senha e emissão de convite cobertas
-  - [ ] Playwright: **o aceite** do convite — bloqueado até a Fase 5, ver DT-005
+  - [x] Playwright: **o aceite** do convite — ~~bloqueado até a Fase 5~~ ✅ **2026-08-27**, no
+        Epic 5.2. O teste cria e descarta a própria ficha, então não consome mais a do João
+        Pereira. DT-005 fechado
 - [x] **Epic 2.5 — E-mail transacional mínimo 🔁** ✅ 2026-08-21 *(antecipado da Fase 10)*
   - [x] Provedor de e-mail configurado (Resend), com a chave fora do repositório
   - [x] Fila BullMQ para envio assíncrono, com espera crescente entre tentativas
@@ -669,8 +671,8 @@ Todas resolvidas em 2026-08-20. Registro completo em [`docs/domain/iam.md`](docs
       sem cookie nenhum. A verificação usou o link real do e-mail, e a rotação foi verificada
       junto com a detecção de reuso derrubando a família. 30 conferências, todas passando
 - [x] Aceite de convite funciona **inteiramente no navegador** — verificado à mão e pela API em
-      2026-08-24. O teste Playwright do aceite fica para a Fase 5: aceitar consome a única ficha
-      sem conta que existe, e criar ficha pela interface é da Fase 5. Ver DT-005
+      2026-08-24, e **coberto por Playwright em 2026-08-27** (Epic 5.2), com ficha descartável
+      criada e apagada pelo próprio teste. DT-005 fechado
 - [x] Rotas protegidas retornam 401/403/404 conforme `iam.md` §7, com testes de integração —
       `e2e/autorizacao.spec.ts`
 - [x] **Cada célula "não pode" da matriz tem um teste** — para os recursos que existem: conta
@@ -1010,23 +1012,31 @@ profissional cadastra aluno que não consentiu ·
         funcionalidade**: se alguém apagar um por achar que é ruído visual, a suíte quebra.
         **Checkbox por ficha foi recusado** — vira clique automático na quinta e não muda a
         responsabilidade, que já é do profissional pelos Termos
-  - [ ] **Dívida do Epic 5.0:** teste de que o aceite de convite **não** altera `access_holder`
+  - [x] **Dívida do Epic 5.0:** teste de que o aceite de convite **não** altera `access_holder`
         nem `status` — ficha `GUARDIAN` continua `GUARDIAN`, ficha `PAUSED` continua `PAUSED`.
-        Depende de `PAUSED`, que nasce no Epic 5.2
-- [ ] **Epic 5.2 — Vínculo profissional↔aluno**
-  - [ ] Convite por link/e-mail e aceite
-  - [ ] Estados do vínculo (ativo, pausado, encerrado)
-  - [ ] Um aluno com múltiplos profissionais
-  - [ ] **A lista de alunos marca as fichas cujo e-mail já tem conta**, com botão de convidar —
+        ✅ 2026-08-27, no Epic 5.2 (`convite.spec.ts`), pela tela e com ficha descartável
+- [x] **Epic 5.2 — Vínculo profissional↔aluno** ✅ 2026-08-27
+  - [x] Convite por link/e-mail e aceite — o convite **saiu do painel** e virou parte da
+        carteira. Duas listas com a mesma ação divergem no dia em que uma ganha uma regra nova
+  - [x] Estados do vínculo (ativo, pausado, encerrado) — `PATCH /students/:id/status`, com a
+        tabela de transições numa função pura (`vinculo.ts`), testada nas **nove** combinações
+  - [x] Um aluno com múltiplos profissionais — provado com a mesma conta entrando em duas
+        carteiras. Não existe unicidade de aluno por conta, e não pode existir
+  - [x] **A lista de alunos marca as fichas cujo e-mail já tem conta**, com botão de convidar —
         sem isso, o aluno que se cadastrou sozinho fica esperando indefinidamente por um convite
         que o profissional não sabe que deveria mandar
   - [x] ~~Decidir se o aluno pode **reivindicar** fichas existentes~~ → **não entra** (decisão
         O3). O marcador do lado do profissional fecha o mesmo buraco sem criar um caminho novo
         pelo qual alguém pede acesso a ficha alheia
-  - [ ] Transições de estado com o que muda para cada lado, e a revogação do convite de pé
-        quando o vínculo encerra — `students.md` §7
-  - [ ] **Dívida do Epic 5.0:** teste de que a ex-aluna clicando de novo no link público recebe
+  - [x] Transições de estado com o que muda para cada lado, e a revogação do convite de pé
+        quando o vínculo encerra — `students.md` §7. Encerrar revoga na mesma transação, e a
+        emissão passa a recusar ficha encerrada: os dois lados da mesma regra
+  - [x] **Dívida do Epic 5.0:** teste de que a ex-aluna clicando de novo no link público recebe
         409 com a mensagem de falar com o professor, e **não** volta a ser aluna sozinha
+  - [x] **Correção de documento:** a §7.2 dizia que pausar tirava a ficha da lista padrão, e a
+        implementação fazia o contrário. A implementação está certa — pausado é aluno atual, e
+        esconder quem o professor continua agendando é obrigá-lo a trocar de filtro. Texto
+        corrigido no mesmo commit
 - [ ] **Epic 5.3 — Ficha do aluno**
   - [ ] Dados de contato e informações básicas
   - [ ] Observações privadas do profissional, com o texto *"escreva o que você mostraria se ela
@@ -1147,12 +1157,12 @@ o administrador, ou o profissional errado.
 - **Regressão**: o aceite de convite **não** pode mais alterar `access_holder` nem `status` — é
   teste antes do conserto, porque é defeito conhecido (Epic 5.0).
 - **O que não dá para testar aqui**: o convite endereçado continua dependendo de caixa de
-  entrada (DT-005). O **avulso** passa a ser testável ponta a ponta a partir do Epic 5.1, porque
-  aí existe como criar ficha pela tela — a URL dele volta uma vez na resposta.
+  entrada. O **avulso** passou a ser testável ponta a ponta no Epic 5.2 — a URL dele volta uma vez
+  na resposta, e o teste cria e descarta a própria ficha. **DT-005 fechado em 2026-08-27.**
 
-> **Orçamento:** a suíte já gasta 81 dos 100 cadastros por hora (DT-010) e 18 dos 20 envios de
-> foto (DT-011). Esta fase acrescenta testes que cadastram. **Medir antes de fechar a fase**, e
-> se passar de ~90, a saída é a suíte zerar os contadores no `globalSetup` — não subir o teto.
+> **Orçamento:** ~~81~~ **87 dos 100 cadastros por hora** (DT-010) e 18 dos 20 envios de foto
+> (DT-011), medido em 2026-08-27 com 173 testes. Faltam **3** para o gatilho. Se passar de ~90, a
+> saída é a suíte zerar os contadores no `globalSetup` — não subir o teto.
 
 ### Tecnologias
 

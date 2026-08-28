@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { InviteDetails, InviteIssued, InviteKind, InviteRow } from '@gestao/types';
+import { InviteDetails, InviteIssued, InviteKind, InviteRow, StudentStatus } from '@gestao/types';
 import {
   ConflictException,
   ForbiddenException,
@@ -361,6 +361,15 @@ export class InviteService {
 
     if (student.userId !== null) {
       throw new ConflictException('Esta ficha já está ligada a uma conta.');
+    }
+
+    // O outro lado da revogação que `mudarEstado` faz ao encerrar. Sem esta recusa, o professor
+    // encerraria o vínculo, o convite de pé morreria — e ele poderia emitir um novo na tela
+    // seguinte, ligando uma conta a um vínculo que ele mesmo terminou.
+    if (student.status === StudentStatus.Ended) {
+      throw new ConflictException(
+        'Este vínculo está encerrado. Reative o aluno antes de convidar.',
+      );
     }
 
     const dono = await this.users.findOneByOrFail({ id: userId });

@@ -9,7 +9,7 @@ import { alerta, cadastrar } from './apoio';
  * eles, a base legal é uma frase num documento que ninguém lê. Se alguém apagar um deles por
  * achar que é ruído visual, este arquivo quebra.
  *
- * **Uma conta para o arquivo inteiro, em série** — o orçamento de cadastro do IP está em 84 de
+ * **Uma conta para o arquivo inteiro, em série** — o orçamento de cadastro do IP está em 87 de
  * 100 por hora (DT-010), e um cadastro por teste aqui não caberia.
  */
 test.describe.configure({ mode: 'serial' });
@@ -114,6 +114,70 @@ test('a busca filtra pelo nome', async () => {
 
   await painel.getByLabel('Buscar por nome').fill('');
   await expect(painel.getByRole('listitem')).toHaveCount(2);
+});
+
+test('pausar troca o rótulo e explica que não trava nada do lado do professor', async () => {
+  const ficha = painel.getByRole('listitem').filter({ hasText: 'João do WhatsApp' });
+
+  await ficha.getByRole('button', { name: 'Pausar' }).click();
+  // `exact`: o parágrafo explicativo logo abaixo **começa com a mesma palavra**, e sem isto o
+  // seletor acha dois elementos e o Playwright recusa por ambiguidade.
+  await expect(ficha.getByText('Pausado', { exact: true })).toBeVisible();
+
+  // O texto é o que impede o estado de virar armadilha: se o professor achar que pausar bloqueia
+  // agendar e cobrar, ele para de pausar — e um estado que ninguém marca faz a lista mentir.
+  await expect(ficha.getByText(/não trava nada do seu lado/i)).toBeVisible();
+
+  // E o botão vira o inverso: não há "pausar de novo".
+  await expect(ficha.getByRole('button', { name: 'Pausar' })).toHaveCount(0);
+  await expect(ficha.getByRole('button', { name: 'Reativar' })).toBeVisible();
+
+  await ficha.getByRole('button', { name: 'Reativar' }).click();
+  await expect(ficha.getByText('Ativo')).toBeVisible();
+});
+
+test('encerrar pede confirmação, sai dos atuais e tranca a ficha', async () => {
+  const ficha = painel.getByRole('listitem').filter({ hasText: 'João do WhatsApp' });
+
+  // Recusar a confirmação não pode encerrar nada. A frase precisa dizer as duas consequências
+  // que não são óbvias — a ficha tranca, e o convite pendente morre.
+  painel.once('dialog', (dialogo) => {
+    expect(dialogo.message()).toMatch(/só para leitura/i);
+    expect(dialogo.message()).toMatch(/convite pendente/i);
+    void dialogo.dismiss();
+  });
+  await ficha.getByRole('button', { name: 'Encerrar' }).click();
+  await expect(ficha.getByText('Ativo')).toBeVisible();
+
+  painel.once('dialog', (dialogo) => void dialogo.accept());
+  await ficha.getByRole('button', { name: 'Encerrar' }).click();
+
+  // O filtro padrão é "atuais", e encerrado não é atual.
+  await expect(ficha).toHaveCount(0);
+
+  await painel.getByRole('button', { name: 'Encerrados' }).click();
+  const encerrada = painel.getByRole('listitem').filter({ hasText: 'João do WhatsApp' });
+  await expect(encerrada.getByText('Encerrado')).toBeVisible();
+
+  // Somente leitura: não há botão de editar, e também não há como convidar. Esconder é melhor do
+  // que deixar clicar e mostrar um erro — a pessoa descobriria a regra pelo tropeço.
+  await expect(encerrada.getByRole('button', { name: 'Editar' })).toHaveCount(0);
+  await expect(encerrada.getByRole('button', { name: 'Gerar link' })).toHaveCount(0);
+  await expect(encerrada.getByRole('button', { name: 'Reativar' })).toBeVisible();
+});
+
+test('convidar é oferecido, e a tela diz o que falta para poder', async () => {
+  await painel.getByRole('button', { name: 'Atuais' }).click();
+  const ficha = painel.getByRole('listitem').filter({ hasText: 'Lucas, 12 anos' });
+
+  // Ficha sem conta ligada é o caso **normal e permanente** de quem nunca aceitou, e o texto
+  // evita qualquer coisa que sugira pendência a zerar.
+  await expect(ficha.getByText(/o normal/i)).toBeVisible();
+
+  // A conta do teste não tem e-mail confirmado, e convidar é a única coisa que isso bloqueia:
+  // enviar convite é a plataforma escrevendo em nome daquele endereço.
+  await expect(ficha.getByRole('button', { name: 'Gerar link' })).toBeDisabled();
+  await expect(ficha.getByText(/confirme seu e-mail/i)).toBeVisible();
 });
 
 test('apagar tira da lista, e a confirmação é obrigatória', async () => {

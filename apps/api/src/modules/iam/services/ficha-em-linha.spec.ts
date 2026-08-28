@@ -1,4 +1,4 @@
-import { AccessHolder, StudentStatus } from '@gestao/types';
+import { AccessHolder, InviteKind, StudentStatus } from '@gestao/types';
 import { fichaComoDono, fichaComoParticipante, type DadosDaFicha } from './ficha-em-linha';
 
 /**
@@ -41,6 +41,7 @@ describe('fichaComoDono', () => {
       'guardianName',
       'hasAccount',
       'id',
+      'invite',
       'phone',
       'possibleDuplicate',
       'privateNotes',
@@ -89,12 +90,21 @@ describe('fichaComoDono', () => {
     const ficha = fichaComoDono(completa);
     expect(ficha.accountFound).toBe(false);
     expect(ficha.possibleDuplicate).toBe(false);
+    // `null` e não ausente: a tela distingue "não há convite de pé" de "ninguém perguntou" pela
+    // presença da chave, e um campo que às vezes some é um campo que a tela testa errado.
+    expect(ficha.invite).toBeNull();
   });
 
   it('os marcadores passam adiante quando chegam', () => {
-    const ficha = fichaComoDono(completa, { accountFound: true, possibleDuplicate: true });
+    const ficha = fichaComoDono(completa, {
+      accountFound: true,
+      possibleDuplicate: true,
+      invite: { kind: InviteKind.Link, expiresAt: '2026-08-29T12:00:00.000Z' },
+    });
+
     expect(ficha.accountFound).toBe(true);
     expect(ficha.possibleDuplicate).toBe(true);
+    expect(ficha.invite).toEqual({ kind: 'LINK', expiresAt: '2026-08-29T12:00:00.000Z' });
   });
 });
 

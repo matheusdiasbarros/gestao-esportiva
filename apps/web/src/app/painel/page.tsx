@@ -1,7 +1,6 @@
 import { Role } from '@gestao/types';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ConvidarAlunos } from '@/components/convidar-alunos';
 import { LinkPublico } from '@/components/link-publico';
 import { ReenviarVerificacao } from '@/components/reenviar-verificacao';
 import { Sair } from '@/components/sair';
@@ -92,8 +91,8 @@ export default async function Painel() {
         <section className="rounded-xl border border-(--color-border) bg-(--color-surface-muted) p-6">
           <h2 className="text-sm font-medium">Seus alunos</h2>
           <p className="mt-1 text-sm text-(--color-ink-muted)">
-            A sua carteira. O aluno não precisa ter conta para você cadastrá-lo — a conta dele entra
-            depois, pelo convite.
+            A sua carteira: cadastrar, convidar, pausar e encerrar. O aluno não precisa ter conta
+            para você cadastrá-lo — a conta dele entra depois, pelo convite.
           </p>
           <Link
             href="/painel/alunos"
@@ -108,17 +107,6 @@ export default async function Painel() {
         <section className="rounded-xl border border-(--color-border) bg-(--color-surface-muted) p-6">
           <h2 className="mb-3 text-sm font-medium">Seu link para captar alunos</h2>
           <LinkPublico slug={sessao.signupSlug} />
-        </section>
-      ) : null}
-
-      {sessao.professionalId ? (
-        <section className="rounded-xl border border-(--color-border) bg-(--color-surface-muted) p-6">
-          <h2 className="text-sm font-medium">Alunos que ainda não têm conta</h2>
-          <p className="mt-1 mb-4 text-xs text-(--color-ink-muted)">
-            Convide para que eles marquem e paguem sozinhos. Quem não aceitar continua na sua
-            carteira do mesmo jeito.
-          </p>
-          <ConvidarAlunos emailVerificado={sessao.emailVerified} />
         </section>
       ) : null}
 

@@ -13,8 +13,9 @@ import { cadastrar, cadastrarAluno } from './apoio';
  * `docs/domain/students.md` §10 é a matriz normativa, e §10.2 lista as células "não" que
  * precisam de teste. A política de campos, sem banco, está em `ficha-em-linha.spec.ts`.
  *
- * **Uma conta para o arquivo inteiro, em série.** O orçamento de cadastro do IP é 100 por hora e
- * a suíte já gasta 81 (DT-010); um cadastro por teste aqui estouraria sozinho.
+ * **Duas contas para o arquivo inteiro, em série** — um professor e uma aluna. O orçamento de
+ * cadastro do IP é 100 por hora e a suíte já gasta 87 (DT-010); um cadastro por teste aqui
+ * estouraria sozinho.
  */
 const API = 'http://localhost:3333/api/v1';
 
@@ -30,6 +31,7 @@ const CAMPOS_DA_FICHA = [
   'guardianName',
   'hasAccount',
   'id',
+  'invite',
   'phone',
   'possibleDuplicate',
   'privateNotes',
@@ -40,18 +42,34 @@ test.describe.configure({ mode: 'serial' });
 
 let contexto: BrowserContext;
 let professor: Page;
+/** O link "treine comigo" do professor deste arquivo. Resolvido uma vez, no `beforeAll`. */
+let slugDoProfessor: string;
+
+/**
+ * Uma conta de aluna, viva o arquivo inteiro.
+ *
+ * Ela existe porque três coisas desta fase só se provam com **duas** contas de verdade: o
+ * marcador "já tem conta", a entrada pelo link público e o 409 de quem já foi encerrada. Antes
+ * era criada e descartada dentro de um teste só — hoje é a mesma, e o custo em cadastros não
+ * mudou (DT-010).
+ */
+let alunaContexto: BrowserContext;
+let aluna: Page;
+let emailDaAluna: string;
 
 interface Ficha {
   id: string;
   fullName: string;
   email: string | null;
   status: string;
+  endedAt: string | null;
   accessHolder: string;
   guardianName: string | null;
   privateNotes: string | null;
   hasAccount: boolean;
   accountFound: boolean;
   possibleDuplicate: boolean;
+  invite: { kind: string; expiresAt: string } | null;
 }
 
 async function criar(dados: Record<string, unknown>): Promise<Ficha> {
@@ -66,14 +84,46 @@ async function carteira(query = ''): Promise<Ficha[]> {
   return (await resposta.json()) as Ficha[];
 }
 
+/**
+ * A ficha, ou uma falha que diz qual sumiu.
+ *
+ * Sem isto, `find(...)` devolvendo `undefined` estoura três linhas adiante com "cannot read
+ * properties of undefined", e a saída não diz nada sobre a carteira.
+ */
+function exigir(ficha: Ficha | undefined, oQue: string): Ficha {
+  if (!ficha) throw new Error(`não achei a ficha na carteira: ${oQue}`);
+  return ficha;
+}
+
+/** Muda o estado do vínculo e devolve a resposta crua — vários testes esperam recusa. */
+async function mudarEstado(id: string, status: string) {
+  return professor.request.patch(`${API}/students/${id}/status`, { data: { status } });
+}
+
+async function mudarEstadoOk(id: string, status: string): Promise<Ficha> {
+  const resposta = await mudarEstado(id, status);
+  expect(resposta.status(), await resposta.text()).toBe(200);
+  return (await resposta.json()) as Ficha;
+}
+
 test.beforeAll(async ({ browser }) => {
   contexto = await browser.newContext();
   professor = await contexto.newPage();
   await cadastrar(professor);
+
+  const eu = (await (await professor.request.get(`${API}/auth/me`)).json()) as {
+    signupSlug: string;
+  };
+  slugDoProfessor = eu.signupSlug;
+
+  alunaContexto = await browser.newContext();
+  aluna = await alunaContexto.newPage();
+  emailDaAluna = (await cadastrarAluno(aluna)).email;
 });
 
 test.afterAll(async () => {
   await contexto.close();
+  await alunaContexto.close();
 });
 
 test.describe('Cadastrar uma ficha', () => {
@@ -176,18 +226,14 @@ test.describe('A lista da carteira', () => {
   test('marca a ficha cujo e-mail já tem conta, com o vínculo ainda por fazer', async () => {
     // O buraco do `iam.md` §9.4 pelo lado do profissional: sem este marcador, o aluno que se
     // cadastrou sozinho fica esperando um convite que ninguém sabe que deveria mandar.
-    const outra = await contexto.browser()?.newContext();
-    const aba = await outra?.newPage();
-    if (!aba) throw new Error('não consegui abrir o contexto da aluna');
-    const aluna = await cadastrarAluno(aba);
-    await outra?.close();
-
-    const ficha = await criar({ fullName: 'Aluna que já se cadastrou', email: aluna.email });
+    const ficha = await criar({ fullName: 'Aluna que já se cadastrou', email: emailDaAluna });
 
     // **Nada é ligado automaticamente**: o e-mail foi digitado pelo profissional e nunca provado
     // pela aluna. O marcador acende um botão; quem decide é ele.
     expect(ficha.accountFound).toBe(true);
     expect(ficha.hasAccount).toBe(false);
+    // E não há convite de pé: o marcador acende o botão, não dispara o convite.
+    expect(ficha.invite).toBeNull();
   });
 
   test('marca possível duplicata quando duas fichas dividem o mesmo e-mail', async () => {
@@ -220,6 +266,220 @@ test.describe('Editar e apagar', () => {
 
     expect((await professor.request.delete(`${API}/students/${ficha.id}`)).status()).toBe(204);
     expect((await professor.request.get(`${API}/students/${ficha.id}`)).status()).toBe(404);
+  });
+});
+
+/**
+ * Os estados do vínculo — `students.md` §7.
+ *
+ * A regra de **qual transição existe** está testada sem banco em `vinculo.spec.ts`, com as nove
+ * combinações. Aqui se prova o que aquele arquivo não alcança: que a transição atravessa o HTTP,
+ * grava no banco, arrasta o convite junto e muda o que a lista mostra.
+ */
+test.describe('O estado do vínculo', () => {
+  test('pausar troca o rótulo e **mantém** na lista de atuais', async () => {
+    const ficha = await criar({ fullName: 'Vai viajar dois meses' });
+
+    const pausada = await mudarEstadoOk(ficha.id, 'PAUSED');
+    expect(pausada.status).toBe('PAUSED');
+    // Pausar **não** grava data de fim: `ended_at` é do encerramento, e o `CHECK` do banco
+    // recusaria a linha com as duas coisas.
+    expect(pausada.endedAt).toBeNull();
+
+    // Pausado é aluno atual — a §7.2 dizia o contrário e foi corrigida em 2026-08-27. Se o
+    // professor continua agendando e cobrando quem está pausado, esconder essa pessoa da tela
+    // que ele abre todo dia é obrigá-lo a trocar de filtro para achar quem ele vai agendar.
+    const atuais = await carteira();
+    expect(atuais.map((f) => f.fullName)).toContain('Vai viajar dois meses');
+
+    const soPausados = await carteira('?filter=PAUSED');
+    expect(soPausados.map((f) => f.fullName)).toEqual(['Vai viajar dois meses']);
+  });
+
+  test('pausado continua editável — pausar é declaração, não trava', async () => {
+    const pausada = exigir((await carteira('?filter=PAUSED'))[0], 'a que foi pausada');
+
+    // §7.2: se pausar impedisse de agendar e de anotar, o professor pararia de pausar, e um
+    // estado que ninguém marca é pior do que estado nenhum — a lista passaria a mentir.
+    const resposta = await professor.request.patch(`${API}/students/${pausada.id}`, {
+      data: { goals: 'Retomar em março.' },
+    });
+    expect(resposta.status(), await resposta.text()).toBe(200);
+  });
+
+  test('encerrar grava a data, sai da lista padrão e tranca a ficha', async () => {
+    const ficha = await criar({ fullName: 'Parou de treinar' });
+
+    const encerrada = await mudarEstadoOk(ficha.id, 'ENDED');
+    expect(encerrada.status).toBe('ENDED');
+    expect(encerrada.endedAt).not.toBeNull();
+
+    expect((await carteira()).map((f) => f.fullName)).not.toContain('Parou de treinar');
+    expect((await carteira('?filter=ENDED')).map((f) => f.fullName)).toContain('Parou de treinar');
+
+    // Somente leitura, e não é formalidade: é o princípio da finalidade virando comportamento.
+    // Terminado o serviço, não existe motivo novo para escrever sobre aquela pessoa.
+    const edicao = await professor.request.patch(`${API}/students/${ficha.id}`, {
+      data: { privateNotes: 'anotação nova depois do fim' },
+    });
+    expect(edicao.status()).toBe(422);
+  });
+
+  test('reativar limpa a data e devolve a ficha para edição', async () => {
+    const encerrada = exigir((await carteira('?filter=ENDED'))[0], 'Parou de treinar');
+    expect(encerrada.fullName).toBe('Parou de treinar');
+
+    const viva = await mudarEstadoOk(encerrada.id, 'ACTIVE');
+    expect(viva.status).toBe('ACTIVE');
+    // Sem isto o banco recusaria a linha: `CHECK ((status = 'ENDED') = (ended_at IS NOT NULL))`.
+    expect(viva.endedAt).toBeNull();
+
+    const edicao = await professor.request.patch(`${API}/students/${viva.id}`, {
+      data: { goals: 'Voltou em abril.' },
+    });
+    expect(edicao.status()).toBe(200);
+  });
+
+  test('a transição que a regra não prevê é recusada, e a ficha não muda', async () => {
+    const ficha = await criar({ fullName: 'Estado teimoso' });
+
+    // Já está ativo: pedir de novo é sinal de tela desatualizada, e responder "pronto"
+    // esconderia isso de quem clicou.
+    const denovo = await mudarEstado(ficha.id, 'ACTIVE');
+    expect(denovo.status()).toBe(422);
+    expect(await denovo.text()).toContain('já está ativo');
+
+    await mudarEstadoOk(ficha.id, 'ENDED');
+
+    // O único atalho que a regra recusa de verdade: encerrado só volta como ativo.
+    const atalho = await mudarEstado(ficha.id, 'PAUSED');
+    expect(atalho.status()).toBe(422);
+    expect(await atalho.text()).toContain('só volta como ativo');
+
+    const depois = (await (
+      await professor.request.get(`${API}/students/${ficha.id}`)
+    ).json()) as Ficha;
+    expect(depois.status).toBe('ENDED');
+  });
+
+  test('estado inventado é recusado antes de chegar ao serviço', async () => {
+    const ficha = await criar({ fullName: 'Estado que não existe' });
+
+    for (const invento of ['CANCELLED', 'active', '', null]) {
+      const resposta = await mudarEstado(ficha.id, invento as string);
+      expect(resposta.status(), `${String(invento)} foi aceito`).toBe(422);
+    }
+  });
+
+  test('ficha de outra carteira não muda de estado — 404, e nunca 403', async ({ page }) => {
+    const minha = await criar({ fullName: 'Não é sua para encerrar' });
+
+    await cadastrar(page);
+    const invasao = await page.request.patch(`${API}/students/${minha.id}/status`, {
+      data: { status: 'ENDED' },
+    });
+    expect(invasao.status()).toBe(404);
+
+    const depois = (await (
+      await professor.request.get(`${API}/students/${minha.id}`)
+    ).json()) as Ficha;
+    expect(depois.status).toBe('ACTIVE');
+  });
+});
+
+/**
+ * O convite e o vínculo, e a linha que separa os dois — `students.md` §7.1.
+ *
+ * Estes testes exercitam a ponta que o Epic 5.0 deixou em aberto de propósito: as duas correções
+ * feitas lá (o aceite parar de sobrescrever o estado, e o link público responder 409 para quem
+ * foi encerrada) precisavam de `PAUSED` e da API de estado, que nasceram só agora.
+ */
+test.describe('O convite e o link público não mexem no vínculo', () => {
+  test('vínculo encerrado não aceita convite novo', async () => {
+    // O **outro lado** da revogação. Encerrar mata o convite de pé — isso está provado pela tela
+    // do Rodrigo, em `convite.spec.ts`, porque emitir exige e-mail confirmado e a conta de teste
+    // não tem. O que se prova aqui é que a porta continua fechada depois: sem esta recusa, o
+    // professor encerraria o vínculo e emitiria um convite novo na tela seguinte, ligando uma
+    // conta a um vínculo que ele mesmo terminou.
+    const ficha = await criar({ fullName: 'Encerrada, e sem convite novo' });
+    await mudarEstadoOk(ficha.id, 'ENDED');
+
+    const tentativa = await professor.request.post(`${API}/invites`, {
+      data: { studentId: ficha.id, kind: 'LINK' },
+    });
+    expect(tentativa.status()).toBe(409);
+    expect(await tentativa.text()).toContain('Reative o aluno antes de convidar');
+  });
+
+  test('a aluna entra pelo link público e vira ficha ativa, com conta', async () => {
+    const entrada = await aluna.request.post(`${API}/auth/signup-link/${slugDoProfessor}/join`);
+    expect(entrada.status(), await entrada.text()).toBe(204);
+
+    // Clicar duas vezes não pode virar duas fichas.
+    expect(
+      (await aluna.request.post(`${API}/auth/signup-link/${slugDoProfessor}/join`)).status(),
+    ).toBe(204);
+
+    const dela = (await carteira()).filter((f) => f.email === emailDaAluna && f.hasAccount);
+    expect(dela).toHaveLength(1);
+    expect(dela[0]?.status).toBe('ACTIVE');
+  });
+
+  /**
+   * A dívida do Epic 5.0, agora paga.
+   *
+   * Antes da correção, este caminho respondia **204 em silêncio**: a ex-aluna clicava de novo no
+   * link do professor, ia embora achando que tinha voltado, e ele não ficava sabendo de nada.
+   */
+  test('a ex-aluna clicando de novo no link público recebe 409, e não volta sozinha', async () => {
+    const dela = exigir(
+      (await carteira()).find((f) => f.email === emailDaAluna && f.hasAccount),
+      'a que entrou pelo link público',
+    );
+
+    await mudarEstadoOk(dela.id, 'ENDED');
+
+    const volta = await aluna.request.post(`${API}/auth/signup-link/${slugDoProfessor}/join`);
+    expect(volta.status()).toBe(409);
+    // Reativar é **só do profissional** (§7.3): encerrar é o direito de deixar de ser aluno de
+    // alguém e não precisa de autorização; recomeçar é uma relação comercial, e é de quem dá a
+    // aula. A mensagem manda ela falar com ele, em vez de sugerir que tente de novo.
+    expect(await volta.text()).toContain('Fale com ele');
+
+    const depois = (await (
+      await professor.request.get(`${API}/students/${dela.id}`)
+    ).json()) as Ficha;
+    expect(depois.status).toBe('ENDED');
+    // E a conta continua ligada: encerrar não desliga `user_id`, é o que dá ao ex-aluno acesso
+    // de leitura ao próprio histórico e o que faz "reativar" funcionar sem convite novo.
+    expect(depois.hasAccount).toBe(true);
+  });
+
+  test('a mesma conta é aluna de dois profissionais, e nenhum vê a ficha do outro', async ({
+    page,
+  }) => {
+    // A ficha **não é a pessoa**. Não existe unicidade de aluno por conta, e não pode existir:
+    // é o que permite Marina treinar com Rodrigo e com Ana sem que um saiba do outro.
+    const outro = await cadastrar(page);
+    expect(outro.email).not.toBe(emailDaAluna);
+
+    const dele = (await (await page.request.get(`${API}/auth/me`)).json()) as {
+      signupSlug: string;
+    };
+    expect((await aluna.request.post(`${API}/auth/signup-link/${dele.signupSlug}/join`)).status())
+      // O vínculo com o primeiro professor está **encerrado** desde o teste anterior, e isso não
+      // atrapalha em nada: o estado é por ficha, não por pessoa.
+      .toBe(204);
+
+    const carteiraDele = (await (await page.request.get(`${API}/students`)).json()) as Ficha[];
+    expect(carteiraDele).toHaveLength(1);
+    expect(carteiraDele[0]?.email).toBe(emailDaAluna);
+    expect(carteiraDele[0]?.status).toBe('ACTIVE');
+
+    // E o primeiro professor não enxerga a ficha nova, nem sabe que ela existe.
+    expect((await professor.request.get(`${API}/students/${carteiraDele[0]?.id}`)).status()).toBe(
+      404,
+    );
   });
 });
 

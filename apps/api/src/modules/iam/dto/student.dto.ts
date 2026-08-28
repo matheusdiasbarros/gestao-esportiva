@@ -5,6 +5,7 @@ import {
   MAX_STUDENT_NAME_LENGTH,
   MAX_STUDENT_PHONE_LENGTH,
   StudentFilter,
+  StudentStatus,
 } from '@gestao/types';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import {
@@ -115,6 +116,25 @@ export class CreateStudentDto {
  * "encerrar o vínculo" serem a mesma operação.
  */
 export class UpdateStudentDto extends PartialType(CreateStudentDto) {}
+
+/**
+ * Mudar o estado do vínculo — pausar, encerrar, reativar.
+ *
+ * Um campo só, e obrigatório. **O destino, e não a ação**: `{ status: 'PAUSED' }` em vez de rotas
+ * `/pause` e `/end`. Com verbos, cada transição nova é uma rota nova, e a regra de qual é
+ * possível se espalha por elas; com o destino, a tabela de `vinculo.ts` continua sendo o único
+ * lugar onde a resposta está escrita.
+ */
+export class ChangeStudentStatusDto {
+  @ApiProperty({
+    enum: StudentStatus,
+    description:
+      'O estado para onde o vínculo vai. As transições possíveis estão em `students.md` §7.3 — ' +
+      'de encerrado só se volta para ativo.',
+  })
+  @IsEnum(StudentStatus, { message: 'Estado de vínculo inválido.' })
+  status: StudentStatus;
+}
 
 /** O filtro da lista. Sem ele, `CURRENT` — o que o profissional quer ver ao abrir a tela. */
 export class ListStudentsQuery {

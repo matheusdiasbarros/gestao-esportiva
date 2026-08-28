@@ -88,7 +88,7 @@ apps/web/src/
   lib/session.ts                   lê a sessão **no servidor**, repassando o cookie
   components/                      campos, sair, link-publico, reenviar-verificacao,
                                    form-cadastro-aluno, entrar-com-professor,
-                                   aceitar-convite, convidar-alunos, trocar-email
+                                   aceitar-convite, trocar-email
 ```
 
 ## 3. Rotas e telas
@@ -398,9 +398,13 @@ mostra o endereço que ele está usando de fato.
 
 ## 7. O que NÃO existe
 
-- **Criar ficha pela interface.** O profissional só convida quem já está na carteira dele, e em
-  Fase 2 a única forma de uma ficha existir é a seed ou o link público. Criar, editar e mesclar
-  ficha é da Fase 5 — e é o que destrava o teste do aceite (DT-005)
+- ~~**Criar ficha pela interface.**~~ Passou a existir na **Fase 5**, e com ela o teste do aceite
+  em navegador — o DT-005 fechou em 2026-08-27. Em Fase 2 a única forma de uma ficha existir era
+  a seed ou o link público. Mesclar ficha continua sendo da Fase 7
+- **A tela de convidar saiu daqui.** Na Fase 2 era uma seção do `/painel`, porque não havia
+  carteira onde pendurá-la. Na Fase 5 ela virou parte de `/painel/alunos`, e o componente
+  `convidar-alunos.tsx` foi apagado — a decisão de convidar se toma olhando a lista de alunos. O
+  aplicativo mantém a tela dele, que consome a mesma `GET /invites`
 - **Trocar a própria senha estando logado.** Só existe o caminho de "esqueci a senha", que passa
   pelo e-mail. É suficiente e ninguém pediu o outro
 - **Tela de aparelhos conectados.** `refresh_tokens` guarda uma etiqueta por aparelho, mas não

@@ -1,4 +1,10 @@
-import type { AccessHolder, StudentAsParticipant, StudentRow, StudentStatus } from '@gestao/types';
+import type {
+  AccessHolder,
+  StandingInvite,
+  StudentAsParticipant,
+  StudentRow,
+  StudentStatus,
+} from '@gestao/types';
 
 /**
  * As **duas** formas de saída da ficha, montadas campo a campo.
@@ -44,9 +50,15 @@ export interface MarcadoresDaFicha {
   accountFound: boolean;
   /** Outra ficha da mesma carteira tem este e-mail ou este telefone. */
   possibleDuplicate: boolean;
+  /** O convite de pé, se houver. Vencido não conta — o índice parcial do banco não olha a data. */
+  invite: StandingInvite | null;
 }
 
-const SEM_MARCADORES: MarcadoresDaFicha = { accountFound: false, possibleDuplicate: false };
+const SEM_MARCADORES: MarcadoresDaFicha = {
+  accountFound: false,
+  possibleDuplicate: false,
+  invite: null,
+};
 
 /**
  * A ficha como o **dono** a vê. Tudo.
@@ -76,6 +88,7 @@ export function fichaComoDono(
     hasAccount: ficha.userId !== null,
     accountFound: marcadores.accountFound,
     possibleDuplicate: marcadores.possibleDuplicate,
+    invite: marcadores.invite,
   };
 }
 

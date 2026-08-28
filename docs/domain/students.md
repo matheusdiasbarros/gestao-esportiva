@@ -285,14 +285,23 @@ que um eixo diz algo sobre o outro.
 | Estado | Para o profissional | Para o aluno (quando houver tela — Fase 11) |
 | --- | --- | --- |
 | `ACTIVE` | na lista padrão; agenda, cobra e edita | vê agenda, saldo e histórico; reserva e cancela |
-| `PAUSED` | fora da lista padrão, com filtro para ver; **continua podendo tudo** | vê agenda, saldo e histórico; **não reserva** |
+| `PAUSED` | ~~fora da lista padrão, com filtro para ver~~ **na lista padrão, com rótulo**; **continua podendo tudo** | vê agenda, saldo e histórico; **não reserva** |
 | `ENDED` | só leitura. Fora da lista padrão | vê **só o histórico** dele; não reserva, não vê a agenda futura nem disponibilidade |
 
 **`PAUSED` não bloqueia o profissional, e isso é de propósito. (proposta)** Pausar é uma
 declaração — "ela está viajando dois meses" —, não uma trava. Se pausar impedisse de agendar, o
 professor pararia de pausar, e um estado que ninguém marca é pior do que estado nenhum: a lista
-passaria a mentir. O que pausar faz de concreto é tirar da lista padrão e tirar do aluno a
+passaria a mentir. O que pausar faz de concreto é **trocar o rótulo** e tirar do aluno a
 capacidade de reservar sozinho.
+
+> **Correção, 2026-08-27 (Epic 5.2).** Esta seção dizia que pausar tirava a ficha da lista
+> padrão, e a implementação fez o contrário: o filtro `CURRENT` traz `ACTIVE` **e** `PAUSED`. A
+> implementação está certa e o texto estava errado, pelo argumento do próprio parágrafo acima. Se
+> o profissional continua agendando e cobrando um aluno pausado, esconder esse aluno da tela que
+> ele abre todo dia é obrigá-lo a trocar de filtro para achar quem ele está prestes a agendar. E
+> a tela oferece três filtros — *Atuais*, *Encerrados*, *Todos* —, sem um "Pausados": com a regra
+> antiga, ver um aluno pausado exigiria *Todos*, junto dos encerrados. **Pausado é aluno atual.**
+> O que ele perde é a reserva pelo lado dele; o que o professor ganha é o rótulo.
 
 **`ENDED` deixa a ficha em somente leitura. (proposta)** Não é formalidade: é o princípio da
 finalidade virando comportamento. Terminado o serviço, não existe mais motivo para escrever

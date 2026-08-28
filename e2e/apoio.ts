@@ -35,14 +35,28 @@ export function contaNova(): Conta {
   };
 }
 
-/** Preenche e envia o formulário que já estiver aberto. Não navega e não afirma nada. */
-async function preencherFormulario(page: Page, conta: Conta): Promise<void> {
+/**
+ * Preenche e envia o formulário de conta que já estiver aberto. Não navega e não afirma nada.
+ *
+ * Serve às três telas que usam o mesmo formulário: `/criar-conta`, `/criar-conta/aluno` e a aba
+ * "Criar conta" da tela de convite. É por isso que ele **não** navega — quem navega é quem chama.
+ *
+ * **O botão muda de nome na tela de convite**, e por isso ele é parâmetro: lá o formulário é o
+ * mesmo componente, mas o botão diz "Aceitar convite" — e naquela tela existe uma *aba* chamada
+ * "Criar conta", então procurar pelo nome fixo não falha rápido: fica trinta segundos esperando
+ * um botão que nunca vai existir, e a saída não diz nada sobre o motivo. Custou um teste aqui.
+ */
+export async function preencherFormulario(
+  page: Page,
+  conta: Conta,
+  botao = 'Criar conta',
+): Promise<void> {
   await page.getByLabel('Nome completo').fill(conta.nome);
   await page.getByLabel('E-mail').fill(conta.email);
   await page.getByLabel('Data de nascimento').fill(conta.nascimento);
   await page.getByLabel('Senha').fill(conta.senha);
   await page.getByRole('checkbox').check();
-  await page.getByRole('button', { name: 'Criar conta' }).click();
+  await page.getByRole('button', { name: botao }).click();
 }
 
 /** Preenche e envia o cadastro **de profissional**. Não afirma nada sobre o resultado. */

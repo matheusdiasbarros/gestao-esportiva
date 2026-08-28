@@ -84,7 +84,18 @@ NAT compartilha o mesmo IP. A revisão de segurança da Fase 2 é o lugar dessa 
 
 ---
 
-### DT-005 — O aceite de convite não tem teste em navegador
+### ~~DT-005 — O aceite de convite não tem teste em navegador~~ ✅ resolvido em 2026-08-27
+
+Resolvido no Epic 5.2, exatamente pelo gatilho previsto: o teste agora **cria e descarta a
+própria ficha**, então não consome mais a do João Pereira. Está em `e2e/convite.spec.ts`, no
+bloco *"Aceitar o convite"*, e faz o percurso inteiro pela tela — link avulso gerado na carteira,
+contexto novo sem sessão, aba "Criar conta", conta criada, painel.
+
+O teste ganhou uma segunda função que o débito não previa: a ficha descartável nasce `PAUSED` e
+`GUARDIAN`, e é o que prova que o aceite **não sobrescreve** nenhum dos dois (`students.md` §7.1).
+Verificado quebrando.
+
+O texto original fica abaixo, porque o raciocínio continua valendo para o DT-006.
 
 **O que:** `e2e/convite.spec.ts` cobre emitir convite, reemitir invalidando o anterior, a tela de
 quem recebeu, o convite morto e quem não pode convidar. **Não cobre o aceite em si.**
@@ -201,18 +212,25 @@ dois provedores antes de existir o segundo (ADR-005).
 
 ---
 
-### DT-010 — A suíte de ponta a ponta gasta 85 dos 100 cadastros por hora que o IP tem
+### DT-010 — A suíte de ponta a ponta gasta 87 dos 100 cadastros por hora que o IP tem
 
 **O que:** cada teste de tela cria a própria conta, de propósito (`e2e/apoio.ts` explica por
-quê), e todos saem de `127.0.0.1`. Uma execução limpa da suíte consome **85** dos 100 cadastros
-por hora que `LimitarCadastro` permite por IP — medido em 2026-08-27, com 157 testes. Uma
+quê), e todos saem de `127.0.0.1`. Uma execução limpa da suíte consome **87** dos 100 cadastros
+por hora que `LimitarCadastro` permite por IP — medido em 2026-08-27, com 173 testes. Uma
 execução cabe; **duas na mesma hora não cabem.**
 
 O número sobe a cada fase, e o histórico é o aviso: 66 na primeira medição, 74 com 112 testes,
-81 com 131, **85 com 157**. Quem acrescentar teste que cadastra mede de novo e atualiza este
-título. **Faltam 5 para o gatilho de correção**, e os dois arquivos novos da Fase 5
-(`alunos.spec.ts` e `carteira-de-alunos.spec.ts`) já compartilham **uma** conta cada um
-justamente por isso — foi o que fez 25 testes custarem 4 cadastros em vez de 25.
+81 com 131, 85 com 157, **87 com 173**. Quem acrescentar teste que cadastra mede de novo e
+atualiza este título. **Faltam 3 para o gatilho de correção**, e os arquivos da Fase 5
+(`alunos.spec.ts`, `carteira-de-alunos.spec.ts`) compartilham **uma** conta cada um justamente
+por isso — o Epic 5.2 acrescentou 16 testes e custou só 2 cadastros, reaproveitando a conta de
+aluna que já existia no arquivo.
+
+**Aconteceu de novo em 2026-08-27, e desta vez comigo.** Depois de uma execução limpa, rodei a
+suíte de novo na mesma hora para investigar duas falhas — e o resultado foram dezenas de falhas
+que não tinham nada a ver com o que eu investigava. A regra prática é a do parágrafo seguinte:
+**antes de reexecutar para diagnosticar, zere os contadores.** Sem isso, a segunda execução
+inventa provas.
 
 **Como isso aparece:** não como "limite estourado". Aparece como meia dúzia de testes de
 arquivos diferentes falhando em `expect(page).toHaveURL('/painel')`, porque o formulário de
@@ -314,3 +332,6 @@ Não são débito — são erros que custaram tempo e que a documentação agora
 | **`react` e `react-dom` precisam ser a MESMA versão, exata.** O `bundledNativeModules` do Expo indicava 19.2.3 e o projeto usa 19.2.8; a página abria em branco, e o motivo só aparecia no console do navegador — nada no terminal do Metro | `apps/mobile/package.json` |
 | **O Expo Go da loja recusa projeto de SDK mais novo do que ele suporta**, e em aparelho com Android antigo a Play Store entrega um Expo Go mais velho de propósito. Não adianta "atualizar": o caminho é build própria ou o alvo navegador | `docs/sistema/fase-02-identidade-e-acesso.md` §6 |
 | **Arquivo em `apps/mobile/app/` é uma rota.** Exportar dali um componente auxiliar confunde o gerador de rotas — auxiliares vão para `src/componentes/` | `apps/mobile/src/componentes/campos.tsx` |
+| **`getByText('Pausado')` acha dois elementos** quando o parágrafo explicativo começa com a mesma palavra do rótulo. O erro é ambiguidade, não ausência, e a mensagem não sugere o motivo. `{ exact: true }` resolve | `e2e/carteira-de-alunos.spec.ts` |
+| **O botão do formulário de conta muda de nome na tela de convite** — "Aceitar convite", não "Criar conta". E lá existe uma *aba* chamada "Criar conta": procurar pelo nome fixo não falha rápido, fica trinta segundos esperando um botão que nunca vai existir | `e2e/apoio.ts`, parâmetro `botao` de `preencherFormulario` |
+| **`entrar()` não espera a navegação.** Um `page.goto` logo depois corre contra a navegação que o login dispara, e às vezes ela vence — a tela seguinte nunca abre. Sempre `await expect(page).toHaveURL('/painel')` entre os dois | `e2e/convite.spec.ts` |

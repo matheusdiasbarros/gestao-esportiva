@@ -1,4 +1,4 @@
-import type { AccessHolder, StudentStatus } from './iam';
+import type { AccessHolder, InviteKind, StudentStatus } from './iam';
 
 /**
  * A ficha do aluno — o registro que **um** profissional mantém sobre alguém que treina com ele.
@@ -52,6 +52,24 @@ export interface StudentRow {
    * consequência financeira e não pode ser respondida antes das tabelas de crédito existirem.
    */
   possibleDuplicate: boolean;
+  /**
+   * O convite que está de pé para esta ficha, ou `null`.
+   *
+   * Vem junto da ficha, e não de uma segunda chamada a `GET /invites`, porque a decisão de
+   * convidar se toma **olhando a carteira** — o marcador `accountFound` acende o botão na mesma
+   * linha. Duas listas com a mesma ação, em telas diferentes, divergem no dia em que uma das
+   * duas recebe uma regra nova.
+   */
+  invite: StandingInvite | null;
+}
+
+/**
+ * O convite de pé para uma ficha. Nunca há dois ao mesmo tempo — garantido pelo índice parcial
+ * `uq_student_invites_ativo`. Convite vencido **não** é convite de pé: o índice não olha a data.
+ */
+export interface StandingInvite {
+  kind: InviteKind;
+  expiresAt: string;
 }
 
 /**

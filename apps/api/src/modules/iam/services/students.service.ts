@@ -7,13 +7,15 @@ import {
 } from '@gestao/types';
 import { Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { DataSource, In, IsNull, MoreThan, Repository } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
 import { CreateStudentDto, ListStudentsQuery, UpdateStudentDto } from '../dto/student.dto';
+import { StudentInvite } from '../entities/student-invite.entity';
 import { Student } from '../entities/student.entity';
 import { User } from '../entities/user.entity';
 import { AccessService } from './access.service';
 import { fichaComoDono, type MarcadoresDaFicha } from './ficha-em-linha';
+import { mudancaDeVinculo } from './vinculo';
 
 /** Os estados que cada filtro da lista mostra. `CURRENT` é o padrão — `students.md` §7.2. */
 const ESTADOS_DO_FILTRO: Record<StudentFilter, StudentStatus[]> = {
@@ -22,6 +24,13 @@ const ESTADOS_DO_FILTRO: Record<StudentFilter, StudentStatus[]> = {
   [StudentFilter.Paused]: [StudentStatus.Paused],
   [StudentFilter.Ended]: [StudentStatus.Ended],
   [StudentFilter.All]: [StudentStatus.Active, StudentStatus.Paused, StudentStatus.Ended],
+};
+
+/** Como cada estado se chama na frase que a pessoa lê quando a transição é recusada. */
+const NOME_DO_ESTADO: Record<StudentStatus, string> = {
+  [StudentStatus.Active]: 'ativo',
+  [StudentStatus.Paused]: 'pausado',
+  [StudentStatus.Ended]: 'encerrado',
 };
 
 /**
@@ -38,7 +47,9 @@ const ESTADOS_DO_FILTRO: Record<StudentFilter, StudentStatus[]> = {
 @Injectable()
 export class StudentsService {
   constructor(
+    private readonly dataSource: DataSource,
     @InjectRepository(Student) private readonly students: Repository<Student>,
+    @InjectRepository(StudentInvite) private readonly invites: Repository<StudentInvite>,
     @InjectRepository(User) private readonly users: Repository<User>,
     private readonly access: AccessService,
   ) {}
@@ -155,6 +166,57 @@ export class StudentsService {
   }
 
   /**
+   * Pausar, encerrar e reativar — a única porta que mexe no estado do vínculo.
+   *
+   * **Separada do `PATCH` da ficha de propósito.** Misturar as duas faria "corrigir o telefone" e
+   * "encerrar o vínculo" serem a mesma operação, e a segunda tem consequências que a primeira não
+   * tem: grava data, revoga convite e tranca a ficha. Uma rota só para isto é também o que dá à
+   * Fase 11 um lugar óbvio para pendurar o botão do aluno — encerrar é dos dois lados (§7.3).
+   *
+   * A regra de qual transição existe está em `vinculo.ts`, isolada e testada sem banco. Aqui
+   * ficam a propriedade, a transação e a frase que a pessoa lê.
+   */
+  async mudarEstado(
+    userId: string,
+    studentId: string,
+    destino: StudentStatus,
+  ): Promise<StudentRow> {
+    const ficha = await this.access.fichaComoDono(userId, studentId);
+    const mudanca = mudancaDeVinculo(ficha.status, destino, new Date());
+
+    if (!mudanca) {
+      throw this.recusar('status', this.porQueNao(ficha.status, destino));
+    }
+
+    await this.dataSource.transaction(async (manager) => {
+      // `WHERE status = <o que eu li>`: dois cliques simultâneos em "Encerrar" e "Pausar"
+      // chegariam aqui com a mesma leitura, e sem isto o último a gravar venceria — inclusive
+      // escrevendo `ended_at` sobre um vínculo que o outro acabou de reativar.
+      const trocada = await manager.update(
+        Student,
+        { id: ficha.id, status: ficha.status },
+        { status: mudanca.status, endedAt: mudanca.endedAt },
+      );
+      if (trocada.affected !== 1) {
+        throw this.recusar('status', 'O estado deste aluno mudou. Recarregue a lista.');
+      }
+
+      // §7.3: encerrar revoga o convite de pé. Sem isto, quem recebeu o link ontem entraria hoje
+      // num vínculo que não existe mais — e entraria em silêncio, porque o aceite só olha o
+      // convite, nunca o estado da ficha.
+      if (mudanca.revogaConvite) {
+        await manager.update(
+          StudentInvite,
+          { studentId: ficha.id, acceptedAt: IsNull(), revokedAt: IsNull() },
+          { revokedAt: new Date() },
+        );
+      }
+    });
+
+    return this.ver(userId, studentId);
+  }
+
+  /**
    * Apagar a ficha. **De verdade, e não exclusão lógica.**
    *
    * A diferença para `locations`, que usa exclusão lógica, é que ali uma sessão passada aponta
@@ -183,6 +245,10 @@ export class StudentsService {
     professionalId: string,
     fichas: Student[],
   ): Promise<Map<string, MarcadoresDaFicha>> {
+    // Carteira vazia, ou filtro que não achou nada: sem isto, o `In([])` da consulta de convites
+    // vira `IN (NULL)` e a lista vazia custaria três consultas para não responder nada.
+    if (fichas.length === 0) return new Map();
+
     const emails = fichas.map((f) => f.email).filter((e): e is string => Boolean(e));
 
     const comConta =
@@ -201,17 +267,40 @@ export class StudentsService {
     const quantos = (valor: string | null, campo: 'email' | 'phone'): number =>
       valor ? carteira.filter((outra) => outra[campo] === valor).length : 0;
 
+    // O convite de pé, com a validade **no `WHERE`**. O índice parcial `uq_student_invites_ativo`
+    // só olha `accepted_at` e `revoked_at`, então um convite vencido continua sendo a única linha
+    // "ativa" da ficha — mostrá-lo como de pé faria o profissional esperar por uma resposta que
+    // não vem mais. É o mesmo filtro que `InviteService.listar` faz, ali em JavaScript.
+    const emPe = await this.invites.find({
+      where: {
+        studentId: In(fichas.map((f) => f.id)),
+        acceptedAt: IsNull(),
+        revokedAt: IsNull(),
+        expiresAt: MoreThan(new Date()),
+      },
+      select: { studentId: true, kind: true, expiresAt: true },
+    });
+    const conviteDe = new Map(emPe.map((invite) => [invite.studentId, invite]));
+
     return new Map(
-      fichas.map((ficha) => [
-        ficha.id,
-        {
-          // Só acende se a ficha **ainda não** está ligada: depois de ligada, o botão de
-          // convidar não tem o que fazer.
-          accountFound:
-            ficha.userId === null && ficha.email !== null && enderecosComConta.has(ficha.email),
-          possibleDuplicate: quantos(ficha.email, 'email') > 1 || quantos(ficha.phone, 'phone') > 1,
-        },
-      ]),
+      fichas.map((ficha) => {
+        const invite = conviteDe.get(ficha.id);
+
+        return [
+          ficha.id,
+          {
+            // Só acende se a ficha **ainda não** está ligada: depois de ligada, o botão de
+            // convidar não tem o que fazer.
+            accountFound:
+              ficha.userId === null && ficha.email !== null && enderecosComConta.has(ficha.email),
+            possibleDuplicate:
+              quantos(ficha.email, 'email') > 1 || quantos(ficha.phone, 'phone') > 1,
+            invite: invite
+              ? { kind: invite.kind, expiresAt: invite.expiresAt.toISOString() }
+              : null,
+          },
+        ];
+      }),
     );
   }
 
@@ -247,6 +336,20 @@ export class StudentsService {
       );
     }
     return null;
+  }
+
+  /**
+   * Por que a transição não vale, em português e dizendo o que fazer.
+   *
+   * "Transição inválida" seria verdade e não ajudaria ninguém. São só dois casos, e eles pedem
+   * conselhos diferentes: quem já está no estado pedido tem uma tela velha aberta; quem tenta ir
+   * de encerrado para pausado está tentando um atalho que não existe.
+   */
+  private porQueNao(atual: StudentStatus, destino: StudentStatus): string {
+    if (atual === destino) {
+      return `Este aluno já está ${NOME_DO_ESTADO[atual]}. Recarregue a lista.`;
+    }
+    return 'Um vínculo encerrado só volta como ativo. Reative primeiro, depois pause.';
   }
 
   private recusar(field: string, message: string): UnprocessableEntityException {
