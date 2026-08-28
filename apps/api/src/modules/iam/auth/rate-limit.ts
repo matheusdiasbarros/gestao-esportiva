@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { ExecutionContext } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 
@@ -136,6 +137,65 @@ export const LimitarConvite = (): MethodDecorator & ClassDecorator =>
     [LIMITE_IP]: { limit: 60, ttl: 60 * MINUTO },
     [LIMITE_ALVO]: { limit: 3, ttl: 60 * MINUTO },
   });
+
+/**
+ * Escrita de ficha: **60 por hora por IP, contando só o que traz e-mail no corpo.**
+ *
+ * O que isto fecha é o **oráculo de existência de e-mail** do marcador `accountFound`, achado #1
+ * da revisão de segurança da Fase 5. O `students.md` §9.1 dizia que o teto de 500 fichas por
+ * profissional limitava o oráculo a 500 endereços — **e isso era falso**: o marcador é
+ * recalculado a cada escrita e o e-mail da ficha é editável, então **uma única ficha testa
+ * infinitos endereços, um por requisição**. Medido em 2026-08-28: ~7.200 endereços por hora,
+ * limitados só pelo teto global de 120/min.
+ *
+ * **Vale no `POST` e no `PATCH`, e os dois dividem a mesma conta.** Só no `POST` não resolveria
+ * nada: o caminho barato é editar o e-mail da mesma ficha, que nem passa perto da criação. Por
+ * isso o `generateKey` daqui **descarta o nome do handler** — sem isso a biblioteca daria uma
+ * cota de 60 para cada rota, e o orçamento do atacante dobraria.
+ *
+ * **Duas contas separadas, e é o que salva a suíte de testes.** Escrita **sem** e-mail no corpo
+ * cai noutra chave, com teto folgado: editar objetivo, observação ou telefone não gasta a cota
+ * que existe para conter varredura de endereços. Sem essa separação, o teto viraria um DT-010
+ * novo — falha em massa, na segunda execução da hora, com um 429 que não menciona limite.
+ *
+ * **Por que 60.** É o mesmo número do `LimitarConvite`, pela mesma persona e pelo mesmo
+ * argumento: o professor que chega com quarenta alunos cadastra os quarenta na mesma tarde, e
+ * nem todos têm e-mail. Dois tetos diferentes para os dois lados da mesma tarde seriam ruído.
+ * Para quem varre, o custo sai de ~7.200 endereços por hora para 60 — enumerar mil passa de oito
+ * minutos para dezessete horas.
+ *
+ * **Dois limites, ditos por inteiro.** Ele limita a **taxa**, não o total: quem esperar testa
+ * quantos endereços quiser. E conta **por IP**, não por conta, porque o limite roda antes da
+ * autenticação de propósito (ver `iam.module.ts`) — a mesma restrição que o
+ * `LimitarReenvioDeVerificacao` já documenta.
+ */
+export const TETO_FICHA_COM_EMAIL = 60;
+export const TETO_FICHA_SEM_EMAIL = 600;
+
+export const LimitarFicha = (): MethodDecorator & ClassDecorator =>
+  Throttle({
+    [LIMITE_IP]: {
+      ttl: 60 * MINUTO,
+      limit: (context) => (semAlvo(context) ? TETO_FICHA_SEM_EMAIL : TETO_FICHA_COM_EMAIL),
+      // `limit` e `generateKey` **precisam** concordar sobre `semAlvo`: se divergissem, uma
+      // requisição contaria numa chave com o teto da outra.
+      generateKey: (context, tracker) => chaveDeFicha(semAlvo(context), tracker),
+    },
+  });
+
+/**
+ * A chave das duas contas de escrita de ficha.
+ *
+ * Sem o nome do handler, de propósito — é o que faz `POST` e `PATCH` dividirem a cota. O padrão
+ * da biblioteca é `ClassName-HandlerName-throttler`, que daria uma cota por rota.
+ *
+ * O resultado é um resumo, e não o IP em claro: endereço de IP é dado pessoal, e a chave do
+ * Redis não é lugar de guardá-lo legível. É o que a implementação padrão também faz.
+ */
+function chaveDeFicha(semEmail: boolean, tracker: string): string {
+  const balde = semEmail ? 'ficha-sem-email' : 'ficha-com-email';
+  return createHash('sha256').update(`${balde}-${tracker}`).digest('hex');
+}
 
 /**
  * Envio de foto: **20 por hora por IP**.

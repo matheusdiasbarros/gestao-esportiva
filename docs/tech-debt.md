@@ -166,9 +166,18 @@ uma borda (WAF, Cloudflare) que permita distinguir tráfego de ataque de tráfeg
 
 ---
 
-### DT-008 — `POST /invites` não tem teto, e vira canhão de e-mail na Fase 5
+### ~~DT-008 — `POST /invites` não tem teto, e vira canhão de e-mail na Fase 5~~ ✅ resolvido em 2026-08-27
 
-**O que:** a rota que emite convite não tem limite de tentativas próprio, aceita um endereço de
+Resolvido no Epic 5.0, no prazo que o próprio débito marcou: `LimitarConvite()` — **60/hora por
+IP e 3/hora por destinatário** —, aplicado em `invites.controller.ts`. O teste prova o 429 no
+quarto convite ao mesmo endereço, e foi verificado quebrando.
+
+Continuava listado como aberto por descuido meu; a revisão de segurança da Fase 5 pegou
+(achado #8). O texto original fica abaixo.
+
+---
+
+**O que era:** a rota que emite convite não tem limite de tentativas próprio, aceita um endereço de
 destino arbitrário no corpo, e o nome do profissional — 120 caracteres, sem restrição de
 conteúdo — vai para o **assunto** da mensagem. Um profissional com e-mail confirmado reemite
 convite em laço e faz a plataforma mandar quantas mensagens quiser, para qualquer endereço, com
@@ -212,7 +221,28 @@ dois provedores antes de existir o segundo (ADR-005).
 
 ---
 
-### DT-010 — A suíte de ponta a ponta gasta 87 dos 100 cadastros por hora que o IP tem
+### ~~DT-010 — A suíte de ponta a ponta gasta os cadastros por hora que o IP tem~~ ✅ resolvido em 2026-08-28
+
+Resolvido pelo gatilho previsto e pelo remédio previsto: uma execução limpa chegou a **89 dos
+100**, e a suíte passou a **apagar os contadores no `globalSetup`** — `e2e/global-setup.ts`, que
+é o Redis de desenvolvimento e é dela. **Não** subimos o teto de 100, que é um controle de
+produção.
+
+**Provado, não presumido:** duas execuções completas seguidas, na mesma hora, **185 testes cada,
+as duas verdes**. Antes a segunda derrubava meia dúzia de testes.
+
+O `globalSetup` não roda no CI (`process.env.CI`), onde cada job sobe um Redis novo, e **falha
+avisando em vez de recusar a execução** para quem roda o Redis fora do Docker.
+
+Isto também fecha o **DT-011**, pelo mesmo mecanismo.
+
+O texto original fica abaixo: o diagnóstico continua valendo, porque a forma da falha é a mesma
+sempre que um limite for atingido, e a medição continua sendo obrigação de quem acrescentar
+teste.
+
+---
+
+**O que era:**
 
 **O que:** cada teste de tela cria a própria conta, de propósito (`e2e/apoio.ts` explica por
 quê), e todos saem de `127.0.0.1`. Uma execução limpa da suíte consome **87** dos 100 cadastros
@@ -266,7 +296,17 @@ O contador do cadastro é o de janela longa — TTL perto de 3600 segundos.
 
 ---
 
-### DT-011 — A suíte gasta 18 dos 20 envios de foto por hora, e ninguém tinha medido
+### ~~DT-011 — A suíte gasta 18 dos 20 envios de foto por hora~~ ✅ resolvido em 2026-08-28
+
+Irmão do DT-010, fechado pelo mesmo `globalSetup`. O gatilho era "o próximo teste que enviar
+foto", e a saída registrada era exatamente esta. O teto de 20 por hora **não** foi tocado —
+decodificar 5 MB de JPEG continua sendo a operação autenticada mais cara do sistema.
+
+O texto original fica abaixo, porque a forma da falha continua valendo como diagnóstico.
+
+---
+
+**O que era:**
 
 **O que:** irmão do DT-010, com folga muito menor. `LimitarEnvioDeFoto` permite **20 por hora
 por IP**, e uma execução limpa da suíte gasta **18** — 90% do teto. Medido em 2026-08-26:

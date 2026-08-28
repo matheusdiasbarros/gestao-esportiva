@@ -238,6 +238,19 @@ test.describe('A lista da carteira', () => {
     expect(ficha.hasAccount).toBe(false);
     // E não há convite de pé: o marcador acende o botão, não dispara o convite.
     expect(ficha.invite).toBeNull();
+
+    // Achado #4 da revisão: `users.email` é normalizado no cadastro e `students.email` não era,
+    // então o mesmo endereço em caixa alta **não acendia** o marcador — enquanto o convite para
+    // ele funcionava, porque o convite normaliza o destino. A metade quebrada era justamente a
+    // que existe para o professor saber que vale a pena convidar.
+    const emCaixaAlta = await criar({
+      fullName: 'Mesma aluna, caixa alta',
+      email: emailDaAluna.toUpperCase(),
+    });
+    expect(emCaixaAlta.email).toBe(emailDaAluna);
+    expect(emCaixaAlta.accountFound).toBe(true);
+    // De quebra, a detecção de duplicata passa a enxergar o par que a maiúscula escondia.
+    expect(emCaixaAlta.possibleDuplicate).toBe(true);
   });
 
   test('marca possível duplicata quando duas fichas dividem o mesmo e-mail', async () => {
@@ -583,6 +596,46 @@ test.describe('O convite e o link público não mexem no vínculo', () => {
     expect(depois.hasAccount).toBe(true);
   });
 
+  /**
+   * Achado #2 da revisão de segurança da fase.
+   *
+   * `PATCH {accessHolder: 'SELF'}` numa ficha com conta ligada fazia **metade** do
+   * `transfer-access`: virava acesso próprio, limpava o responsável e **deixava a conta ligada**.
+   * Era exatamente o que o comentário do controller dizia que o desenho quis impedir — o campo
+   * escapou por `PartialType(CreateStudentDto)`.
+   */
+  test('com conta ligada, o PATCH não troca quem acessa — isso é ação, não campo', async () => {
+    // A ficha da aluna, que entrou pelo link público e está encerrada desde o bloco anterior.
+    const dela = exigir(
+      (await carteira('?filter=ENDED')).find((f) => f.email === emailDaAluna && f.hasAccount),
+      'a ficha encerrada da aluna',
+    );
+    await mudarEstadoOk(dela.id, 'ACTIVE');
+
+    const meia = await professor.request.patch(`${API}/students/${dela.id}`, {
+      data: { accessHolder: 'GUARDIAN', guardianName: 'Alguém' },
+    });
+    expect(meia.status()).toBe(422);
+    expect(await meia.text()).toContain('conta ligada');
+
+    // E a ficha não mudou nem pela metade.
+    const depois = (await (
+      await professor.request.get(`${API}/students/${dela.id}`)
+    ).json()) as Ficha;
+    expect(depois.accessHolder).toBe('SELF');
+    expect(depois.guardianName).toBeNull();
+    expect(depois.hasAccount).toBe(true);
+
+    // Editar o resto continua funcionando: a recusa é sobre trocar quem acessa, não sobre a
+    // ficha inteira. Mandar o **mesmo** tipo de acesso também passa — é o que a tela faz.
+    const comum = await professor.request.patch(`${API}/students/${dela.id}`, {
+      data: { goals: 'Continua treinando.', accessHolder: 'SELF' },
+    });
+    expect(comum.status(), await comum.text()).toBe(200);
+
+    await mudarEstadoOk(dela.id, 'ENDED');
+  });
+
   test('a mesma conta é aluna de dois profissionais, e nenhum vê a ficha do outro', async ({
     page,
   }) => {
@@ -625,8 +678,27 @@ test.describe('Quem não pode', () => {
     // esconder a existência dela não protegeria nada (`iam.md` §7, a tabela dos três códigos).
     await cadastrarAluno(page);
 
+    const inventado = '01900000-0000-7000-8000-000000000001';
+
     expect((await page.request.get(`${API}/students`)).status()).toBe(403);
     expect((await page.request.post(`${API}/students`, { data: { fullName: 'X' } })).status()).toBe(
+      403,
+    );
+    // Células 3 e 8 da matriz §10.2, que passavam ao vivo e não tinham teste — achado #6 da
+    // revisão. O aluno não edita a própria ficha, e **não reativa o próprio vínculo**: encerrar é
+    // o direito de deixar de ser aluno de alguém; recomeçar é uma relação comercial, e é de quem
+    // dá a aula.
+    expect(
+      (await page.request.patch(`${API}/students/${inventado}`, { data: { goals: 'x' } })).status(),
+    ).toBe(403);
+    expect(
+      (
+        await page.request.patch(`${API}/students/${inventado}/status`, {
+          data: { status: 'ACTIVE' },
+        })
+      ).status(),
+    ).toBe(403);
+    expect((await page.request.post(`${API}/students/${inventado}/transfer-access`)).status()).toBe(
       403,
     );
   });
@@ -644,6 +716,17 @@ test.describe('Quem não pode', () => {
       ).status(),
     ).toBe(404);
     expect((await page.request.delete(`${API}/students/${minha.id}`)).status()).toBe(404);
+    // As duas rotas novas da Fase 5 também — sem teste, elas seriam a porta que ninguém olhou.
+    expect(
+      (
+        await page.request.patch(`${API}/students/${minha.id}/status`, {
+          data: { status: 'ENDED' },
+        })
+      ).status(),
+    ).toBe(404);
+    expect((await page.request.post(`${API}/students/${minha.id}/transfer-access`)).status()).toBe(
+      404,
+    );
 
     // E a ficha continua intacta depois de todas as tentativas.
     const depois = (await (

@@ -17,16 +17,20 @@ Escopo do MVP em [`docs/product/mvp.md`](docs/product/mvp.md).
 
 ## Estado atual
 
-**Fases 0, 1, 2 e 3 concluídas.** A próxima do MVP é a Fase 5 (alunos) — a Fase 4 saiu do
-escopo e roda junto da 12.
+**Fases 0, 1, 2, 3 e 5 concluídas.** A próxima do MVP é a Fase 6 (agenda) — a Fase 4 saiu do
+escopo e roda junto da 12. O **Epic 2.6 (staging)** venceu e depende de conta em provedor.
 
 Funciona hoje: criar conta de profissional ou de aluno, entrar, sair, recuperar senha,
-confirmar e trocar e-mail, convidar alunos, o link público "treine comigo" do professor, a
-autorização por papel e propriedade, e o painel protegido — na web e no aplicativo. Em
-`/painel/perfil`, o profissional monta o perfil inteiro pela tela: foto, apresentação,
-modalidades com preço em centavos e locais de atendimento — e a página `/treine-com/:slug`
-mostra foto, modalidades e bairros para quem recebe o link. Não existe ainda nada de agenda,
-aluno como funcionalidade, ou pagamento.
+confirmar e trocar e-mail, o link público "treine comigo" do professor, a autorização por papel
+e propriedade, e o painel protegido — na web e no aplicativo. Em `/painel/perfil`, o profissional
+monta o perfil inteiro pela tela: foto, apresentação, modalidades com preço em centavos e locais
+de atendimento — e a página `/treine-com/:slug` mostra foto, modalidades e bairros. Em
+`/painel/alunos`, ele mantém a carteira: cadastra ficha **de aluno que não precisa ter conta**,
+convida por e-mail ou link, pausa, encerra, reativa e apaga; a ficha guarda contato, objetivos e
+observações privadas, marca menor de idade com responsável e avisa quando ele faz 18 anos.
+
+Não existe ainda nada de agenda, aula, pagamento, nem tela do aluno — ele não vê a própria ficha
+em lugar nenhum, e isso é da Fase 11.
 
 O roadmap de 20 fases está em [`TODO.md`](TODO.md) — é o documento que manda.
 
@@ -53,8 +57,8 @@ pnpm --filter @gestao/api migration:run
 pnpm --filter @gestao/api seed            # dados de desenvolvimento, idempotente
 pnpm dev                                  # API :3333 · web :3000
 
-pnpm lint && pnpm typecheck && pnpm test  # 123 testes de unidade
-pnpm test:e2e                             # 131 testes (ver DT-010 e DT-011: uma vez por hora)
+pnpm lint && pnpm typecheck && pnpm test  # 161 testes de unidade
+pnpm test:e2e                             # 185 testes de tela
 
 pnpm --filter @gestao/api test -- health.service   # um teste específico
 pnpm exec playwright test cadastro                 # um arquivo de tela

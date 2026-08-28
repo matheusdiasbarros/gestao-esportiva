@@ -37,7 +37,7 @@ Não são contas — não têm e-mail/senha, só existem como registro vinculado
 | Ficha | O que é |
 | --- | --- |
 | João Pereira | aluno de Rodrigo que nunca aceitou o convite — só tem telefone, sem conta |
-| Sofia Dias | menor de idade, ficha de Rodrigo — quem acessa é Carlos (responsável), não ela |
+| Sofia Dias | menor de idade, ficha de Rodrigo — quem acessa é Carlos (responsável), não ela. A ficha traz `guardian_name = 'Carlos Dias'`, que a Fase 5 tornou obrigatório para `GUARDIAN` |
 
 ---
 

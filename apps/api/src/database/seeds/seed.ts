@@ -149,6 +149,12 @@ async function seed(ds: DataSource): Promise<void> {
   });
 
   // Menor de idade: quem acessa é o responsável, com a conta dele.
+  //
+  // `guardianName` é **obrigatório** desde a Fase 5 — `ck_students_guardian` exige que
+  // `access_holder = 'GUARDIAN'` e `guardian_name IS NOT NULL` andem juntos. Sem ele a seed
+  // quebra **em banco limpo**, e não no banco de quem já migrou: `criarFicha` pula quando o id
+  // existe, e a migration preencheu a linha antiga a partir da conta ligada. Foi assim que o
+  // defeito passou despercebido até a revisão de segurança da fase o encontrar.
   await criarFicha({
     id: ID.fichaSofia,
     professionalId: ID.profRodrigo,
@@ -156,6 +162,7 @@ async function seed(ds: DataSource): Promise<void> {
     fullName: 'Sofia Dias',
     birthDate: '2014-05-09',
     accessHolder: AccessHolder.Guardian,
+    guardianName: 'Carlos Dias',
   });
 }
 

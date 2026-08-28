@@ -15,6 +15,7 @@ import {
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from './auth/current-user.decorator';
 import { Papeis } from './auth/papeis.decorator';
+import { LimitarFicha } from './auth/rate-limit';
 import {
   ChangeStudentStatusDto,
   CreateStudentDto,
@@ -55,6 +56,7 @@ export class StudentsController {
   }
 
   @Post()
+  @LimitarFicha()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Cadastra uma ficha. Nasce ativa e **sem conta**' })
   async criar(
@@ -73,7 +75,12 @@ export class StudentsController {
     return this.alunos.ver(user.id, id);
   }
 
+  /**
+   * O teto vale aqui **e** no `POST`, dividindo a mesma conta: editar o e-mail da mesma ficha é
+   * o caminho barato do oráculo de existência, e ele nem passa perto da criação.
+   */
   @Patch(':id')
+  @LimitarFicha()
   @ApiOperation({ summary: 'Edita a ficha. **Não** muda o estado do vínculo' })
   async editar(
     @CurrentUser() user: AuthenticatedUser,

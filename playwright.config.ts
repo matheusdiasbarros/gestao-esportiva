@@ -16,6 +16,9 @@ const ehCI = Boolean(process.env.CI);
  */
 export default defineConfig({
   testDir: './e2e',
+  // Zera os contadores de limite antes de tudo — só em desenvolvimento. Ver DT-010 e o próprio
+  // arquivo, que explica por que apagar a contagem é preferível a afrouxar o teto.
+  globalSetup: './e2e/global-setup.ts',
   // Um teste que trava não pode segurar o CI até o limite do runner.
   timeout: 30_000,
   expect: { timeout: 5_000 },

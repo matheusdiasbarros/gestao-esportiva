@@ -120,6 +120,54 @@ test.describe('A carteira de alunos — o administrador não alcança', () => {
     // pergunta "de quem é esta ficha".
     expect((await comoAdmin.get(`${API}/students/${inventado}`)).status()).toBe(403);
     expect((await comoAdmin.delete(`${API}/students/${inventado}`)).status()).toBe(403);
+    // As duas rotas que a Fase 5 acrescentou. Achado #6 da revisão: elas passavam ao vivo e não
+    // tinham teste, e rota nova sem célula testada é a que um dia nasce sem o `@Papeis`.
+    expect(
+      (
+        await comoAdmin.patch(`${API}/students/${inventado}/status`, { data: { status: 'ENDED' } })
+      ).status(),
+    ).toBe(403);
+    expect((await comoAdmin.post(`${API}/students/${inventado}/transfer-access`)).status()).toBe(
+      403,
+    );
+  });
+
+  /**
+   * Achado #3 da revisão de segurança da Fase 5.
+   *
+   * O `students.md` §9.1 é explícito: **conta suspensa ou anonimizada conta como "sem conta"**.
+   * Convidar não levaria a nada — o aceite já recusa conta que não está ativa. Sem o filtro, o
+   * marcador mandava o professor esperar por uma resposta que o sistema não deixa acontecer.
+   *
+   * Mora aqui, e não em `alunos.spec.ts`, por um motivo só: suspender conta é do administrador, e
+   * a sessão dele já existe neste arquivo.
+   */
+  test('conta suspensa deixa de acender o marcador "já tem conta"', async ({ page, browser }) => {
+    const professor = await cadastrar(page);
+    expect(professor.email).toBeTruthy();
+
+    const outra = await browser.newContext();
+    const aba = await outra.newPage();
+    const alvo = await cadastrar(aba);
+    const { id } = (await (await aba.request.get(`${API}/auth/me`)).json()) as { id: string };
+    await outra.close();
+
+    const ficha = (await (
+      await page.request.post(`${API}/students`, {
+        data: { fullName: 'Aluno de conta suspensa', email: alvo.email },
+      })
+    ).json()) as { id: string; accountFound: boolean };
+    expect(ficha.accountFound).toBe(true);
+
+    await comoAdmin.patch(`${API}/admin/users/${id}/status`, { data: { status: 'SUSPENDED' } });
+
+    const depois = (await (await page.request.get(`${API}/students/${ficha.id}`)).json()) as {
+      accountFound: boolean;
+    };
+    expect(depois.accountFound).toBe(false);
+
+    // Reativa para não deixar lixo suspenso no banco de desenvolvimento.
+    await comoAdmin.patch(`${API}/admin/users/${id}/status`, { data: { status: 'ACTIVE' } });
   });
 
   test('a listagem de contas não traz nada da ficha, nem o nome do aluno', async () => {

@@ -964,7 +964,7 @@ dado sensível ·
 
 ---
 
-## Fase 5 — Gestão de alunos ⬜
+## Fase 5 — Gestão de alunos ✅
 
 **Objetivo:**
 Permitir que o profissional gerencie sua carteira de alunos, com vínculo, histórico,
@@ -1197,15 +1197,24 @@ o administrador, ou o profissional errado.
 
 ### Critérios de conclusão
 
-- [ ] Profissional cadastra, edita e arquiva alunos
-- [ ] Convite e aceite testados ponta a ponta
-- [ ] Aluno sem conta que se cadastra depois é vinculado corretamente
+- [x] Profissional cadastra, edita e arquiva alunos — "arquivar" virou **encerrar o vínculo**, com
+      estado próprio e ficha em somente leitura. Apagar continua existindo, para a ficha criada
+      por engano
+- [x] Convite e aceite testados ponta a ponta — **o aceite pela tela fechou o DT-005**, com ficha
+      descartável criada e apagada pelo próprio teste
+- [x] Aluno sem conta que se cadastra depois é vinculado corretamente — pelo marcador "já tem
+      conta", que acende um botão. **Nada é ligado automaticamente**, e é decisão (§9.1)
 - [x] Regras e base legal em `docs/domain/students.md`
-- [ ] As dez células "não" da matriz têm teste — `students.md` §10.2. As duas primeiras são de
+- [x] As dez células "não" da matriz têm teste — `students.md` §10.2. As duas primeiras são de
       **API**: a resposta que o aluno recebe e a que o administrador recebe não podem conter
-      `private_notes`. Campo escondido no HTML não é autorização
-- [ ] Revisão de segurança obrigatória registrada em `docs/security/`
-- [ ] Manual de manutenção em `docs/sistema/fase-05-alunos.md`
+      `private_notes`. Campo escondido no HTML não é autorização. **Oito estavam cobertas e duas
+      não** — a revisão de segurança encontrou (achado #6), e as quatro asserções que faltavam
+      entraram nos arquivos que já existiam
+- [x] Revisão de segurança obrigatória registrada em `docs/security/revisao-fase-05.md` —
+      **seis achados, todos corrigidos**, cada correção verificada quebrando. O mais instrutivo
+      é o #1: a mitigação do oráculo de e-mail estava escrita, revisada e aceita no documento de
+      domínio, e **não funcionava**
+- [x] Manual de manutenção em `docs/sistema/fase-05-alunos.md`
 
 ---
 
@@ -2295,3 +2304,4 @@ Preencher ao concluir cada fase.
 | 1 | 2026-08-20 | 2026-08-20 | ADR-002, ADR-003 | — | pnpm + Turborepo, TypeScript fixado em 5.9.3, UUID v7. API, web e Expo consumindo `/health`. CI verde. P2 resolvida: app nativo. P1 resolvida: turmas entram, sem lista de espera. Falta proteger a `main` |
 | 2 | 2026-08-20 | 2026-08-24 | ADR-004 | `iam.md` | Contas, login, convite nas duas modalidades, autorização por papel e propriedade, troca de e-mail, lista completa de senhas vazadas embarcada. Telas na web e no aplicativo — decidido no meio da fase que **o profissional também usa o app**. 84 testes de unidade, 68 de tela. Revisão de segurança achou 3 bloqueadores, todos corrigidos. Débitos: DT-004 a DT-008. **Epic 2.6 (staging) adiado para depois da Fase 5** |
 | 3 | 2026-08-25 | 2026-08-26 | ADR-005 | `professional-profile.md` | Perfil completo pela tela: foto, apresentação, modalidades com preço em centavos e locais. Catálogo curado **com escape** para a modalidade que faltar. A página `/treine-com/:slug` passou a mostrar foto, modalidades e bairros, com **lista fechada** de campos. `GET /auth/signup-link/:slug` deletada e virou `GET /professionals/link/:slug` — uma superfície pública, não duas. Epic 3.5 (locais) absorvido da Fase 4; Epic 3.6 fora do MVP. 123 testes de unidade, 131 de tela. Revisão de segurança em `docs/security/revisao-fase-03.md`: **passa**, 5 achados corrigidos (o mais grave era o próprio teste da fase passar verde sem testar nada). Débitos: DT-009, DT-010, DT-011. **Duas lacunas sem épico: pausar/trocar o link público e a exclusão de conta** |
+| 5 | 2026-08-26 | 2026-08-28 | ADR-005 **emendada** (§8: `students` fica em `iam`) | `students.md` | A carteira de alunos: cadastrar, convidar, pausar, encerrar, reativar e apagar, com o aluno **sem precisar de conta**. Quatro colunas em `students`, nenhuma tabela nova, dois `CHECK`. **Saúde ficou fora do MVP** (decisão O1) — minimização por ausência. Três funções puras carregam as regras: política de campos, transições do vínculo e as duas regras de idade. O convite **saiu do painel** e virou parte da carteira. 161 testes de unidade, 185 de tela. Revisão em `docs/security/revisao-fase-05.md`: **passa**, 6 achados, **todos corrigidos** — o #1 mostrou que a mitigação do oráculo de e-mail estava escrita no documento e **não funcionava**. Fechou DT-005, DT-008, DT-010 e DT-011. **Epic 2.6 (staging) vence agora** |

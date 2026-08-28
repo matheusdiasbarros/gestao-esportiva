@@ -2,7 +2,7 @@
 
 Documentação de manutenção, escrita **para quem chega sem contexto** — pessoa ou IA.
 
-Última atualização: 2026-08-25
+Última atualização: 2026-08-28
 
 ---
 
@@ -64,3 +64,5 @@ mesmo commit. Documento por fase envelhece se ninguém fizer isso — e document
 | 1 | Fundação técnica | [fase-01-fundacao-tecnica.md](fase-01-fundacao-tecnica.md) |
 | 2 | Identidade e acesso | [fase-02-identidade-e-acesso.md](fase-02-identidade-e-acesso.md) |
 | 3 | Perfil profissional | [fase-03-perfil-profissional.md](fase-03-perfil-profissional.md) |
+| 4 | *(saiu do escopo — roda junto da 12)* | — |
+| 5 | Alunos | [fase-05-alunos.md](fase-05-alunos.md) |

@@ -6,13 +6,14 @@ de tênis, beach tennis, padel, futebol, corrida, natação, lutas, dança e out
 O produto organiza alunos, agenda e pagamentos em um lugar só, e deixa o aluno marcar,
 remarcar e pagar sozinho.
 
-> **Estado:** Fase 3 (perfil profissional) **concluída** em 2026-08-26. Dá para criar conta de
-> profissional ou de aluno, entrar, sair, recuperar a senha, confirmar e trocar o e-mail, e
-> convidar alunos — na web e no aplicativo. Em `/painel/perfil`, o profissional monta o perfil
-> inteiro pela tela: foto, apresentação, modalidades com preço e locais de atendimento; e o link
-> `/treine-com/:slug` que ele compartilha mostra foto, modalidades e bairros. Agenda, alunos como
-> funcionalidade e pagamento ainda não existem. A próxima é a Fase 5, a gestão de alunos — a
-> Fase 4 saiu do MVP e roda junto da 12.
+> **Estado:** Fase 5 (gestão de alunos) **concluída** em 2026-08-28. Dá para criar conta de
+> profissional ou de aluno, entrar, sair, recuperar a senha e confirmar e trocar o e-mail — na
+> web e no aplicativo. Em `/painel/perfil`, o profissional monta o perfil inteiro pela tela: foto,
+> apresentação, modalidades com preço e locais de atendimento; e o link `/treine-com/:slug` que
+> ele compartilha mostra foto, modalidades e bairros. Em `/painel/alunos`, ele mantém a carteira:
+> cadastra a ficha de um aluno **que não precisa ter conta**, convida por e-mail ou link, pausa,
+> encerra, reativa e apaga. Agenda e pagamento ainda não existem, e o aluno ainda não vê a própria
+> ficha. A próxima é a Fase 6, a agenda — a Fase 4 saiu do MVP e roda junto da 12.
 >
 > O roadmap está no [TODO.md](TODO.md); o escopo do MVP, em
 > [docs/product/mvp.md](docs/product/mvp.md); quem pode fazer o quê, em

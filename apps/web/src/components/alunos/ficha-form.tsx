@@ -52,12 +52,20 @@ export function FichaForm({ ficha, aoSalvar, aoCancelar }: Props) {
       return valor ? valor : null;
     };
 
+    // O e-mail só viaja quando **mudou**. `JSON.stringify` descarta `undefined`, e o servidor
+    // trata campo ausente como "não mexa" — então corrigir um objetivo deixa de reescrever o
+    // endereço. Não é arrumação: a escrita que carrega e-mail é a que consome o teto do oráculo
+    // de existência (`LimitarFicha`), e reenviar o mesmo endereço a cada edição gastaria a cota
+    // do professor sem ele ter testado endereço nenhum.
+    const email = texto('email');
+    const emailMudou = !editando || email !== (ficha.email ?? null);
+
     try {
       await apiFetch(editando ? `/students/${ficha.id}` : '/students', {
         method: editando ? 'PATCH' : 'POST',
         body: JSON.stringify({
           fullName: texto('fullName') ?? '',
-          email: texto('email'),
+          ...(emailMudou ? { email } : {}),
           phone: texto('phone'),
           birthDate: texto('birthDate'),
           goals: texto('goals'),
@@ -141,17 +149,23 @@ export function FichaForm({ ficha, aoSalvar, aoCancelar }: Props) {
       </label>
 
       <div className="rounded-lg border border-(--color-border) p-3">
+        {/* **Com conta ligada, a caixa some.** Trocar quem acessa deixa de ser edição de campo e
+            passa a ser a ação "passar o acesso" — ela desliga a conta, e o formulário não faria
+            isso. O servidor recusa de qualquer jeito; esconder evita a pessoa descobrir a regra
+            por um erro depois de já ter digitado o resto. */}
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
             checked={comResponsavel}
+            disabled={ficha?.hasAccount ?? false}
             onChange={(e) => setComResponsavel(e.target.checked)}
           />
           Quem acessa é um responsável
         </label>
         <p className="mt-1 text-xs text-(--color-ink-muted)">
-          Menor de idade não tem conta na plataforma. Quem entra pela ficha é o responsável, com a
-          conta dele.
+          {ficha?.hasAccount
+            ? 'Esta ficha já tem uma conta ligada. Mudar quem acessa desliga essa conta, e por isso é uma ação à parte, na lista.'
+            : 'Menor de idade não tem conta na plataforma. Quem entra pela ficha é o responsável, com a conta dele.'}
         </p>
         {/* A recusa por idade chega no campo `accessHolder`, e é a caixa acima. Sem esta linha a
             mensagem não teria onde aparecer, e o formulário pareceria não fazer nada. */}

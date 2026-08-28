@@ -12,8 +12,9 @@ import { uuidv7 } from 'uuidv7';
 import { CreateStudentDto, ListStudentsQuery, UpdateStudentDto } from '../dto/student.dto';
 import { StudentInvite } from '../entities/student-invite.entity';
 import { Student } from '../entities/student.entity';
-import { User } from '../entities/user.entity';
+import { User, UserStatus } from '../entities/user.entity';
 import { AccessService } from './access.service';
+import { normalizarEmail } from './auth.service';
 import { fichaComoDono, type MarcadoresDaFicha } from './ficha-em-linha';
 import { menorPrecisaDeResponsavel } from './maioridade';
 import { mudancaDeVinculo } from './vinculo';
@@ -26,6 +27,21 @@ const ESTADOS_DO_FILTRO: Record<StudentFilter, StudentStatus[]> = {
   [StudentFilter.Ended]: [StudentStatus.Ended],
   [StudentFilter.All]: [StudentStatus.Active, StudentStatus.Paused, StudentStatus.Ended],
 };
+
+/**
+ * O e-mail da ficha, normalizado — ou `null`.
+ *
+ * **`users.email` é normalizado no cadastro e `students.email` não era**, e a metade quebrada
+ * era justamente a que importa: `MARINA@EXEMPLO.LOCAL` não acendia o marcador "já tem conta" de
+ * uma conta que existe, enquanto o convite para o mesmo endereço funcionava — porque o convite
+ * normaliza o destino. Achado #4 da revisão de segurança da fase.
+ *
+ * Efeito colateral bem-vindo: a detecção de duplicata compara `email` cru, então ela passa a
+ * pegar o par que escapava por causa de uma maiúscula.
+ */
+function emailDaFicha(email: string | null | undefined): string | null {
+  return email ? normalizarEmail(email) : null;
+}
 
 /** Como cada estado se chama na frase que a pessoa lê quando a transição é recusada. */
 const NOME_DO_ESTADO: Record<StudentStatus, string> = {
@@ -114,7 +130,7 @@ export class StudentsService {
       // (`iam.md` §9.4).
       userId: null,
       fullName: dto.fullName,
-      email: dto.email || null,
+      email: emailDaFicha(dto.email),
       phone: dto.phone || null,
       birthDate: dto.birthDate || null,
       status: StudentStatus.Active,
@@ -143,6 +159,31 @@ export class StudentsService {
       );
     }
 
+    // **Trocar quem acessa é ação, não campo, quando existe conta ligada.**
+    //
+    // Achado #2 da revisão de segurança da fase: `PATCH {accessHolder: 'SELF'}` numa ficha com
+    // `user_id` fazia **metade** da transferência — virava acesso próprio, limpava o responsável
+    // e deixava a conta do responsável ligada. O `transfer-access` é `POST` justamente porque os
+    // três efeitos só fazem sentido juntos, e o campo escapou por `PartialType(CreateStudentDto)`.
+    //
+    // A direção oposta era pior: marcar `GUARDIAN` numa ficha ligada à conta da própria aluna
+    // grava o estado que a decisão D9 proíbe — menor com conta própria.
+    //
+    // Ficha **sem** conta ligada continua livre: aí não há nada para reconciliar, e é o caso
+    // normal de corrigir o cadastro logo depois de criá-lo.
+    if (
+      dto.accessHolder !== undefined &&
+      dto.accessHolder !== atual.accessHolder &&
+      atual.userId !== null
+    ) {
+      throw this.recusar(
+        'accessHolder',
+        atual.accessHolder === AccessHolder.Guardian
+          ? 'Esta ficha tem conta ligada. Use “passar o acesso para ele” em vez de editar aqui.'
+          : 'Esta ficha tem conta ligada. Desfaça o vínculo com a conta antes de mudar quem acessa.',
+      );
+    }
+
     const accessHolder = dto.accessHolder ?? atual.accessHolder;
     const enviouResponsavel = dto.guardianName !== undefined;
     const guardianName = this.responsavelCoerente(
@@ -162,7 +203,7 @@ export class StudentsService {
       { id: atual.id },
       {
         ...(dto.fullName !== undefined ? { fullName: dto.fullName } : {}),
-        ...(dto.email !== undefined ? { email: dto.email || null } : {}),
+        ...(dto.email !== undefined ? { email: emailDaFicha(dto.email) } : {}),
         ...(dto.phone !== undefined ? { phone: dto.phone || null } : {}),
         ...(dto.birthDate !== undefined ? { birthDate: dto.birthDate || null } : {}),
         ...(dto.goals !== undefined ? { goals: dto.goals || null } : {}),
@@ -303,7 +344,14 @@ export class StudentsService {
 
     const comConta =
       emails.length > 0
-        ? await this.users.find({ where: { email: In(emails) }, select: { email: true } })
+        ? await this.users.find({
+            // **Só conta ativa.** `students.md` §9.1: conta suspensa ou anonimizada conta como
+            // "sem conta", porque convidar não levaria a nada — o aceite já recusa
+            // (`invite.service.ts`). Sem este filtro o marcador manda o professor esperar por
+            // uma resposta que o sistema não deixa acontecer. Achado #3 da revisão da fase.
+            where: { email: In(emails), status: UserStatus.Active },
+            select: { email: true },
+          })
         : [];
     const enderecosComConta = new Set(comConta.map((u) => u.email));
 
