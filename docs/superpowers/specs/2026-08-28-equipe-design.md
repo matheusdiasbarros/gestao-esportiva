@@ -394,8 +394,10 @@ foi o achado nº 1 da revisão da Fase 5.
 isso: *"número de ADR se atribui quando o documento é escrito"* e *"reserva que colide cede o
 número e vai para o fim"*.
 
-**ADR-006 passa a ser a equipe; a modelagem temporal vira ADR-007**, e as reservadas depois dela
-deslocam junto.
+**ADR-006 passa a ser a equipe, e a modelagem temporal vai para o fim da fila** — não para o 007.
+Deslocar a fila inteira renumeraria o provedor de pagamento, a hospedagem e o PostGIS, que já
+são citados por esse número em vários documentos. A regra diz "vai para o fim" exatamente para
+evitar isso.
 
 ### 11.5 Um item solto, que não é desta fase
 
