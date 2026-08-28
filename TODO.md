@@ -1298,8 +1298,12 @@ recusa por conflito de professor vazando a agenda de outro negócio ·
 - [ ] **Epic 5.5.2 — Convite e aceite**
   - [ ] `POST /staff/invites` — token de uso único guardado como **hash**, 7 dias, e-mail do dono
         verificado exigido, e o mesmo teto do convite de aluno reaproveitado
-  - [ ] **O convite não pode revelar se o e-mail já tem conta.** É a forma exata do achado nº 1
-        da revisão da Fase 5, e o teste vem antes do código
+  - [ ] **A emissão não pode diferir entre e-mail com e sem conta.** A spec apontava para o lado
+        errado, e a leitura do código em 2026-08-28 corrigiu: o convite de aluno **já responde
+        `hasAccount`**, mas na tela de **aceite**, e ali é defensável — quem abriu o link controla
+        aquela caixa e não descobre nada que já não saiba. O risco é na **emissão**, se a resposta
+        ao dono mudasse conforme o destinatário. Hoje não muda; o convite de equipe copia essa
+        forma, e o teste vem antes do código
   - [ ] Aceite nas duas portas: quem já tem conta vira membro; quem não tem **cria conta e nasce
         profissional completo**, com carteira e link "treine comigo" próprios (decisão E1)
   - [ ] Revogar convite pendente; no máximo um válido por destinatário e por dono
@@ -1307,13 +1311,20 @@ recusa por conflito de professor vazando a agenda de outro negócio ·
         afirma a ausência de qualquer rota que crie membro sem token
 - [ ] **Epic 5.5.3 — Associação do aluno e a regra de acesso**
   - [ ] `student_teachers`: quais professores atendem cada ficha. **Tabela e não coluna**, porque
-        um aluno pode ter vários (E7) — com coluna, o aluno de duas modalidades viraria duas
-        fichas, que o sistema já sinaliza como provável duplicata
+        um aluno pode ter vários (E7). O argumento ficou mais forte com a leitura do código em
+        2026-08-28: existe `uq_students_professional_user`, então uma conta só pode ter **uma**
+        ficha por profissional — para o aluno do clube que tem conta, "duas fichas para duas
+        modalidades" não é nem representável. A tabela deixou de ser a opção melhor e virou a única
   - [ ] `professional_id` da ficha **nunca muda**. Trocar o professor mexe só na associação
   - [ ] `AccessService` ganha a regra **membro da equipe**, com **duas** condições: estou na
         equipe deste dono com status `ACTIVE`, **e** estou associado a este recurso. Só a
         primeira entregaria a carteira inteira do clube
   - [ ] Não é decorator, pela mesma razão registrada no Epic 2.3: guard não conhece recurso
+  - [ ] **Rever as oito chamadas de `fichaComoDono`, uma a uma.** Hoje "dono" é a única porta de
+        entrada da ficha; abrir uma segunda obriga cada chamada a dizer se aceita o membro — ver
+        e editar aceitam, pausar, encerrar, apagar e transferir acesso não. O próprio comentário
+        do `invite.service.ts` já avisou disto: *"respondida em cada serviço, uma delas um dia
+        responde diferente — e a que responder diferente será a que vaza"*
   - [ ] A matriz de `iam.md` §6 ganha a coluna do membro, e `iam.md` §7.5 é **reescrita** — "não
         existe permissão granular" deixou de ser verdade
   - [ ] As quinze células "não pode" com teste. As três que mais importam são de **API**: o
