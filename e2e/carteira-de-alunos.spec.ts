@@ -132,8 +132,44 @@ test('pausar troca o rótulo e explica que não trava nada do lado do professor'
   await expect(ficha.getByRole('button', { name: 'Pausar' })).toHaveCount(0);
   await expect(ficha.getByRole('button', { name: 'Reativar' })).toBeVisible();
 
+  // O filtro "Pausados" existe porque "quem eu preciso retomar?" é pergunta de verdade. Sem ele,
+  // a única forma de responder seria "Todos", junto dos encerrados.
+  await painel.getByRole('button', { name: 'Pausados' }).click();
+  await expect(painel.getByRole('listitem')).toHaveCount(1);
+  await expect(painel.getByRole('listitem')).toContainText('João do WhatsApp');
+
+  // E "Atuais" continua trazendo o pausado: pausado é aluno atual (§7.2). Se ele sumisse daqui,
+  // o professor teria que trocar de filtro para achar quem está prestes a agendar.
+  await painel.getByRole('button', { name: 'Atuais' }).click();
+  await expect(painel.getByRole('listitem')).toHaveCount(2);
+
   await ficha.getByRole('button', { name: 'Reativar' }).click();
   await expect(ficha.getByText('Ativo')).toBeVisible();
+});
+
+test('duas fichas com o mesmo e-mail são marcadas — só marcadas', async () => {
+  const repetido = 'mesmo-endereco@exemplo.local';
+
+  for (const nome of ['Ana Primeira', 'Ana Segunda']) {
+    await painel.getByRole('button', { name: 'Novo aluno' }).click();
+    await painel.getByLabel('Nome completo').fill(nome);
+    await painel.getByLabel('E-mail').fill(repetido);
+    await painel.getByRole('button', { name: 'Cadastrar aluno' }).click();
+  }
+
+  // **Só detecção.** Mesclar é da Fase 7: enquanto a ficha é nome e contato, mesclar é apagar a
+  // errada; quando ela carregar saldo e extrato, "qual saldo sobrevive" passa a ter consequência
+  // financeira. Por isso não existe botão de mesclar aqui, e o teste garante que não apareça um.
+  const marcadas = painel.getByRole('listitem').filter({ hasText: 'Possível duplicata' });
+  await expect(marcadas).toHaveCount(2);
+  await expect(painel.getByRole('button', { name: /mesclar|unir|juntar/i })).toHaveCount(0);
+
+  for (const nome of ['Ana Primeira', 'Ana Segunda']) {
+    const ficha = painel.getByRole('listitem').filter({ hasText: nome });
+    painel.once('dialog', (dialogo) => void dialogo.accept());
+    await ficha.getByRole('button', { name: 'Apagar' }).click();
+    await expect(ficha).toHaveCount(0);
+  }
 });
 
 test('encerrar pede confirmação, sai dos atuais e tranca a ficha', async () => {

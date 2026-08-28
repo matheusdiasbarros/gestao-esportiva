@@ -1059,12 +1059,18 @@ profissional cadastra aluno que não consentiu ·
         data de hoje, e um `CHECK` com `now()` viraria falso sozinho no aniversário
   - [x] Histórico — **nada a fazer aqui.** Ele é preenchido pelas fases 6–9, e não existe tabela
         nenhuma apontando para `students` ainda
-- [ ] **Epic 5.4 — Listagem e organização**
-  - [ ] Busca e filtro por estado do vínculo — ~~tags~~ ficam para quando alguém pedir: busca
+- [x] **Epic 5.4 — Listagem e organização** ✅ 2026-08-28
+  - [x] Busca e filtro por estado do vínculo — ~~tags~~ ficam para quando alguém pedir: busca
         por nome mais filtro por estado dão conta de 40 alunos, e tag é um segundo vocabulário
-        que alguém mantém para sempre
-  - [ ] Detecção de ficha duplicada na própria carteira. **Só detecção** — mesclar é Fase 7
-  - [ ] ~~Importação simples (CSV)~~ — **quando alguém pedir**, como o `mvp.md` já dizia
+        que alguém mantém para sempre. A busca saiu no Epic 5.1; **o filtro *Pausados* faltava na
+        tela** e entrou agora — sem ele, ver quem está pausado exigiria *Todos*, junto dos
+        encerrados. São quatro botões e não cinco: a API aceita `ACTIVE`, e a tela não o oferece
+        porque entre "Atuais" e "Ativos" a diferença é uma letra e ninguém adivinharia qual traz
+        o pausado
+  - [x] Detecção de ficha duplicada na própria carteira. **Só detecção** — mesclar é Fase 7. Saiu
+        no Epic 5.1 pela API; o teste de tela entrou agora, e ele **afirma a ausência** de
+        qualquer botão de mesclar
+  - [x] ~~Importação simples (CSV)~~ — **quando alguém pedir**, como o `mvp.md` já dizia
 
 ### Decisões da fase
 
@@ -1175,7 +1181,7 @@ o administrador, ou o profissional errado.
   na resposta, e o teste cria e descarta a própria ficha. **DT-005 fechado em 2026-08-27.**
 
 > **Orçamento:** ~~81~~ **87 dos 100 cadastros por hora** (DT-010) e 18 dos 20 envios de foto
-> (DT-011), medido em 2026-08-28 com 182 testes. Faltam **3** para o gatilho. Se passar de ~90, a
+> (DT-011), medido em 2026-08-28 com 183 testes. Faltam **3** para o gatilho. Se passar de ~90, a
 > saída é a suíte zerar os contadores no `globalSetup` — não subir o teto.
 
 ### Tecnologias

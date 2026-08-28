@@ -216,11 +216,11 @@ dois provedores antes de existir o segundo (ADR-005).
 
 **O que:** cada teste de tela cria a própria conta, de propósito (`e2e/apoio.ts` explica por
 quê), e todos saem de `127.0.0.1`. Uma execução limpa da suíte consome **87** dos 100 cadastros
-por hora que `LimitarCadastro` permite por IP — medido em 2026-08-28, com 182 testes. Uma
+por hora que `LimitarCadastro` permite por IP — medido em 2026-08-28, com 183 testes. Uma
 execução cabe; **duas na mesma hora não cabem.**
 
 O número sobe a cada fase, e o histórico é o aviso: 66 na primeira medição, 74 com 112 testes,
-81 com 131, 85 com 157, **87 com 182**. Quem acrescentar teste que cadastra mede de novo e
+81 com 131, 85 com 157, **87 com 183**. Quem acrescentar teste que cadastra mede de novo e
 atualiza este título. **Faltam 3 para o gatilho de correção**, e os arquivos da Fase 5
 (`alunos.spec.ts`, `carteira-de-alunos.spec.ts`) compartilham **uma** conta cada um justamente
 por isso — o Epic 5.2 acrescentou 16 testes e custou só 2 cadastros, reaproveitando a conta de

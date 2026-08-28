@@ -30,8 +30,20 @@ const ESTADOS: Record<StudentStatus, string> = {
   [StudentStatus.Ended]: 'Encerrado',
 };
 
+/**
+ * Os filtros, e **por que são quatro e não cinco**.
+ *
+ * *Atuais* é o padrão e traz ativos **e** pausados — pausado é aluno atual (§7.2). *Pausados*
+ * existe porque "quem eu preciso retomar?" é uma pergunta que o professor faz de verdade, e sem
+ * ela a única forma de responder seria *Todos*, junto dos encerrados.
+ *
+ * A API também aceita `ACTIVE`, que a tela **não** oferece: entre "Atuais" e "Ativos" a diferença
+ * é uma letra e nenhum professor adivinharia qual traz o pausado. O filtro fica na API para quem
+ * precisar dele por código; a tela não ganha um botão que ensina errado.
+ */
 const FILTROS: { valor: StudentFilter; rotulo: string }[] = [
   { valor: StudentFilter.Current, rotulo: 'Atuais' },
+  { valor: StudentFilter.Paused, rotulo: 'Pausados' },
   { valor: StudentFilter.Ended, rotulo: 'Encerrados' },
   { valor: StudentFilter.All, rotulo: 'Todos' },
 ];
