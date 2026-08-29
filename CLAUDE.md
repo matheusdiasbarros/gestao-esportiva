@@ -17,8 +17,10 @@ Escopo do MVP em [`docs/product/mvp.md`](docs/product/mvp.md).
 
 ## Estado atual
 
-**Fases 0, 1, 2, 3 e 5 concluídas.** A próxima do MVP é a Fase 6 (agenda) — a Fase 4 saiu do
-escopo e roda junto da 12. O **Epic 2.6 (staging)** venceu e depende de conta em provedor.
+**Fases 0, 1, 2, 3 e 5 concluídas.** A **Fase 5.5 (equipe)** está em andamento — faltam os
+Epics 5.5.5 e 5.5.6, a revisão de segurança e o manual. Depois vem a **Fase 5.7 (idade mínima de
+16 anos, com assistência)**, e só então a Fase 6 (agenda). A Fase 4 saiu do escopo e roda junto
+da 12. O **Epic 2.6 (staging)** venceu e depende de conta em provedor.
 
 Funciona hoje: criar conta de profissional ou de aluno, entrar, sair, recuperar senha,
 confirmar e trocar e-mail, o link público "treine comigo" do professor, a autorização por papel
@@ -82,6 +84,14 @@ Nesta ordem, e não pule:
 **A regra principal:** planejar o suficiente para saber para onde vamos, mas **decidir os
 detalhes só quando eles se tornam relevantes**. Nada de arquitetura prematura, dependência sem
 necessidade concreta, ou regra de negócio de fase futura.
+
+**Os dois papéis vivem nos dois canais.** Quem cria uma capacidade entrega as superfícies dela
+**na mesma fase** — não existe "a tela do celular fica para a Fase 11". O aluno é atendido
+**principalmente na web** (ele não instala aplicativo para marcar duas aulas por semana, e não
+há build de iPhone); o profissional é atendido **principalmente no aplicativo** (ele trabalha em
+pé, na quadra), e a web é o extra de tela grande — relatório e gráfico. Detalhe em
+[`docs/domain/iam.md`](docs/domain/iam.md) §10. *Esta regra já foi escrita uma vez e descumprida
+por três fases seguidas: ver DT-012.*
 
 **Idioma.** Código, tabelas e colunas em **inglês**. Produto, documentação, comentários e
 commits em **pt-BR**.

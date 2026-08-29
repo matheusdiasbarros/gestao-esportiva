@@ -1,4 +1,4 @@
-import type { PublicProfile } from '@gestao/types';
+import { SportStatus, type PublicProfile } from '@gestao/types';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -74,15 +74,31 @@ export class PublicProfileService {
       bio: perfil?.bio ?? null,
       photoUrl: urlDaFoto(perfil?.photoPath ?? null, perfil?.photoUpdatedAt ?? null),
       sports: vinculos
-        .map((vinculo) => ({
-          name: modalidades.get(vinculo.sportId)?.name ?? null,
-          experienceSinceYear: vinculo.experienceSinceYear,
-        }))
-        // Modalidade sem nome só acontece se alguém apagar a linha do catálogo por SQL, contra
-        // a restrição. Na página pública ela some, em vez de aparecer como um traço.
-        .filter((sport): sport is { name: string; experienceSinceYear: number | null } =>
-          Boolean(sport.name),
-        )
+        .flatMap((vinculo) => {
+          const modalidade = modalidades.get(vinculo.sportId);
+          return modalidade
+            ? [
+                {
+                  name: modalidade.name,
+                  status: modalidade.status,
+                  experienceSinceYear: vinculo.experienceSinceYear,
+                },
+              ]
+            : [];
+        })
+        // **Duas exclusões, e a segunda foi acrescentada em 2026-08-29.**
+        //
+        // Sem nome só acontece se alguém apagar a linha do catálogo por SQL, contra a restrição.
+        // Na página pública ela some, em vez de aparecer como um traço.
+        //
+        // **Pendente também some, e este é o ponto novo.** O nome de uma modalidade pendente foi
+        // digitado por um profissional e nunca revisado por ninguém — a curadoria é manual e não
+        // tem tela (§5.3). Deixá-la sair aqui publica texto de usuário na internet sem moderação,
+        // e ainda enche a busca da Fase 12 de grafias que a normalização existe para evitar.
+        // Ele continua usando a modalidade na carteira e na agenda; o que espera a revisão é a
+        // vitrine, e a tela de perfil diz isso com todas as letras.
+        .filter((linha) => linha.status === SportStatus.Approved)
+        .map(({ name, experienceSinceYear }) => ({ name, experienceSinceYear }))
         .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
       locations: locais,
     });

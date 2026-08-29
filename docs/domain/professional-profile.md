@@ -239,6 +239,19 @@ no banco. Isto não é descuido: é a mesma pendência já registrada no `iam.md
 administrativo mínimo está no MVP e não tem épico em fase nenhuma". A Fase 3 **acrescenta um
 segundo motivo** para essa tela existir, e a pendência precisa ser lida com esse peso.
 
+> **O furo que isso abria, tapado em 2026-08-29.** Como ninguém aprova, a modalidade fica
+> `PENDING` para sempre — e o perfil público **publicava o nome dela mesmo assim**, porque a
+> consulta buscava o nome pelo identificador sem olhar o estado. Na prática: um texto digitado
+> por um usuário ia para a internet sem nenhuma revisão, e a busca da Fase 12 herdaria as
+> grafias que a normalização existe justamente para juntar.
+>
+> **A pendente saiu da vitrine.** Ele continua usando a modalidade normalmente com os alunos
+> dele — o que espera a curadoria é a página pública, e a tela de perfil passou a dizer isso com
+> todas as letras, para o silêncio não virar chamado de suporte. A regra tem teste, e ele foi
+> provado quebrando.
+>
+> Isto **não substitui a tela de curadoria** — só impede que a falta dela vaze para fora.
+
 **A modalidade nunca é apagada de verdade.** A chave estrangeira é `RESTRICT`, não `CASCADE`.
 Apagar levaria junto o vínculo do profissional — e, a partir da Fase 6, deixaria sessões sem
 modalidade. Arquivar entrega o mesmo efeito de produto sem destruir dado.
@@ -350,6 +363,34 @@ acontece, não *quão perto* alguém está — está escrito assim no `mvp.md`.
 **`kind`, não `type`. (proposta)** `type` é palavra-chave do TypeScript e some no meio de DTO
 e de união discriminada. A tradução pt-BR ↔ código continua sendo "tipo de local" ↔
 `LocationKind`.
+
+### 7.1b Qual modalidade acontece em qual local ✱
+
+**Acrescentado em 2026-08-29, a partir de um caso que o desenho não tinha.** *"Dou tênis num
+clube e beach tennis em outro, e os dois clubes têm as duas quadras."* Hoje `locations` não tem
+nenhuma ligação com modalidade — um profissional tem uma lista de locais e uma lista de
+modalidades, e nada diz o que acontece onde.
+
+**O que isso já quebra, e o que ia quebrar:**
+
+| Onde | O estrago |
+| --- | --- |
+| Página pública, **hoje** | lista *"Tênis, Beach Tennis"* e *"Jardim da Penha, Praia do Canto"* lado a lado, sem relação. Quem lê pode aparecer no lugar errado |
+| Agenda, Fase 6 | nada impediria marcar tênis no local onde ele só dá beach tennis |
+| Busca, Fase 12 | "beach tennis perto de mim" casaria com o bairro do tênis |
+
+**A tabela:** `professional_sport_locations`, com o par *(professional_sport_id, location_id)*
+único. É uma ligação entre duas coisas que **já pertencem ao mesmo profissional**, então não há
+pergunta de propriedade nova — as duas pontas já foram conferidas por quem as criou.
+
+**Zero linhas significa "atendo esta modalidade em todos os meus locais".** É a única leitura que
+não invalida os perfis que já existem, e é a que poupa o autônomo de um local só de preencher uma
+matriz para dizer o óbvio. A regra é dita **uma vez**, no serviço que monta a resposta pública e
+na trava da agenda — em nenhum outro lugar.
+
+**Não decidido, e é da Fase 9:** se o preço da mesma modalidade pode mudar de local para local.
+O clube fica com uma parte, então o professor cobra diferente lá — é um caso real, e resolvê-lo
+hoje seria pendurar dinheiro numa tabela que ainda não sabe cobrar. Registrado na §13.
 
 ### 7.2 Os quatro tipos
 

@@ -383,8 +383,18 @@ apagar é para a ficha criada por engano.**
 
 ### 8.1 A regra
 
-A conta é 18+ (decisão D9 da Fase 2). O menor existe como ficha, e quem acessa é o responsável,
-com a conta dele. O que faltava era a regra fina:
+> **O número mudou em 2026-08-29: 18 → 16.** A decisão D9 foi revisada (`iam.md` §8.1) porque a
+> justificativa escrita estava errada — o que trava a idade é a **capacidade civil** para aceitar
+> os Termos, não a LGPD. De 16 a 18 o ato é válido **se assistido**, e a assistência passou a ser
+> confirmada por e-mail do responsável.
+>
+> **Toda ocorrência de "18" nesta seção vira "16"**, e o raciocínio abaixo não muda em mais nada:
+> `IDADE_DE_MAIORIDADE` e `MINIMUM_SIGNUP_AGE` são o mesmo número pelo mesmo motivo e movem
+> juntos. Se o jovem de 16 pode ter conta, a ficha dele pode ser `SELF` — mover um sem o outro
+> criaria uma ficha que o banco aceita e que nenhuma conta consegue acessar.
+
+A conta é 16+ (decisão D9 da Fase 2, revisada). O menor de 16 existe como ficha, e quem acessa é
+o responsável, com a conta dele. O que faltava era a regra fina:
 
 | Regra | Detalhe |
 | --- | --- |
@@ -421,7 +431,10 @@ Um responsável com dois filhos no mesmo professor tem duas fichas apontando par
 — e é por isso que **não pode existir unicidade de e-mail por carteira** (§9.2). O caso já
 estava previsto no `iam.md` §9.3; aqui ele vira uma restrição que **não** se cria.
 
-### 8.3 O aniversário de 18 anos
+### 8.3 O aniversário que muda o acesso
+
+> **Era "o aniversário de 18 anos"; passou a ser o de 16**, em 2026-08-29. A escolha (c) abaixo
+> não mudou — o que mudou é **quando** o aviso acende. Ver §8.1.
 
 | Opção | Trade-off |
 | --- | --- |

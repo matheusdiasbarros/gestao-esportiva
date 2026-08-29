@@ -223,7 +223,7 @@ primeira migration com dados custa migração.
 | # | Decisão | Resultado |
 | --- | --- | --- |
 | 🔒 D3 | Mesma conta pode ser profissional e aluno? | **Sim.** Um login só. Sai de graça no modelo: perfil de profissional de um lado, fichas do outro |
-| 🔒 D9 | Idade mínima para ter conta | **18 anos.** Menor existe só como ficha; quem acessa é o responsável, com a conta dele. A ficha marca se o acesso é da própria pessoa ou de um responsável |
+| 🔒 D9 | Idade mínima para ter conta | ~~18 anos~~ → **16 anos, com assistência confirmada.** Revisada em 2026-08-29; ver §8.1. Abaixo de 16 o menor existe só como ficha, e quem acessa é o responsável com a conta dele |
 | 🔒 D10 | Aluno pode se cadastrar sozinho? | **Sim**, cadastro aberto |
 | 🔒 D10b | Como o aluno auto-cadastrado chega a um professor? | **Link público do profissional** ("treine comigo"), para colar no Instagram ou WhatsApp. Quem se cadastra por ele já entra como aluno dele |
 | 🔒 §5 | `Student` é a pessoa ou a ficha? | **A ficha de cada profissional.** Motivo: privacidade — dois profissionais concorrentes não compartilham a mesma linha de dado pessoal de alguém que não consentiu. `StudentLink` sai do glossário |
@@ -236,6 +236,44 @@ primeira migration com dados custa migração.
 **Base legal (LGPD), Fase 2:** execução de contrato para os dados da conta; legítimo interesse
 do profissional para os dados que ele digita na ficha, com aviso no primeiro contato — que é o
 convite. A base legal do cadastro de aluno que nunca consentiu é decisão da Fase 5.
+
+### 8.1 D9 revisada — a idade mínima, e o motivo certo ✱
+
+**Revisada em 2026-08-29.** O 18 estava certo como número e **errado como justificativa**, e essa
+é a parte que importa: o documento não dizia por quê, e a suposição natural — LGPD — está errada.
+
+**São duas leis, e elas dizem coisas diferentes:**
+
+| | O que exige |
+| --- | --- |
+| **LGPD, art. 14 §1** | Criança (até 12 incompletos): consentimento **específico e em destaque** de ao menos um dos pais. Adolescente (12 a 18): sem exigência expressa de consentimento parental — só o "melhor interesse" |
+| **Código Civil, arts. 3º e 4º** | Menor de 16: absolutamente incapaz. De 16 a 18: **relativamente** incapaz — o ato é válido **se assistido** |
+
+**Quem trava a idade é a capacidade civil, não a proteção de dados.** A decisão D8a torna o
+aceite dos Termos obrigatório no cadastro, com versão e data gravadas — e aceitar Termos é
+assinar contrato. Um aceite de menor de 16 é nulo; de 16 a 18 é **anulável, salvo se assistido**.
+
+**A decisão:** a idade mínima passa a ser **16 anos**, e o que a sustenta é a assistência ser
+real, não declarada. Quem tem 16 ou 17 informa nome e e-mail do responsável no cadastro, e o
+responsável **confirma por um link**.
+
+**O que fica bloqueado até a confirmação chegar, e o que não fica.** A conta entra e usa na hora;
+o que espera é **agendar e pagar**. É o mesmo padrão da D5 — que já deixa entrar sem verificar
+e só exige verificação para *agir para fora* —, e a razão é a mesma: bloquear a entrada punia a
+pessoa por um passo que não é dela.
+
+> **Uma frase que precisa continuar verdadeira:** `MINIMUM_SIGNUP_AGE` (a conta) e
+> `IDADE_DE_MAIORIDADE` (a ficha) são **o mesmo número pelo mesmo motivo**. Se um jovem de 16
+> pode ter conta própria, a ficha dele pode ser `SELF`. Mover um sem o outro cria o estado
+> contraditório que a decisão D9 existe para impedir: uma ficha que o banco aceita e que nenhuma
+> conta pode acessar.
+
+**A lacuna que esta revisão expôs, e que continua aberta.** A ficha de uma **criança de menos de
+12 anos** é criada hoje sob *legítimo interesse* do profissional (`students.md` §3.3) — a mesma
+base legal da ficha de um adulto. O art. 14 §1 pede **consentimento** nessa faixa, e legítimo
+interesse provavelmente não está disponível. Não é o mecanismo de consentimento que está em
+dúvida: é a **base legal inteira**. Registrado na §11 como pergunta de advogado, agora com o
+número — **12**, e não 18.
 
 ## 9. Fluxos de entrada
 
@@ -345,11 +383,46 @@ paga por decisão consciente (ADR-004 §9), e aqui sai para menos gente: só par
 autenticado e acertou a senha. Esconder não fecharia nada e deixaria a pessoa esperando um
 e-mail que nunca chegaria.
 
-## 10. Em que contexto a pessoa está
+## 10. Em que canal a pessoa está
 
-Quando a mesma conta é profissional e aluno, alguma tela precisa dizer qual chapéu ela está
-usando. Recorte do MVP, deliberadamente enxuto: **a web é do profissional, o app é do aluno.**
-Sem menu de troca de papel. Se o professor quiser ver as aulas que ele faz como aluno, abre o app.
+> **Reescrito por inteiro em 2026-08-29.** Esta seção dizia *"a web é do profissional, o app é do
+> aluno. Sem seletor de contexto, sem menu de troca."* As três metades caíram, em momentos
+> diferentes e por motivos diferentes, e a seção estava contradizendo tanto o `TODO.md` quanto o
+> comentário do próprio código que ela deveria governar.
+
+**Os dois papéis são atendidos nos dois canais.** A web e o aplicativo não dividem *usuários*;
+dividem *situações*.
+
+| | Web | Aplicativo |
+| --- | --- | --- |
+| **Profissional** | a tela grande: relatório, financeiro, configuração, o perfil inteiro | **o que se faz em quadra**: presença, remarcar, convidar quem apareceu agora, corrigir um telefone |
+| **Aluno** | tudo. É o canal **principal** dele | tudo, para quem prefere instalar |
+
+**Por que o aluno é atendido na web, e isso não é opcional.** Duas razões, e a segunda é
+definitiva:
+
+1. A persona não instala aplicativo para marcar duas aulas por semana. Isto já estava escrito no
+   comentário de `apps/web/src/app/convite/[token]/page.tsx` desde a Fase 2 — *"não pede instalar
+   aplicativo em nenhum momento, e isso é requisito de produto, não conveniência"* —, e a antiga
+   §10 dizia o contrário do arquivo que ela governava.
+2. **Não há build de iPhone**, e não haverá enquanto não houver um Mac. Para o aluno de iOS a web
+   não é alternativa: é a única porta. Fechá-la seria fechar a plataforma para ele.
+
+**Por que o profissional é atendido no aplicativo.** Ele trabalha em pé, na quadra, longe de um
+computador. Dar presença, convidar o aluno que acabou de aparecer, corrigir um telefone — nada
+disso pode exigir voltar para casa. **A web é o extra**, não o principal: é onde o mesmo dado
+aparece organizado numa tela grande, com relatório e gráfico.
+
+**A regra operacional, e ela vale para toda fase daqui em diante:** *quem cria uma capacidade
+entrega as superfícies dela na mesma fase* — a do profissional e a do aluno, na web e no
+aplicativo, conforme a tabela acima. Não existe "a tela mobile fica para a Fase 11".
+
+> **Isto já tinha sido decidido uma vez, em 2026-08-24, e foi descumprido.** O `TODO.md` da Fase
+> 11 escreveu a regra com todas as letras. As Fases 3, 5 e 5.5 entregaram só web. A dívida é
+> concreta e está registrada: perfil, carteira e equipe **não existem no aplicativo**.
+
+**O que continua valendo:** não existe menu de "trocar de papel". Os papéis são derivados do dado
+(§4) e a pessoa vê o que ela é — se é as duas coisas, vê as duas.
 
 ### 10.1 O seletor de negócio ✱
 
@@ -385,7 +458,9 @@ depois.
 | ~~Base legal do cadastro de aluno sem consentimento; o que o aluno pode fazer sobre observações privadas~~ | ✅ `students.md` §3 e §6 |
 | ~~Regras do responsável de menor: o que vê, o que pode fazer~~ | ✅ `students.md` §8 |
 | ~~Regra fina do fim de vínculo e retenção do histórico do aluno~~ | ✅ `students.md` §7 |
-| Superfície web do aluno além do aceite do convite | Fase 11 |
+| ~~Superfície web do aluno além do aceite do convite~~ | ✅ **Deixou de ser pendência em 2026-08-29** e virou regra: §10. Ela ia para a "Fase 11 — Aplicativo", que não entrega nada na web — do jeito que estava, nunca seria construída |
+| **A base legal da ficha de criança com menos de 12 anos pode estar errada.** Hoje é legítimo interesse; o art. 14 §1 pede consentimento de um responsável nessa faixa | **Advogado.** Ver §8.1. Distinta da pergunta abaixo: aqui a dúvida é a base legal, não o mecanismo |
+| Perfil, carteira e equipe **não existem no aplicativo** — três fases entregues só na web, contra a regra da §10 | Dívida registrada. Ver `tech-debt.md` |
 | Mesclar fichas duplicadas na carteira do próprio profissional | **Fase 7**, não Fase 5 — mesclar só é problema de verdade quando as fichas carregam saldo e extrato (`students.md` §9.2). A Fase 5 entrega a **detecção** |
 | Se o aceite do convite pelo responsável basta como **consentimento parental** (art. 14, §1) | **Advogado.** `students.md` §15.2 |
 | Se a plataforma é **operadora** ou **controladora conjunta** quanto ao conteúdo da ficha | **Advogado.** `students.md` §15.3 |

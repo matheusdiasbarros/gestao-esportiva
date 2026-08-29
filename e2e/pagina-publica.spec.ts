@@ -190,6 +190,37 @@ test.describe('A resposta da API', () => {
     expect(Object.keys(perfil.areas[0] ?? {}).sort()).toEqual(['city', 'neighborhood', 'state']);
   });
 
+  /**
+   * **Modalidade pendente não sai na vitrine** — regra de 2026-08-29.
+   *
+   * O nome de uma pendente foi digitado por um profissional e nunca revisado: a curadoria é
+   * manual e não tem tela (`professional-profile.md` §5.3). Deixá-la sair publica texto de
+   * usuário na internet sem moderação. Ele continua usando a modalidade com os alunos dele.
+   *
+   * O teste cadastra a pendente **depois** dos outros: ela é a última do arquivo a mexer no
+   * perfil, e o `sports[0]` que os testes acima conferem continua sendo o mesmo.
+   */
+  test('modalidade ainda em revisão não aparece para o visitante', async ({ request }) => {
+    const inventada = `Frescobol de Teste ${Date.now()}`;
+
+    await montar('/professionals/me/sports', {
+      sportName: inventada,
+      prices: [{ sessionFormat: 'INDIVIDUAL', amountCents: 9900 }],
+    });
+
+    // Ela existe mesmo, e é dele: sem esta conferência o teste abaixo passaria por não ter nada
+    // para vazar — que é exatamente como o achado #2 da revisão da Fase 3 escapou.
+    const minhas = (await (await dono.request.get(`${API}/professionals/me/sports`)).json()) as {
+      sport: { name: string; status: string };
+    }[];
+    const pendente = minhas.find((linha) => linha.sport.name === inventada);
+    expect(pendente, 'a modalidade inventada não foi criada').toBeDefined();
+    expect(pendente!.sport.status).toBe('PENDING');
+
+    const bruto = await (await request.get(`${API}/professionals/link/${slug}`)).text();
+    expect(bruto, 'a modalidade em revisão vazou para a página pública').not.toContain(inventada);
+  });
+
   test('nenhum dado privado aparece em lugar nenhum do corpo', async ({ request }) => {
     const bruto = await (await request.get(`${API}/professionals/link/${slug}`)).text();
 

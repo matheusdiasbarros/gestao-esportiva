@@ -3,7 +3,7 @@
 Registro de compromissos assumidos conscientemente. Cada item diz o que é, por que foi
 aceito e o que dispara a correção.
 
-Última atualização: 2026-08-28
+Última atualização: 2026-08-29
 
 ---
 
@@ -339,6 +339,52 @@ docker exec gestao-redis sh -c 'for k in $(redis-cli --scan --pattern "{*}:*"); 
 
 Os dois maiores contadores de janela longa (TTL perto de 3600) são o cadastro, perto de 81, e o
 envio de foto, perto de 18. Encontrado pela revisão de segurança da Fase 3 (achado #6).
+
+---
+
+## Fase 5.5
+
+### DT-012 — Três fases de tela do profissional existem só na web
+
+**O que:** perfil, carteira de alunos e equipe — as entregas das Fases 3, 5 e 5.5 — **não
+existem no aplicativo**. Ele tem entrar, criar conta, painel, recuperar senha, trocar e-mail e
+convidar, e mais nada.
+
+**Por quê:** a regra que manda entregar a tela mobile junto foi escrita em 2026-08-24, no
+cabeçalho da Fase 11, e **as três fases seguintes não a cumpriram**. Não houve decisão de adiar;
+houve esquecimento repetido, que é pior, porque não deixou rastro em lugar nenhum.
+
+**Por que isso dói mais do que parece:** o profissional destas personas trabalha em pé, na
+quadra. A carteira de alunos é justamente o que ele abre para conferir um nome antes da aula, e
+hoje isso exige um computador. A web deveria ser o **extra** de tela grande — e é o único canal
+que existe.
+
+**Aceito porque:** quase tudo que falta ao aluno depende da agenda, que ainda não existe;
+construir a paridade agora seria refazer telas que a Fase 6 vai mexer. O que **não** é aceitável
+é continuar acumulando: da Fase 5.7 em diante, quem cria uma capacidade entrega as superfícies
+dela na mesma fase — `iam.md` §10, reescrito em 2026-08-29.
+
+**Gatilho para pagar:** o acerto de contas é da Fase 11, que deixou de ser "o aplicativo" e
+passou a ser publicação mais o que ficou para trás. Antes disso, qualquer fase que **mexa** numa
+dessas três telas leva a versão mobile junto, em vez de aumentar a dívida.
+
+### DT-013 — Ninguém aprova modalidade nova, e não há tela para isso
+
+**O que:** o profissional digita um nome fora do catálogo, nasce uma linha `PENDING`, e ela fica
+pendente **para sempre**. Aprovar, mesclar e arquivar é rodar SQL no banco à mão.
+
+**Por quê:** o painel administrativo não existe — pendência registrada desde o `iam.md` §11, sem
+fase dona. A Fase 3 documentou isso na §5.3 do `professional-profile.md` com todas as letras.
+
+**Aceito porque:** com uma pessoa usando o sistema, três modalidades pendentes por conta é um
+teto que segura. O estrago é de catálogo, não de dado pessoal.
+
+**O que já foi feito para a falta não vazar**, em 2026-08-29: a modalidade pendente **saiu da
+página pública**. Antes, o nome digitado por um usuário ia para a internet sem revisão — e a
+busca da Fase 12 herdaria todas as grafias que a normalização existe para juntar.
+
+**Gatilho para pagar:** o primeiro dia com usuários reais. Duas contas cadastrando modalidade ao
+mesmo tempo e ninguém curando é o catálogo virando lixeira em uma semana.
 
 ---
 

@@ -142,10 +142,16 @@ export function BlocoModalidades({
                           .join(' · ')}
                   </p>
 
+                  {/* A segunda frase entrou em 2026-08-29, junto da regra que tira a modalidade
+                      pendente da página pública. Sem ela, o profissional cadastra "Beach Tenis",
+                      abre o próprio link e não a encontra — e o silêncio da tela vira um chamado
+                      de suporte que ninguém sabe responder. */}
                   {modalidade.sport.status === 'PENDING' ? (
                     <p className="mt-1 text-xs text-(--color-ink-muted)">
                       Você cadastrou este nome. Vamos revisar e, se já existir no catálogo com outra
-                      grafia, juntamos as duas — o seu preço continua onde está.
+                      grafia, juntamos as duas — o seu preço continua onde está. Enquanto isso, ela{' '}
+                      <strong>não aparece na sua página pública</strong>: você usa normalmente com
+                      seus alunos.
                     </p>
                   ) : null}
                 </div>

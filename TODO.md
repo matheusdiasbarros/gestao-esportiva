@@ -74,6 +74,7 @@ suposições, e enxerga o que eu deixei passar por estar perto demais.
 | 4 — Localização | ○ | ⬤ | ⬤ | ○ | | ○ | ⬤ | |
 | 5 — Alunos | ⬤ | ○ | ⬤ | ⬤ | | ○ | ⬤ | |
 | 5.5 — Equipe | ⬤ | ⬤ | ⬤ | ⬤ | | ⬤ | ⬤ | |
+| 5.7 — Idade mínima | ⬤ | | ⬤ | ⬤ | ⬤ | ⬤ | ⬤ | |
 | 6 — Agenda | ⬤ | ⬤ | ⬤ | ⬤ | | ⬤ | ○ | |
 | 7 — Créditos | ⬤ | ⬤ | ⬤ | ○ | | ⬤ | ○ | |
 | 8 — Turmas | ⬤ | ○ | ⬤ | ⬤ | | ⬤ | | |
@@ -287,7 +288,8 @@ Composição do MVP definida na Fase 0 — ver [`docs/product/mvp.md`](docs/prod
 | 4 | Localização e área de atendimento | ⬜ | **não** | 3 |
 | 5 | Gestão de alunos | ⬜ | sim | 2, 3 |
 | 5.5 | Equipe | ⬜ | sim | 2, 3, 5 |
-| 6 | Agenda | ⬜ | sim | 3, 5, 5.5 |
+| 5.7 | Idade mínima e assistência | ⬜ | sim | 2, 5 |
+| 6 | Agenda | ⬜ | sim | 3, 5, 5.5, 5.7 |
 | 7 | Pacotes e créditos | ⬜ | sim | 6 |
 | 8 | Turmas | ⬜ | reduzida | 6, 7 |
 | 9 | Financeiro | ⬜ | parcial | 7 |
@@ -885,6 +887,20 @@ deixar alguém **entrar**; aqui é deixar um dado privado **sair**.
       fechar, dois registrados como débito
 - [x] Manual de manutenção em `docs/sistema/fase-03-perfil-profissional.md`
 
+> **Conserto aplicado em 2026-08-29, durante a Fase 5.5.** A pergunta do dono — *"como será feito
+> o cadastro de modalidade nova, e quem aceita?"* — expôs um furo que estava na junção de duas
+> decisões corretas.
+>
+> Ninguém aprova: a curadoria é manual, é SQL na mão, e não tem tela nem épico (§5.3). Logo a
+> modalidade digitada fica `PENDING` para sempre. E o perfil público **publicava o nome dela
+> assim mesmo**, porque a consulta buscava o nome pelo identificador sem olhar o estado. Um texto
+> de usuário ia para a internet sem revisão — e a busca da Fase 12 herdaria as grafias que a
+> normalização existe para juntar.
+>
+> **A pendente saiu da vitrine**, com teste provado quebrando; a tela de perfil passou a avisar,
+> para o sumiço não virar chamado de suporte. Ele continua usando a modalidade com os alunos
+> dele. Isto **não substitui** a tela de curadoria — só impede que a falta dela vaze para fora.
+
 ---
 
 ## Fase 4 — Localização e área de atendimento ⬜
@@ -1462,7 +1478,20 @@ revelando ficha de colega; e os três tetos que foram calibrados para autônomo 
   - [ ] **O dono lê essa regra na tela, antes de confirmar** — o que fica visível e o que some.
         Ele é o controlador do dado; não pode descobrir isso depois
   - [ ] Os alunos particulares do membro nunca aparecem para o dono, em momento nenhum
-- [ ] **Epic 5.5.6 — Espaços, e o que a Fase 6 herda**
+- [ ] **Epic 5.5.6 — Espaços, o local de cada modalidade, e o que a Fase 6 herda**
+  - [ ] **`professional_sport_locations`: qual modalidade acontece em qual local** — trazido pelo
+        dono em 2026-08-29, com o caso *"dou tênis num clube e beach tennis em outro, e os dois
+        clubes têm as duas quadras"*. Entra **aqui**, e não na Fase 6, porque este épico já abre
+        `locations` para os espaços: é uma migration em vez de duas, e um bloco de tela em vez de
+        dois. A Fase 6 recebe a regra pronta, que é o que o épico se propõe a fazer.
+        Par *(professional_sport_id, location_id)* único; **zero linhas significa "atendo em
+        todos os meus locais"**, que é a única leitura que não invalida os perfis existentes nem
+        obriga o autônomo de um local a preencher matriz. Detalhe em
+        [`professional-profile.md`](docs/domain/professional-profile.md) §7.1b
+  - [ ] A página pública passa a dizer **o que acontece onde**, em vez de duas listas soltas —
+        hoje "Tênis, Beach Tennis" e "Jardim da Penha, Praia do Canto" aparecem lado a lado sem
+        relação, e quem lê pode aparecer no lugar errado. A lista fechada de campos muda, e o
+        teste dela precisa mudar junto **no mesmo commit**
   - [ ] `spaces` como filha de `locations`, dentro de `professional-profile`: nome da quadra,
         sala ou campo, **sem endereço próprio** — o local já tem o dele. Com
         **`UNIQUE (location_id, id)`**, senão a chave composta da Fase 6 não é sequer criável, e
@@ -1627,6 +1656,81 @@ vazamento tem destinatário conhecido: o colega de equipe, o ex-membro, o clube 
 
 ---
 
+## Fase 5.7 — Idade mínima e assistência do responsável ⬜
+
+> **Fase acrescentada em 2026-08-29**, do mesmo jeito e pelo mesmo motivo que a 5.5: meio número
+> para não renumerar catorze fases. **Pequena, e transversal** — mexe no cadastro (Fase 2) e na
+> ficha (Fase 5), e não tem nada a ver com equipe. Por isso não entrou na 5.5: uma fase que
+> cresce com assunto alheio deixa de ter um fim reconhecível.
+
+**Objetivo:**
+Baixar a idade mínima de conta de 18 para **16 anos**, com a assistência do responsável
+confirmada de verdade — e corrigir a justificativa escrita, que apontava para a lei errada.
+
+**Por que agora, e não depois da Fase 6:** a agenda decide quem pode marcar aula sozinho, e a
+resposta depende de quem pode ter conta. Chegar na Fase 6 com essa regra em movimento seria
+mexer no chão da fase de maior risco técnico do projeto.
+
+**Dependências:** Fases 2 e 5.
+
+**Agentes desta fase:**
+`product` ⬤ o texto do formulário e do e-mail ao responsável ·
+`backend` ⬤ · `web` ⬤ · `mobile` ⬤ **o cadastro existe nos dois canais** (`iam.md` §10) ·
+`security` ⬤ **revisão obrigatória** — mexe em cadastro e em dado de menor, que são dois
+gatilhos do agente ao mesmo tempo
+
+> **A decisão, com o raciocínio inteiro, está em [`iam.md`](docs/domain/iam.md) §8.1.** O resumo:
+> o 18 estava certo como número e **errado como justificativa**. Quem trava a idade é o **Código
+> Civil** — aceitar os Termos é assinar contrato, e menor de 16 não assina —, não a LGPD, que
+> exige consentimento parental só até os 12. De 16 a 18 o ato é válido **se assistido**.
+
+### Épicos e tarefas
+
+- [ ] **Epic 5.7.1 — Os dois números, e por que eles andam juntos**
+  - [ ] `MINIMUM_SIGNUP_AGE` e `IDADE_DE_MAIORIDADE` passam a 16. **Os dois, no mesmo commit**:
+        se o jovem de 16 pode ter conta, a ficha dele pode ser `SELF`. Mover um sem o outro cria
+        uma ficha que o banco aceita e que nenhuma conta consegue acessar
+  - [ ] O aviso de aniversário na ficha passa a acender aos **16**, não aos 18 (`students.md`
+        §8.3). A escolha de *avisar e oferecer*, em vez de transferir sozinho, não muda
+  - [ ] Teste de véspera e de dia exato do aniversário, nos dois números
+- [ ] **Epic 5.7.2 — A assistência, e o que ela bloqueia**
+  - [ ] Quem tem 16 ou 17 informa **nome e e-mail do responsável** no cadastro. O formulário
+        pede isso a partir da data de nascimento digitada, e não por uma caixa que a pessoa marca
+  - [ ] O responsável recebe um link e **confirma**. Guardar quem assistiu, ao lado da versão e
+        da data dos Termos que a D8a já grava — sem isso o aceite continua anulável, e a fase
+        inteira teria trocado um número sem resolver nada
+  - [ ] **O que espera a confirmação é agendar e pagar — não entrar.** Mesmo padrão da decisão
+        D5, que já deixa entrar sem verificar e só exige verificação para *agir para fora*.
+        Bloquear a entrada puniria a pessoa por um passo que não é dela
+  - [ ] O link do responsável é token com hash, uso único e validade — como todo link deste
+        sistema. Nada de identificador adivinhável no e-mail
+  - [ ] Teto por hora no reenvio, e a recusa **não pode dizer** se aquele endereço já confirmou
+- [ ] **Epic 5.7.3 — A base legal, que é onde a lacuna de verdade estava**
+  - [ ] Registrar em `students.md` §15 a pergunta com o **número certo**: a ficha de criança com
+        **menos de 12 anos** é criada hoje sob *legítimo interesse*, e o art. 14 §1 pede
+        **consentimento** nessa faixa. Não é o mecanismo que está em dúvida — é a base legal
+  - [ ] **Pergunta de advogado, não de programador.** O que esta fase entrega é o registro com o
+        corte de 12 anos escrito; o que fazer a respeito depende da resposta
+
+### Decisões da fase
+
+- [x] **16 anos, com assistência confirmada por e-mail** — tomada com o dono em 2026-08-29,
+      contra a recomendação de manter 18. O argumento de manter era que nada se perdia: o menor
+      já é atendido como ficha com o responsável na conta. O dono decidiu abrir a conta própria
+      ao adolescente, e a assistência confirmada é o que sustenta a decisão juridicamente
+- [ ] O que exatamente fica bloqueado até a confirmação, quando a agenda existir — agendar é
+      claro; pagar é da Fase 9 e precisa ser reconferido lá
+
+### Critérios de conclusão
+
+- [ ] Conta de 16 anos criada e usável, com agendamento bloqueado até a confirmação
+- [ ] Conta de 15 anos recusada, com a frase dizendo o que fazer
+- [ ] Os dois números movidos juntos, com teste que falharia se só um tivesse mudado
+- [ ] Revisão de segurança registrada em `docs/security/`
+- [ ] `iam.md` §8.1 e `students.md` §8 atualizados; manual da fase em `docs/sistema/`
+
+---
+
 ## Fase 6 — Agenda ⬜
 
 > **O que a Fase 5.5 mudou aqui**, em 2026-08-28. A aula nasce com `teacher_id`, `location_id` e
@@ -1634,6 +1738,30 @@ vazamento tem destinatário conhecido: o colega de equipe, o ex-membro, o clube 
 > e por espaço, ambas só para aula não cancelada. A trava do professor **atravessa negócios**, e
 > a recusa não pode dizer em qual deles ele está — isso é requisito, não acabamento.
 > Disponibilidade passa a ser por professor. O teste de concorrência dobra.
+
+> **Requisitos trazidos pelo dono em 2026-08-29**, antes de a fase abrir. Não são sugestões: são
+> o comportamento pedido, e a abertura da fase os transforma em decisões numeradas.
+>
+> **(A) Quem marca é escolha do professor, por professor.** Ele liga ou desliga "o aluno marca
+> sozinho". Desligado, só ele mexe na própria agenda. Isto **fecha a decisão em aberto** desta
+> fase — *"quem pode agendar: só o profissional, ou o aluno também?"* — e a resposta é *os dois,
+> e quem decide é ele*.
+>
+> **(B) O horário nasce reservado para um formato, um local e uma modalidade.** O professor não
+> declara só "estou livre das 19h às 20h": ele declara **das 19h às 20h, turma de tênis, na
+> Quadra 2 do Clube X**. Sem isso o aluno marca uma individual num horário que era de turma, ou
+> marca no clube A num horário em que o professor está no clube B. É a mesma classe de defeito
+> que a §7.1b do `professional-profile.md` acabou de fechar para local × modalidade — aqui ela
+> reaparece com **horário** junto.
+>
+> **(C) Turma só aceita aluno do mesmo nível.** Misturar níveis estraga a aula para os dois
+> lados. Implica um conceito que **não existe em lugar nenhum do sistema hoje**: nível do aluno,
+> e nível da turma. Isso é modelagem nova — provavelmente na ficha, provavelmente por
+> modalidade, porque o mesmo aluno é avançado no tênis e iniciante no padel. **A Fase 8 é a das
+> turmas**, mas o campo precisa nascer antes de alguém marcar a primeira.
+>
+> Os três atravessam a Fase 6 e a Fase 8. Quem abrir a Fase 6 decide o corte, e **não pode
+> decidir a modelagem do nível sem olhar a Fase 8 junto**.
 
 **Objetivo:**
 Permitir que o profissional configure disponibilidade e gerencie aulas, com tratamento
@@ -1658,9 +1786,15 @@ não podem passar ·
 ### Épicos e tarefas
 
 - [ ] **Epic 6.1 — Disponibilidade**
-  - [ ] Grade semanal recorrente por local
+  - [ ] Grade semanal recorrente **por professor e por negócio** (decisão E19 da Fase 5.5)
+  - [ ] **Cada faixa reserva formato, local e modalidade** — requisito (B) acima. "Terça 19h às
+        20h" não basta; é "terça 19h às 20h, turma de tênis, Quadra 2 do Clube X". Sem isso o
+        aluno marca individual em horário de turma, ou marca num clube onde o professor não está
   - [ ] Exceções e bloqueios pontuais (férias, feriados)
   - [ ] Antecedência mínima e janela máxima de agendamento
+  - [ ] **A chave "o aluno marca sozinho", por professor** — requisito (A) acima. Desligada é o
+        padrão seguro: o professor que não sabe que existe não é surpreendido por uma aula que
+        ele não marcou
 - [ ] **Epic 6.2 — Aulas (sessões)**
   - [ ] Criação de aula individual
   - [ ] Edição, remarcação e cancelamento
@@ -1689,7 +1823,12 @@ não podem passar ·
 - [ ] Timezone: armazenar em UTC e converter na borda? Qual é o fuso de referência do profissional? Como tratar horário de verão?
 - [ ] Política de cancelamento: prazo, por quem, consequência (regra financeira detalhada na Fase 7)
 - [ ] Aula tem duração fixa por modalidade ou livre?
-- [ ] Quem pode agendar: só o profissional, ou o aluno também? (impacta a Fase 11)
+- [x] ~~Quem pode agendar: só o profissional, ou o aluno também?~~ **Fechada pelo dono em
+      2026-08-29: os dois, e quem decide é o professor**, por uma chave dele. Ver o requisito (A)
+      no cabeçalho da fase
+- [ ] **Nível do aluno: onde mora, e por modalidade?** — requisito (C). O mesmo aluno é avançado
+      no tênis e iniciante no padel, então nível na ficha "solto" já nasce errado. Decidir junto
+      da Fase 8, que é quem consome
 - [ ] Reagendamento cria nova aula ou altera a existente? (impacta histórico e auditoria)
 - [ ] Horizonte de materialização de séries recorrentes (gerar quantos meses à frente?)
 - [ ] Aula que aconteceu mas não foi marcada: fecha automaticamente após X horas?
@@ -2034,6 +2173,26 @@ pagamentos e notificações; ao **profissional**, o que ele precisa fora de casa
 >
 > Cada fase que criar uma capacidade do profissional decide se ela é de quadra: se for, entrega
 > a tela mobile junto, e não empurra para cá. A Fase 2 já fez isso com o convite.
+
+> ### ⚠️ Esta fase mudou de forma em 2026-08-29 — leia antes de abri-la
+>
+> **A regra acima foi escrita e descumprida.** As Fases 3, 5 e 5.5 entregaram só web. O
+> aplicativo hoje tem entrar, criar conta, painel, recuperar senha, trocar e-mail e convidar — e
+> mais nada. **Perfil, carteira e equipe não existem nele.**
+>
+> E faltava a outra metade, que ninguém tinha visto: **o `iam.md` §10 mandava a superfície web
+> do aluno para esta fase, e esta fase não entrega nada na web.** Do jeito que estava escrito, a
+> área do aluno no navegador nunca seria construída — e **sem Mac não há build de iPhone**, então
+> para o aluno de iOS a web não é alternativa, é a única porta.
+>
+> **O §10 foi reescrito** e agora diz o que vale: os dois papéis são atendidos nos dois canais, e
+> **quem cria uma capacidade entrega as superfícies dela na mesma fase**. A web do profissional é
+> o extra de tela grande — relatório e gráfico —, não o principal.
+>
+> **O que esta fase passa a ser:** publicação nas lojas, o que for específico de aplicativo
+> (push, sessão persistente, offline, *deep link*) e **o acerto de contas do que ficou para trás**.
+> Os épicos abaixo ainda descrevem a fase antiga e serão reescritos quando ela abrir; o que vale
+> desde já é a regra do §10 para as Fases 5.7, 6, 7, 8 e 9.
 
 **Entregável esperado:**
 App Expo publicado em canal de teste (TestFlight / Google Play internal) com os fluxos
@@ -2690,7 +2849,7 @@ Estrutura-alvo. **Criar cada diretório apenas quando ele tiver conteúdo real.*
 | **Painel administrativo: em que fase entra?** — está no MVP e não tem épico em lugar nenhum | a definir | `docs/domain/iam.md` §11 |
 | **Onde publicar o staging** — adiado para depois da Fase 5; provedor em aberto | 5+ | ADR-008 |
 | **Termos de Uso e Política de Privacidade** — não existem, são pré-requisito do lançamento | antes do lançamento | trabalho jurídico, sem dono |
-| Catálogo de modalidades aberto ou curado | 3 | `docs/domain/professional-profile.md` |
+| Catálogo de modalidades aberto ou curado | 3 | `docs/domain/professional-profile.md` — **curado, e ninguém cura**: a modalidade pendente já saiu da página pública em 2026-08-29, mas a tela de curadoria continua sem fase. Ver DT-013 |
 | Provedor de geocoding e precisão pública de localização | 12 | ADR-005 |
 | Propriedade e privacidade dos dados do aluno | 5 | `docs/domain/students.md` |
 | **Aluno reivindicar fichas que já existem** — com e-mail confirmado e o profissional aprovando | 5 | `docs/domain/iam.md` §9.4 |
@@ -2699,6 +2858,9 @@ Estrutura-alvo. **Criar cada diretório apenas quando ele tiver conteúdo real.*
 | **Maior de idade sob responsável é caso normal** — o aviso da carteira vira oferta | 5 | nota ao fim da Fase 5 |
 | **Desvinculação do acesso pedida pelo próprio aluno maior de idade** | 11 | nota ao fim da Fase 5 |
 | **Teto de membros por equipe** — proposta 50, e quem decide é a revisão de segurança | 5.5 | `docs/domain/staff.md` |
+| **Nível do aluno: onde mora, e por modalidade?** — turma só aceita aluno do mesmo nível (requisito do dono, 2026-08-29). O conceito não existe em lugar nenhum hoje, e o mesmo aluno é avançado no tênis e iniciante no padel | 6 / 8 | cabeçalho da Fase 6 |
+| **O preço da modalidade pode mudar de local para local?** — o clube fica com uma parte, então ele cobra diferente lá. Caso real, e pendurar dinheiro agora numa tabela que ainda não cobra seria prematuro | 9 | `docs/domain/professional-profile.md` §7.1b |
+| **A base legal da ficha de criança com menos de 12 anos** — hoje é legítimo interesse; o art. 14 §1 pede consentimento nessa faixa. Não é o mecanismo que está em dúvida, é a base legal | 5.7 | **advogado.** `iam.md` §8.1 |
 | Política de conflitos de agenda | 6 | `docs/domain/scheduling.md` |
 | Timezone e modelagem temporal | 6 | ADR-010 |
 | Política de cancelamento | 6 / 7 | `docs/domain/scheduling.md` |
