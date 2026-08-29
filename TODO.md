@@ -1457,27 +1457,42 @@ revelando ficha de colega; e os três tetos que foram calibrados para autônomo 
   - [x] Nada de financeiro aparece para o membro — **ausência na resposta**, não campo escondido.
         Hoje a ficha não carrega valor nenhum, e o teste é o que faz a Fase 9 notar se ela passar
         a carregar
-- [ ] **Epic 5.5.5 — Saída da equipe**
-  - [ ] Qualquer um dos dois lados encerra: o dono remove, o membro sai. **Nenhuma tela escreve
-        "funcionário", "demitir" ou "demissão"** — decisão E17, e o motivo está lá
-  - [ ] **A segurança do desligamento está na condição `status = ACTIVE`, não na limpeza das
-        associações.** Se a limpeza falhar, o ex-membro continua fora. A limpeza é produto — o
-        aviso "ficha sem professor" —, não trava (ADR-006)
-  - [ ] Aulas que ele **já deu** ficam com o nome dele para sempre — o histórico do clube não
-        pode ter buraco *(exercitável só quando a Fase 6 criar aulas; a regra nasce aqui)*
-  - [ ] **`teacher_id` das aulas FUTURAS vira nulo; das passadas, nunca.** Isto conserta um
-        defeito que saía de duas decisões minhas: se o identificador ficasse, a trava do
-        professor — que **atravessa negócios** — bloquearia as terças às 19h dele **no próprio
-        negócio dele**, para sempre, por causa de uma aula que o clube nunca reatribuiu. E a
-        recusa **não pode explicar por quê**, pelo requisito de sigilo do §7.2. Passado é fato,
-        futuro é plano
-  - [ ] Fichas associadas a ele ficam **sem professor**, e o dono vê o aviso. Nada é reatribuído
-        sozinho — mesmo padrão que a Fase 5 usa quando um aluno faz 18 anos
-  - [ ] O ex-membro guarda **as aulas com o nome do aluno** (E15) e perde contato, objetivos e
-        observações **no mesmo instante**
-  - [ ] **O dono lê essa regra na tela, antes de confirmar** — o que fica visível e o que some.
-        Ele é o controlador do dado; não pode descobrir isso depois
-  - [ ] Os alunos particulares do membro nunca aparecem para o dono, em momento nenhum
+- [x] **Epic 5.5.5 — Saída da equipe** ✅ 2026-08-29 — 4 testes novos de API e 1 de vocabulário,
+      **todos provados quebrando**. A descoberta do épico foi uma contradição na documentação: o
+      `staff.md` §9.1 mandava revogar o convite *"na mesma transação"*, e isso é o **oposto** do
+      que a ADR-006 exige. Corrigido nos dois lugares
+  - [x] Qualquer um dos dois lados encerra: o dono remove, o membro sai. **Nenhuma tela escreve
+        "funcionário", "demitir" ou "demissão"** — decisão E17, e o motivo está lá. O teste
+        **varre o código-fonte**, e não visita telas: teste de tela só prova a tela que alguém
+        lembrou de abrir, e a palavra proibida vai aparecer justamente na tela nova
+  - [x] **A segurança do desligamento está na condição `status = ACTIVE`, não na limpeza das
+        associações.** Se as duas estivessem na mesma transação, uma falha na limpeza
+        **desfaria o desligamento** — e quem clicou continuaria com um membro dentro, achando
+        que o tinha tirado. A limpeza registra o erro no log e não derruba a requisição
+  - [x] **A limpeza é por negócio, e o `WHERE` aninhado é o que garante isso.** Apagar por
+        `professional_id = <o membro>` sozinho arrancaria as associações dele em outro clube **e
+        na carteira particular dele** — quem atende os próprios alunos aparece em
+        `student_teachers` como qualquer outro. Sair de uma equipe apagaria o trabalho dele em
+        todas as outras. É a sabotagem mais valiosa do épico
+  - [x] Fichas associadas a ele ficam **sem professor**, e o dono vê o aviso — destacado, com o
+        botão "Escolher professor" na própria linha. **Derivado, nunca guardado**: não há coluna
+        "perdeu o professor", porque ela discordaria da realidade na primeira reatribuição feita
+        por outro caminho. Nada é reatribuído sozinho, mesmo padrão dos 18 anos da Fase 5
+  - [x] Convite de equipe pendente morre junto. Raro e possível: o dono convida de novo antes de
+        encerrar, e o convite sobrevivente devolveria a pessoa para dentro sem ninguém decidir
+  - [x] **O dono lê a regra na tela, antes de confirmar** — cinco linhas dizendo o que some
+        agora, o que continua dele, o que fica sem professor e que voltar exige convite novo. E
+        o membro que sai lê a versão dele, que inclui a frase mais difícil: os alunos que **ele
+        mesmo cadastrou** no clube continuam com o clube
+  - [x] Os alunos particulares do membro nunca aparecem para o dono — já coberto no Epic 5.5.3,
+        e o teste continua verde
+  - [ ] ~~Aulas que ele já deu ficam com o nome dele; as futuras perdem o professor~~ →
+        **não é exercitável, e não é esquecimento.** Não existe tabela de aula. A regra está
+        escrita em `participacao.ts` (`liberaAulasFuturas`) e o campo nasce anulável no Epic
+        5.5.6, que é o write-ahead da Fase 6. *A única parte desta saída que fica sem teste*
+  - [ ] ~~O ex-membro guarda as aulas com o nome do aluno (E15)~~ → **pela mesma razão.** Hoje
+        ele não guarda nada, porque não há nada a guardar; a tela não promete um histórico que
+        não existe
 - [ ] **Epic 5.5.6 — Espaços, o local de cada modalidade, e o que a Fase 6 herda**
   - [ ] **`professional_sport_locations`: qual modalidade acontece em qual local** — trazido pelo
         dono em 2026-08-29, com o caso *"dou tênis num clube e beach tennis em outro, e os dois

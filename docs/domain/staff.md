@@ -361,10 +361,30 @@ Qualquer um dos dois lados encerra: o dono remove, o membro sai. A regra separa 
 | Aulas que ele **já deu** | ficam com o nome dele para sempre. O histórico do clube não pode ter buraco |
 | Aulas **futuras** dele | perdem o professor. **Não são canceladas** (E16) — §9.2 |
 | Alunos particulares dele | continuam dele. Nunca foram do clube |
-| Convite pendente para ele, se houver | é revogado na mesma transação ✱ — mesma regra que `students.md` §7.3 aplica ao encerrar um vínculo de aluno |
+| Convite pendente para ele, se houver | é revogado ✱ — mesma regra que `students.md` §7.3 aplica ao encerrar um vínculo de aluno |
 
 Ficha sem professor **não some nem é reatribuída sozinha**. É o mesmo padrão que a Fase 5 usa
 quando um aluno faz 18 anos: **nada muda sozinho, o sistema avisa e a pessoa decide.**
+
+> **Correção de 2026-08-29, ao implementar o Epic 5.5.5.** Esta tabela dizia que o convite
+> pendente é revogado *"na mesma transação"*. **Está errado, e ao contrário do que a ADR-006
+> exige.** A gravação da saída e a limpeza são separadas de propósito:
+>
+> A segurança do desligamento mora na condição `status = ACTIVE` da regra de acesso. No instante
+> em que a linha vira `ENDED`, o ex-membro já não alcança nada — a limpeza não protege coisa
+> alguma, ela **produz o aviso** "estes alunos ficaram sem professor".
+>
+> Se as duas estivessem na mesma transação, uma falha na limpeza **desfaria o desligamento**: a
+> pessoa que clicou em "tirar da equipe" continuaria com um membro dentro, achando que o tinha
+> tirado. O inverso é muito mais barato — a limpeza falha, o acesso já acabou, e sobra o nome de
+> um ex-membro em "quem atende" até alguém reatribuir a ficha. Por isso a limpeza registra o erro
+> no log e **não derruba a requisição**.
+>
+> **A limpeza é por negócio, e o `WHERE` que garante isso não é decoração.** Apagar as
+> associações por `professional_id = <o membro>` sozinho arrancaria também as dele em outro clube
+> **e na carteira particular dele** — o profissional que atende os próprios alunos aparece em
+> `student_teachers` como qualquer outro. Sair de uma equipe apagaria o trabalho dele em todas as
+> outras. Há teste, e ele foi provado quebrando.
 
 ### 9.2 A aula futura órfã — o buraco do desenho ✱
 

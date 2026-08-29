@@ -60,10 +60,35 @@ export function ProfessoresDaFicha({
   }
 
   if (!aberto) {
+    // **O aviso de ficha sem professor, e por que ele é derivado.** Quando alguém sai da equipe,
+    // as fichas dele ficam sem ninguém — e **nada é reatribuído sozinho**, pelo mesmo motivo que
+    // a ficha do aluno de 18 anos não muda sozinha: o sistema não sabe quem deve assumir, e
+    // escolher por conta própria é pior do que perguntar.
+    //
+    // Não há coluna "perdeu o professor", e não deve haver: ela discordaria da realidade na
+    // primeira vez que alguém reatribuísse por outro caminho. O estado "sem ninguém da equipe" é
+    // a própria lista vazia, e a tela só precisa dizer isso em voz alta.
+    const semProfessor = nomes.length === 0;
+
     return (
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-(--color-border) pt-3">
-        <p className="text-xs text-(--color-ink-muted)">
-          {nomes.length > 0 ? `Atendido por ${nomes.join(', ')}` : 'Você atende este aluno'}
+      <div
+        className={`mt-3 flex flex-wrap items-center justify-between gap-2 pt-3 ${
+          semProfessor
+            ? '-mx-1 mt-3 rounded-lg border border-(--color-ok) px-3 pb-3'
+            : 'border-t border-(--color-border)'
+        }`}
+      >
+        <p className="text-xs">
+          {semProfessor ? (
+            <>
+              <strong>Ninguém da equipe atende este aluno.</strong>{' '}
+              <span className="text-(--color-ink-muted)">
+                Ou é você quem dá a aula, ou o professor dele saiu da equipe.
+              </span>
+            </>
+          ) : (
+            <span className="text-(--color-ink-muted)">Atendido por {nomes.join(', ')}</span>
+          )}
         </p>
         <button
           type="button"
@@ -73,7 +98,7 @@ export function ProfessoresDaFicha({
           }}
           className="rounded-lg border border-(--color-border) px-3 py-1.5 text-xs font-medium"
         >
-          Quem atende
+          {semProfessor ? 'Escolher professor' : 'Quem atende'}
         </button>
       </div>
     );

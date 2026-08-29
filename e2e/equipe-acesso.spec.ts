@@ -256,11 +256,51 @@ test.describe('O que o dono não vê', () => {
   });
 });
 
-test.describe('Quem saiu perde na hora', () => {
-  test('o ex-membro não alcança mais nenhuma ficha do clube', async () => {
-    const ficha = await criarFichaDoClube(`Despedida ${randomUUID().slice(0, 8)}`);
-    await associar(ficha, [carteiraDoMembro]);
-    expect((await comoMembro.get(`${API}/students/${ficha}`)).status()).toBe(200);
+/**
+ * A saída da equipe, e tudo o que ela arrasta — Epic 5.5.5.
+ *
+ * **Um evento só, e quatro consequências**, por isso o encerramento acontece no `beforeAll` e
+ * cada consequência tem um teste com nome próprio. Repetir o encerramento em cada teste custaria
+ * um convite novo por vez, e o convite tem teto por hora.
+ *
+ * Fica no fim do arquivo de propósito: depois daqui o membro não faz mais parte da equipe, e
+ * qualquer teste acrescentado abaixo herdaria esse estado.
+ */
+test.describe('Quem saiu perde na hora, e as fichas ficam sem professor', () => {
+  let doClube: string;
+  let particular: string;
+  let emailDoConvitePendente: string;
+
+  test.beforeAll(async () => {
+    doClube = await criarFichaDoClube(`Despedida ${randomUUID().slice(0, 8)}`);
+    await associar(doClube, [carteiraDoMembro]);
+    expect((await comoMembro.get(`${API}/students/${doClube}`)).status()).toBe(200);
+
+    // **A ficha particular do membro, com ele mesmo como professor.** É o caso que a limpeza
+    // errada destrói: um `DELETE ... WHERE professional_id = <o membro>` sem dizer de qual
+    // negócio arrancaria também as associações dele na carteira dele — e sair de um clube
+    // apagaria o trabalho dele em todos os outros lugares, inclusive no próprio.
+    const criada = await comoMembro.post(`${API}/students`, {
+      data: { fullName: `Particular ${randomUUID().slice(0, 8)}` },
+    });
+    expect(criada.status()).toBe(201);
+    particular = ((await criada.json()) as { id: string }).id;
+    expect(
+      (
+        await comoMembro.put(`${API}/students/${particular}/teachers`, {
+          data: { professionalIds: [carteiraDoMembro] },
+        })
+      ).status(),
+    ).toBe(200);
+
+    // Raro e possível: o dono convida de novo antes de encerrar. Se o convite sobrevivesse, um
+    // clique nele devolveria a pessoa para dentro sem ninguém decidir isso.
+    emailDoConvitePendente = contaDoMembro.email;
+    expect(
+      (
+        await comoDono.post(`${API}/staff/invites`, { data: { email: emailDoConvitePendente } })
+      ).status(),
+    ).toBe(201);
 
     const equipe = (await (await comoDono.get(`${API}/staff`)).json()) as {
       members: { id: string; professionalId: string; status: string }[];
@@ -268,13 +308,50 @@ test.describe('Quem saiu perde na hora', () => {
     const participacao = equipe.members.find(
       (m) => m.professionalId === carteiraDoMembro && m.status === 'ACTIVE',
     );
-    expect(participacao).toBeDefined();
-    await comoDono.patch(`${API}/staff/${participacao!.id}/status`, { data: { status: 'ENDED' } });
+    expect(participacao, 'a participação que o teste ia encerrar não existe').toBeDefined();
+    expect(
+      (
+        await comoDono.patch(`${API}/staff/${participacao!.id}/status`, {
+          data: { status: 'ENDED' },
+        })
+      ).status(),
+    ).toBe(204);
+  });
 
+  test('o ex-membro não alcança mais nenhuma ficha do clube', async () => {
     // **Sem esperar 15 minutos.** Se a participação viajasse dentro do token de acesso, o
     // ex-membro continuaria entrando até o token vencer — e a promessa de que o acesso some no
     // mesmo instante seria falsa. Ela não viaja, e é este teste que prova.
-    expect((await comoMembro.get(`${API}/students/${ficha}`)).status()).toBe(404);
+    expect((await comoMembro.get(`${API}/students/${doClube}`)).status()).toBe(404);
     expect((await comoMembro.get(`${API}/students?negocio=${carteiraDoDono}`)).status()).toBe(404);
+  });
+
+  test('a ficha que ele atendia fica sem professor, e ninguém a reatribui sozinho', async () => {
+    const ficha = (await (await comoDono.get(`${API}/students/${doClube}`)).json()) as {
+      teacherIds: string[];
+    };
+    expect(ficha.teacherIds, 'a ficha continuou com o ex-membro como professor').toEqual([]);
+  });
+
+  test('a carteira particular dele continua intacta', async () => {
+    const minha = (await (await comoMembro.get(`${API}/students/${particular}`)).json()) as {
+      teacherIds: string[];
+    };
+    expect(
+      minha.teacherIds,
+      'sair de uma equipe apagou a associação dele na própria carteira',
+    ).toEqual([carteiraDoMembro]);
+
+    await comoMembro.delete(`${API}/students/${particular}`);
+  });
+
+  test('o convite de equipe que estava de pé morre junto', async () => {
+    const equipe = (await (await comoDono.get(`${API}/staff`)).json()) as {
+      invites: { email: string }[];
+    };
+    expect(
+      equipe.invites.map((c) => c.email),
+      'o convite sobreviveu à saída, e um clique nele devolveria a pessoa para dentro',
+    ).not.toContain(emailDoConvitePendente.toLowerCase());
   });
 });

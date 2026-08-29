@@ -11,6 +11,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -23,6 +24,7 @@ import { MailKind } from '../../mail/mail.types';
 import { Professional } from '../entities/professional.entity';
 import { StaffInvite } from '../entities/staff-invite.entity';
 import { StaffMember } from '../entities/staff-member.entity';
+import { StudentTeacher } from '../entities/student-teacher.entity';
 import { User, UserStatus } from '../entities/user.entity';
 import { AccessService } from './access.service';
 import {
@@ -33,7 +35,7 @@ import {
   normalizarEmail,
   primeiroNome,
 } from './auth.service';
-import { mudancaDeParticipacao } from './participacao';
+import { mudancaDeParticipacao, type SaidaDaEquipe } from './participacao';
 import { ClientType, hashDe } from './token.service';
 
 /** Sete dias, como o convite endereçado de aluno. */
@@ -68,7 +70,10 @@ export class StaffService {
     @InjectRepository(StaffMember) private readonly members: Repository<StaffMember>,
     @InjectRepository(Professional) private readonly professionals: Repository<Professional>,
     @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(StudentTeacher) private readonly teachers: Repository<StudentTeacher>,
   ) {}
+
+  private readonly log = new Logger(StaffService.name);
 
   /**
    * Emite um convite de equipe, invalidando o anterior para o mesmo endereço.
@@ -310,9 +315,15 @@ export class StaffService {
   /**
    * Encerra uma participação. **Os dois lados podem**: o dono remove, o membro sai.
    *
-   * As consequências — soltar as fichas, tirar o professor das aulas futuras, revogar o convite —
-   * estão descritas em `participacao.ts` e entram no Epic 5.5.5, junto das telas e das tabelas que
-   * elas tocam. Aqui grava-se a saída, que é o que sustenta o resto.
+   * **A gravação da saída e a limpeza não estão na mesma transação, e isso é decisão.** A
+   * segurança do desligamento mora na condição `status = ACTIVE` da regra de acesso — no instante
+   * em que esta linha vira `ENDED`, o ex-membro já não alcança nada. A limpeza é **produto**: ela
+   * produz o aviso "estes alunos ficaram sem professor" (ADR-006).
+   *
+   * Se as duas estivessem juntas, uma falha na limpeza desfaria o desligamento — e a pessoa que
+   * clicou em "tirar da equipe" continuaria com um membro dentro, achando que tinha saído. O
+   * inverso é muito mais barato: a limpeza falha, o acesso já acabou, e sobra o nome de um
+   * ex-membro em "quem atende" até alguém reatribuir a ficha.
    */
   async mudarEstado(userId: string, membroId: string, destino: StaffStatus): Promise<void> {
     const professionalId = await this.access.carteiraDe(userId);
@@ -333,13 +344,80 @@ export class StaffService {
 
     // `WHERE status = <o que eu li>`: entre a leitura e a gravação cabe outro encerramento, e
     // sem esta condição o segundo sobrescreveria a data do primeiro.
-    await this.members.update(
+    const encerrada = await this.members.update(
       { id: linha.id, status: linha.status },
       { status: mudanca.status, endedAt: mudanca.endedAt },
     );
+
+    // Perdeu a corrida: outro já encerrou esta participação. Não é erro para quem clicou — o
+    // resultado que ele queria aconteceu — e a limpeza é de quem ganhou.
+    if (encerrada.affected !== 1) return;
+
+    await this.limparDepoisDaSaida(linha, mudanca);
   }
 
   // --------------------------------------------------------------------------------- privados
+
+  /**
+   * As consequências da saída, depois de ela já estar gravada.
+   *
+   * **Nada aqui pode derrubar a requisição**, e é por isso que o `catch` engole. O desligamento
+   * já aconteceu e já foi respondido pelo banco; lançar daqui diria a quem clicou que falhou uma
+   * coisa que deu certo — e o segundo clique receberia "esta participação já está encerrada",
+   * que é a mensagem mais confusa possível para quem acabou de ver um erro.
+   *
+   * O que se perde quando isto falha é cosmético e reparável: o nome de um ex-membro continua em
+   * "quem atende" até alguém reatribuir a ficha. O que **não** se perde é o acesso dele, que
+   * morreu na linha anterior.
+   */
+  private async limparDepoisDaSaida(linha: StaffMember, mudanca: SaidaDaEquipe): Promise<void> {
+    try {
+      if (mudanca.desassociaFichas) {
+        // **Só as fichas deste negócio**, e o `WHERE` aninhado é o que garante isso. Apagar por
+        // `professional_id = <o membro>` sozinho arrancaria também as associações dele em outro
+        // clube e **na carteira particular dele** — o profissional que atende os próprios alunos
+        // aparece em `student_teachers` como qualquer outro. Sair de uma equipe apagaria o
+        // trabalho dele em todas as outras.
+        await this.teachers
+          .createQueryBuilder()
+          .delete()
+          .where('professional_id = :membro', { membro: linha.memberProfessionalId })
+          .andWhere(`student_id IN (SELECT id FROM students WHERE professional_id = :dono)`, {
+            dono: linha.ownerProfessionalId,
+          })
+          .execute();
+      }
+
+      if (mudanca.revogaConvitePendente) {
+        // Raro e possível: o dono convidou de novo antes de encerrar. O convite sobreviveria à
+        // saída, e um clique nele devolveria a pessoa para dentro sem ninguém decidir isso.
+        const conta = await this.professionals.findOne({
+          where: { id: linha.memberProfessionalId },
+          relations: { user: true },
+        });
+        if (conta) {
+          await this.invites.update(
+            {
+              ownerProfessionalId: linha.ownerProfessionalId,
+              email: conta.user.email,
+              acceptedAt: IsNull(),
+              revokedAt: IsNull(),
+            },
+            { revokedAt: new Date() },
+          );
+        }
+      }
+
+      // `mudanca.liberaAulasFuturas` **não tem o que fazer ainda**: não existe tabela de aula.
+      // A regra está escrita em `participacao.ts` e o campo nasce anulável na Fase 6, que é
+      // quem a consome. Não é esquecimento — é a única parte desta saída que não é exercitável.
+    } catch (erro) {
+      this.log.error(
+        `A saída da participação ${linha.id} foi gravada, mas a limpeza das associações falhou`,
+        erro instanceof Error ? erro.stack : String(erro),
+      );
+    }
+  }
 
   /**
    * Gasta o convite e cria a participação, dentro da transação de quem chamou.

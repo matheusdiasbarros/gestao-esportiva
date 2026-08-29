@@ -392,6 +392,19 @@ mesmo tempo e ninguém curando é o catálogo virando lixeira em uma semana.
 
 Não são débito — são erros que custaram tempo e que a documentação agora previne.
 
+> **`pnpm lint && pnpm typecheck && pnpm test:e2e` não é a verificação completa — falta
+> `pnpm test`.** Em 2026-08-29 um commit de documentação levou junto, por `git add -A`, uma
+> alteração de uma linha que ninguém tinha feito de propósito: `MINIMUM_PASSWORD_LENGTH` caiu de
+> 10 para 6, enfraquecendo a política de senha da ADR-004 §6. Lint, tipos e os 223 testes de tela
+> passaram, e a regressão entrou na `main`.
+>
+> **A suíte de tela não pegaria nunca**, e o motivo é instrutivo: toda senha de teste dela é uma
+> frase longa, então 6 e 10 dão exatamente o mesmo resultado. Os quatro testes que provam a regra
+> são de **unidade** — e foram justamente eles que a derrubaram no dia seguinte.
+>
+> Duas lições, e a segunda é a que importa: `git add -A` commita o que estiver na árvore, seu ou
+> não; e **três verificações de quatro é uma verificação a menos**.
+
 | Armadilha | Onde ficou registrado |
 | --- | --- |
 | `consistent-type-imports` quebra a injeção de dependência do NestJS | `packages/config/eslint.config.mjs` |

@@ -172,15 +172,19 @@ test.describe('A tela da equipe, do lado de quem lidera', () => {
     await paginaDona.goto('/painel/alunos');
     const linha = paginaDona.getByRole('listitem').filter({ hasText: nome.fullName });
 
-    // Antes de associar ninguém, a ficha é da pessoa que a criou. A frase é o oposto de um
-    // rótulo vazio: ela responde à pergunta sem obrigar a abrir o controle.
-    await expect(linha.getByText('Você atende este aluno')).toBeVisible();
+    // **Ficha sem ninguém da equipe é um aviso, não um rótulo vazio** — Epic 5.5.5. É o mesmo
+    // estado em que caem as fichas de quem sai da equipe, e o dono precisa vê-lo destacado para
+    // reatribuir. Nada é reatribuído sozinho.
+    await expect(linha.getByText('Ninguém da equipe atende este aluno.')).toBeVisible();
 
-    await linha.getByRole('button', { name: 'Quem atende' }).click();
+    await linha.getByRole('button', { name: 'Escolher professor' }).click();
     await linha.getByRole('checkbox', { name: contaDoMembro.nome }).check();
     await linha.getByRole('button', { name: 'Salvar' }).click();
 
+    // Com professor, o aviso some e vira informação.
     await expect(linha.getByText(`Atendido por ${contaDoMembro.nome}`)).toBeVisible();
+    await expect(linha.getByText('Ninguém da equipe atende este aluno.')).toHaveCount(0);
+    await expect(linha.getByRole('button', { name: 'Quem atende' })).toBeVisible();
   });
 
   test('quem não faz parte de equipe nenhuma não vê o seletor de carteira', async () => {

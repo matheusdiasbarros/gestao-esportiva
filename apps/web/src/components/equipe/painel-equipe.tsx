@@ -106,12 +106,23 @@ export function PainelEquipe({ emailVerificado }: { emailVerificado: boolean }) 
                   <p className="text-sm font-medium">{membro.fullName}</p>
                   <p className="text-xs text-(--color-ink-muted)">{membro.email}</p>
                 </div>
+                {/* **A confirmação diz o que fica e o que some, antes de o botão fazer efeito.**
+                    Não é zelo: o dono é o **controlador** dos dados daqueles alunos, e ele não
+                    pode descobrir depois que o professor perdeu o contato deles no mesmo
+                    instante, nem que as fichas ficaram sem ninguém. É o mesmo padrão do aviso
+                    que a Fase 5 dá antes de transferir o acesso de um aluno de 18 anos. */}
                 <Acao
                   onClick={() =>
                     void encerrar(
                       membro.id,
-                      `Tirar ${membro.fullName} da sua equipe? O acesso dele aos alunos do seu ` +
-                        'negócio termina na hora. Os alunos e o histórico continuam com você.',
+                      `Tirar ${membro.fullName} da sua equipe?\n\n` +
+                        `• O acesso dele termina AGORA: contato, objetivos e observações dos ` +
+                        `alunos do seu negócio somem para ele no mesmo instante.\n` +
+                        `• Os alunos continuam seus. Os que ele atendia ficam SEM PROFESSOR, e ` +
+                        `aparecem marcados assim na sua lista de alunos.\n` +
+                        `• Nada é reatribuído sozinho — quem escolhe o próximo professor é você.\n` +
+                        `• Os alunos particulares dele continuam dele, e você nunca os viu.\n` +
+                        `• Para ele voltar, é preciso um convite novo.`,
                     )
                   }
                 >
@@ -177,12 +188,23 @@ export function PainelEquipe({ emailVerificado }: { emailVerificado: boolean }) 
                     Na equipe desde {dia(participacao.startedAt)}
                   </p>
                 </div>
+                {/* O outro lado da mesma regra. Quem sai precisa saber que perde o contato dos
+                    alunos daquele negócio **no mesmo instante** — inclusive dos que ele mesmo
+                    cadastrou, porque a ficha é da carteira do negócio (decisão E2 com E9). É a
+                    consequência que mais tem chance de virar briga, e a tela de cadastro já
+                    avisou uma vez, antes de ele salvar. */}
                 <Acao
                   onClick={() =>
                     void encerrar(
                       participacao.id,
-                      `Sair da equipe de ${participacao.ownerName}? Você perde o acesso aos ` +
-                        'alunos dele na hora. Os seus alunos particulares continuam seus.',
+                      `Sair da equipe de ${participacao.ownerName}?\n\n` +
+                        `• Você perde AGORA o acesso aos alunos desse negócio: contato, ` +
+                        `objetivos e observações.\n` +
+                        `• Isso vale também para os alunos que você mesmo cadastrou lá — a ` +
+                        `ficha é da carteira do negócio, e continua com ele.\n` +
+                        `• Os seus alunos particulares continuam seus, e ${participacao.ownerName} ` +
+                        `nunca os viu.\n` +
+                        `• Para voltar, é preciso um convite novo.`,
                     )
                   }
                 >
