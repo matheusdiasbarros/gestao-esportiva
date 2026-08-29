@@ -29,37 +29,47 @@ remarcar e pagar sozinho.
 | --- | --- |
 | Node.js | 24 (ver [`.nvmrc`](.nvmrc)) |
 | pnpm | 11 — instale com `corepack enable pnpm` |
-| Docker Desktop | para PostgreSQL e Redis locais |
+| Docker | Desktop no Windows e no macOS, Engine no Linux. Só para PostgreSQL e Redis |
 
-## Como rodar — o caminho curto
+**Só isso, e o Docker sobe apenas os serviços — a aplicação roda no Node da sua máquina.** Não
+há Dockerfile, e a ausência é decisão: o aplicativo usa Expo, que precisa alcançar um celular na
+rede local, e o `node_modules` do pnpm é feito de links simbólicos e binários compilados por
+sistema. Um contêiner de desenvolvimento removeria um instalador — o Node — e acrescentaria
+esses dois problemas. Empacotar a aplicação é da Fase 18, quando houver servidor.
 
-No Windows, **dois cliques em [`iniciar.bat`](iniciar.bat)**. Ele confere as ferramentas, sobe
-o banco, aplica as migrations, popula os dados de exemplo, liga API e web, e abre o navegador
-quando estiver pronto. Para derrubar tudo depois, [`parar.bat`](parar.bat).
+## Como rodar
 
-## Como rodar — passo a passo
+**Dois comandos**, e o primeiro só na primeira vez:
 
 ```bash
-# 1. Dependências
+pnpm bootstrap    # prepara tudo: .env, dependências, banco, migrations e dados de exemplo
+pnpm dev          # sobe API e web
+```
+
+O `bootstrap` funciona igual no Windows, no macOS e no Linux, e **pode rodar de novo sem
+estragar nada**: ele não toca num `.env` que já existe, e migrations e seed são idempotentes.
+Se faltar Node, Docker ou o Docker estiver parado, ele para e diz o que fazer.
+
+### Ainda mais curto
+
+| Sistema | Como |
+| --- | --- |
+| Windows | dois cliques em [`iniciar.bat`](iniciar.bat) |
+| macOS e Linux | `./iniciar.sh` — na primeira vez, `chmod +x iniciar.sh` |
+
+Os dois ligam o Docker se estiver parado, chamam o `pnpm bootstrap`, sobem API e web e abrem o
+navegador quando estiver pronto. Para derrubar tudo no Windows, [`parar.bat`](parar.bat); nos
+outros, `Ctrl+C` e `pnpm db:down`.
+
+### O que o bootstrap faz, se você preferir na mão
+
+```bash
+cp .env.example .env                          # no Windows: Copy-Item .env.example .env
 pnpm install
-
-# 2. Variáveis de ambiente
-cp .env.example .env        # no Windows: Copy-Item .env.example .env
-
-# 3. Banco e cache
-pnpm db:up
-
-# 4. Build — as migrations importam os tipos compartilhados, que precisam estar compilados
-pnpm build
-
-# 5. Migrations
+pnpm db:up                                    # e esperar o Postgres aceitar conexão
+pnpm build                                    # ANTES das migrations: elas importam @gestao/types
 pnpm --filter @gestao/api migration:run
-
-# 6. Dados de desenvolvimento
 pnpm --filter @gestao/api seed
-
-# 7. API e web
-pnpm dev
 ```
 
 - API: http://localhost:3333/api/v1
@@ -86,7 +96,9 @@ com Android mais antigo — a loja entrega a versão compatível com o aparelho,
 
 | Comando | O que faz |
 | --- | --- |
+| `pnpm bootstrap` | prepara o ambiente do zero, nos três sistemas. Pode rodar de novo |
 | `iniciar.bat` | sobe o ambiente inteiro e abre o navegador (Windows) |
+| `./iniciar.sh` | o mesmo, no macOS e no Linux |
 | `parar.bat` | derruba servidores e containers, **preservando os dados** |
 | `pnpm dev` | sobe API e web em modo de desenvolvimento |
 | `pnpm build` | constrói todos os pacotes |

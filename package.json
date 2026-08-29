@@ -8,6 +8,7 @@
     "node": ">=24"
   },
   "scripts": {
+    "bootstrap": "node scripts/bootstrap.mjs",
     "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
