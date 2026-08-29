@@ -129,7 +129,7 @@ export class CriaEquipe1787938423000 implements MigrationInterface {
 
     // ------------------------------------------------------------------------ chaves estrangeiras
 
-    // `CASCADE` nas quatro: apagado o profissional, a participação e a associação deixam de fazer
+    // `CASCADE` nas cinco: apagado o profissional, a participação e a associação deixam de fazer
     // sentido. Não é perda de histórico — o histórico de aulas mora em `sessions`, que a Fase 6
     // cria com o identificador do professor e sobrevive a isto.
     await queryRunner.query(
