@@ -26,11 +26,15 @@ const CAMPO =
 
 interface Props {
   ficha?: StudentRow;
+  /** A carteira em que a ficha nasce. Ausente = a minha. */
+  negocio?: string;
+  /** De quem é essa carteira, para o aviso poder dizer o nome. */
+  nomeDoNegocio?: string | null;
   aoSalvar: () => void;
   aoCancelar: () => void;
 }
 
-export function FichaForm({ ficha, aoSalvar, aoCancelar }: Props) {
+export function FichaForm({ ficha, negocio, nomeDoNegocio, aoSalvar, aoCancelar }: Props) {
   const editando = ficha !== undefined;
 
   const [comResponsavel, setComResponsavel] = useState(
@@ -60,8 +64,12 @@ export function FichaForm({ ficha, aoSalvar, aoCancelar }: Props) {
     const email = texto('email');
     const emailMudou = !editando || email !== (ficha.email ?? null);
 
+    // O negócio só viaja na **criação**. `professional_id` nunca muda depois de gravado, então
+    // mandá-lo no `PATCH` sugeriria uma mudança de carteira que o sistema não faz.
+    const criarEm = negocio ? `/students?negocio=${negocio}` : '/students';
+
     try {
-      await apiFetch(editando ? `/students/${ficha.id}` : '/students', {
+      await apiFetch(editando ? `/students/${ficha.id}` : criarEm, {
         method: editando ? 'PATCH' : 'POST',
         body: JSON.stringify({
           fullName: texto('fullName') ?? '',
@@ -95,6 +103,23 @@ export function FichaForm({ ficha, aoSalvar, aoCancelar }: Props) {
         <p className="rounded-lg border border-(--color-border) bg-(--color-surface-muted) p-3 text-xs text-(--color-ink-muted)">
           Você está cadastrando dados de outra pessoa. Avise seu aluno de que usa esta plataforma —
           o convite faz isso por você.
+        </p>
+      ) : null}
+
+      {/* **Quem vai perder alguma coisa descobre antes, não depois.**
+          O professor que traz o próprio aluno para o clube o perde ao sair da equipe: a ficha é da
+          carteira do negócio, e não existe mover ficha entre carteiras. É consequência correta das
+          decisões E2 e E9, e é a que mais tem chance de virar briga — dizer depois seria descobrir
+          na hora em que já não dá para desfazer.
+
+          Aparece **na criação e na edição**, e não só na criação: quem edita uma ficha do clube
+          meses depois pode nunca ter visto a tela de cadastro dela. */}
+      {negocio ? (
+        <p className="rounded-lg border border-(--color-ok) p-3 text-xs">
+          Este aluno é da carteira de <strong>{nomeDoNegocio ?? 'quem lidera o negócio'}</strong>.
+          Se você sair da equipe, a ficha continua com o negócio — e você perde o acesso a ela. Para
+          um aluno seu, troque a carteira para <strong>Meus alunos particulares</strong> antes de
+          cadastrar.
         </p>
       ) : null}
 

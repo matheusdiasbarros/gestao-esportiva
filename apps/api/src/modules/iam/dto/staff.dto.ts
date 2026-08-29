@@ -1,8 +1,16 @@
 import { StaffStatus } from '@gestao/types';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsEnum } from 'class-validator';
+import { IsEmail, IsEnum, IsOptional, IsUUID } from 'class-validator';
 import { Trim } from '../../../common/validation/trim';
 import { SignupProfessionalDto } from './auth.dto';
+
+/** Qual equipe listar: a minha, ou a de um negócio de que eu faço parte. */
+export class ListStaffQuery {
+  @ApiProperty({ required: false, description: 'A carteira do negócio. Ausente = a sua equipe.' })
+  @IsOptional()
+  @IsUUID('7', { message: 'Negócio inválido.' })
+  negocio?: string;
+}
 
 export class CreateStaffInviteDto {
   @ApiProperty({ example: 'ana@exemplo.com', description: 'Para quem o convite vai.' })

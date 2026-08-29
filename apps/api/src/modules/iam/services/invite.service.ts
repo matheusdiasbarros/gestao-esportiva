@@ -328,8 +328,18 @@ export class InviteService {
       if (ligada.affected !== 1) throw this.conviteMorto();
     } catch (erro) {
       if (ehViolacaoDeUnicidade(erro, 'uq_students_professional_user')) {
+        // **A colisão deixou de ser rara quando a equipe existiu.** `uq_students_professional_user`
+        // permite uma ficha por conta em cada carteira; com um profissional só cadastrando, duas
+        // fichas da mesma pessoa eram descuido. Com cinco professores cadastrando na carteira do
+        // clube (decisão E9), é o resultado normal de dois deles receberem o mesmo aluno.
+        //
+        // A frase diz **quem conserta e como**, porque quem lê aqui é o aluno e ele não pode
+        // fazer nada: apagar ficha é célula do dono (`students.md` §7.5), e o dono acha a
+        // duplicada pelo marcador que a Fase 5 já acende. Sem isto seria um 500 reproduzível —
+        // o achado (d) da `staff.md` §11.
         throw new ConflictException(
-          'Você já é aluno deste profissional. Entre na sua conta para ver a agenda.',
+          'Sua conta já está ligada a outra ficha deste profissional. Esta aqui é repetida — ' +
+            'avise o professor para ele apagar a duplicada. O seu acesso continua valendo pela primeira.',
         );
       }
       throw erro;

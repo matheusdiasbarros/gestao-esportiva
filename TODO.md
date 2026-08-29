@@ -1405,26 +1405,42 @@ revelando ficha de colega; e os três tetos que foram calibrados para autônomo 
         que não é. A matriz completa está em `docs/domain/staff.md`, que fechou oito células que
         a spec não tinha. As três que mais importam são de **API**: o membro não alcança ficha
         que não é dele, não alcança **nada** de financeiro, e o ex-membro não alcança contato
-- [ ] **Epic 5.5.4 — As telas dos dois papéis, e o seletor de negócio**
-  - [ ] **O seletor de contexto** (decisão E18): um membro de dois clubes tem **três** carteiras —
+- [x] **Epic 5.5.4 — As telas dos dois papéis, e o seletor de negócio** ✅ 2026-08-29 — 12 testes,
+      **cinco deles provados quebrando**, um por sabotagem, cada uma derrubando exatamente o teste
+      que a protege. Descoberta do épico: **a colisão do E9 já estava tratada desde a Fase 5** — o
+      `InviteService.ligar` traduzia a violação em 409, e o achado (d) da `staff.md` estava meio
+      errado. O que estava quebrado era a **frase**, que mandava o aluno "entrar na sua conta" como
+      se não houvesse nada a fazer
+  - [x] **O seletor de contexto** (decisão E18): um membro de dois clubes tem **três** carteiras —
         a do clube A, a do clube B e a particular dele. O `iam.md` §10 fechou o MVP sem seletor,
         e essa decisão caiu. Sem ele, ele cadastra aluno na carteira errada na primeira semana —
-        e **não tem conserto**, porque `professional_id` nunca muda. O §10 é reescrito junto
-  - [ ] Painel da equipe do dono: convidar, ver pendentes, ver membros, associar e trocar o
-        professor de uma ficha
-  - [ ] A carteira do membro mostra **só as fichas associadas a ele** — e é filtro de consulta,
+        e **não tem conserto**, porque `professional_id` nunca muda. O §10 foi reescrito: a
+        **§10.1** registra as três regras de forma, e a terceira não estava na proposta — *é filtro
+        de consulta, nunca de tela*. Invisível para quem não faz parte de equipe nenhuma, porque o
+        autônomo não pode pagar por um conceito que não é dele
+  - [x] Painel da equipe do dono em `/painel/equipe`: convidar, ver pendentes, cancelar convite,
+        ver membros, tirar da equipe — e, na mesma tela, **as equipes de que ele faz parte**. Não
+        são duas telas porque não são duas pessoas
+  - [x] Associar e trocar o professor de uma ficha, na própria linha da carteira. Substitui a
+        lista inteira de uma vez: o que estiver marcado ao salvar é o que fica
+  - [x] A carteira do membro mostra **só as fichas associadas a ele** — e é filtro de consulta,
         nunca de tela
-  - [ ] O membro cadastra ficha na carteira do negócio, e ela **nasce associada a ele** (E9)
-  - [ ] **Tratar a colisão que o E9 torna comum:** dois professores cadastram o mesmo aluno na
-        carteira do clube, e o segundo aceite bate em `uq_students_professional_user`. Hoje isso
-        é um 500 reproduzível esperando acontecer — precisa virar mensagem que diga o que fazer
-  - [ ] **Avisar o membro, antes de salvar, que a ficha é do clube.** O professor que traz o
-        próprio aluno o perde ao sair da equipe. É consequência correta do E2 com o E9, e é a que
-        mais vira briga se ninguém disser antes
-  - [ ] Observações privadas são do negócio: dono e professor associado veem o mesmo campo (E10)
-  - [ ] O membro vê os nomes da equipe e a ocupação dos espaços **com o nome do colega**, sem
-        alcançar a ficha do aluno dele (E12)
-  - [ ] Nada de financeiro aparece para o membro — **ausência na resposta**, não campo escondido
+  - [x] O membro cadastra ficha na carteira do negócio, e ela **nasce associada a ele** (E9)
+  - [x] ~~Hoje isso é um 500 reproduzível~~ → **não era.** O tratamento existia desde a Fase 5 e o
+        teste agora o exercita com duas fichas de verdade; sabotar o `catch` devolve o 500, o que
+        prova que é ele que segura. A **mensagem** é que mudou: diz quem conserta e como, porque
+        quem lê é o aluno e apagar ficha é célula do dono
+  - [x] **Avisar o membro, antes de salvar, que a ficha é do clube** — e **também na edição**, não
+        só na criação: quem abre a ficha meses depois nunca viu a tela de cadastro dela
+  - [x] Observações privadas são do negócio: dono e professor associado veem o mesmo campo (E10) —
+        cai de graça do `fichaComoDonoOuProfessor`, e o teste de editar a ficha associada cobre
+  - [x] O membro vê **os nomes da equipe** e não vê o contato de ninguém — `GET /staff?negocio=`,
+        com o e-mail **ausente da resposta**, não escondido na tela. *A ocupação dos espaços com o
+        nome do colega (E12) depende da agenda e é da Fase 6; o nome, que é o que ela vai exibir,
+        já existe*
+  - [x] Nada de financeiro aparece para o membro — **ausência na resposta**, não campo escondido.
+        Hoje a ficha não carrega valor nenhum, e o teste é o que faz a Fase 9 notar se ela passar
+        a carregar
 - [ ] **Epic 5.5.5 — Saída da equipe**
   - [ ] Qualquer um dos dois lados encerra: o dono remove, o membro sai. **Nenhuma tela escreve
         "funcionário", "demitir" ou "demissão"** — decisão E17, e o motivo está lá

@@ -39,13 +39,25 @@ export interface StaffInviteDetails {
   hasAccount: boolean;
 }
 
-/** Uma pessoa na equipe, como o dono a vê. */
+/** Uma pessoa na equipe. */
 export interface StaffMemberRow {
   /** Identificador da **participação**, não do profissional. É por ele que se encerra. */
   id: string;
   professionalId: string;
   fullName: string;
-  email: string;
+  /**
+   * **Só para o dono, e por isso é opcional — a chave some da resposta do membro.**
+   *
+   * "Ver os nomes da equipe" e "ver o contato de quem está na equipe" são duas células
+   * diferentes da matriz (`staff.md` §7.1): a primeira é *sim* para o membro, a segunda é
+   * *não*. O e-mail do colega é dado pessoal de outro profissional, e a lista da equipe não é
+   * agenda de contatos — nome basta para reconhecer quem ocupou a quadra.
+   *
+   * Ausência, e não string vazia ou campo escondido na tela: o que não vem na resposta não vaza
+   * por um `console.log`, por uma aba de rede aberta, nem por um cliente novo que esqueceu de
+   * esconder.
+   */
+  email?: string;
   status: StaffStatus;
   startedAt: string;
   /** Presente **se e somente se** o estado é `ENDED`. */
@@ -60,10 +72,15 @@ export interface StaffInviteRow {
 }
 
 /**
- * A equipe do dono: quem está dentro, e quem ainda não respondeu.
+ * A equipe: quem está dentro, e quem ainda não respondeu.
  *
  * Os dois na mesma resposta, e não em duas rotas, pela mesma razão que o convite do aluno saiu do
  * painel e virou parte da carteira: a decisão de convidar se toma **olhando quem já está lá**.
+ *
+ * **A mesma forma serve aos dois papéis, e o conteúdo é que muda.** Para o dono, a equipe inteira
+ * — inclusive quem já saiu — mais os convites de pé. Para o membro, só quem está ativo, sem
+ * e-mail e com `invites` vazio: convite pendente carrega o endereço de alguém que ainda nem
+ * respondeu, e revogá-lo é célula do dono.
  */
 export interface StaffTeam {
   members: StaffMemberRow[];

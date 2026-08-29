@@ -199,22 +199,43 @@ export class StaffService {
     });
   }
 
-  /** A equipe do dono: quem está dentro, e quem ainda não respondeu. */
-  async equipe(userId: string): Promise<StaffTeam> {
-    const professionalId = await this.access.carteiraDe(userId);
-    // Lista vazia, não erro: quem não é profissional simplesmente não tem equipe, e a tela já
-    // não mostra a seção. Recusar aqui transformaria um estado normal em falha.
-    if (!professionalId) return { members: [], invites: [] };
+  /**
+   * A equipe: quem está dentro, e quem ainda não respondeu.
+   *
+   * **Uma rota para os dois papéis, e o escopo decide o que sai.** Sem `negocio`, é a minha
+   * equipe, e eu sou o dono dela. Com `negocio`, é a equipe de um clube de que eu faço parte — e
+   * aí saem **só os ativos, sem e-mail e sem convite pendente**. Duas rotas separadas responderiam
+   * a mesma pergunta em dois lugares, e um dia uma responderia diferente.
+   *
+   * O membro precisa dos nomes: é o que faz "a Quadra 2 está ocupada pela Bianca" significar
+   * alguma coisa quando a Fase 6 chegar. O contato dele é outra célula da matriz, e é *não*.
+   */
+  async equipe(userId: string, negocio?: string): Promise<StaffTeam> {
+    // Lista vazia, não erro, só no caso sem escopo: quem não é profissional simplesmente não tem
+    // equipe, e a tela já não mostra a seção. Recusar transformaria um estado normal em falha.
+    // Com `negocio` na mão a história é outra — negócio alheio precisa responder 404.
+    if (!negocio && !(await this.access.carteiraDe(userId))) return { members: [], invites: [] };
+
+    const { professionalId, professorId } = await this.access.escopoDaCarteira(userId, negocio);
+    const souDono = professorId === null;
 
     const [linhas, convites] = await Promise.all([
       this.members.find({
-        where: { ownerProfessionalId: professionalId },
+        where: souDono
+          ? { ownerProfessionalId: professionalId }
+          : { ownerProfessionalId: professionalId, status: StaffStatus.Active },
         order: { startedAt: 'DESC' },
       }),
-      this.invites.find({
-        where: { ownerProfessionalId: professionalId, acceptedAt: IsNull(), revokedAt: IsNull() },
-        order: { email: 'ASC' },
-      }),
+      souDono
+        ? this.invites.find({
+            where: {
+              ownerProfessionalId: professionalId,
+              acceptedAt: IsNull(),
+              revokedAt: IsNull(),
+            },
+            order: { email: 'ASC' },
+          })
+        : [],
     ]);
 
     const contas = await this.contasDos(linhas.map((linha) => linha.memberProfessionalId));
@@ -227,7 +248,8 @@ export class StaffService {
           id: linha.id,
           professionalId: linha.memberProfessionalId,
           fullName: conta?.fullName ?? '',
-          email: conta?.email ?? '',
+          // A chave **some** para o membro, e não vem vazia: `staff.md` §7.1.
+          ...(souDono ? { email: conta?.email ?? '' } : {}),
           status: linha.status,
           startedAt: linha.startedAt.toISOString(),
           endedAt: linha.endedAt?.toISOString() ?? null,

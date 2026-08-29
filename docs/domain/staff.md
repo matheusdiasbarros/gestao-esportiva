@@ -570,6 +570,11 @@ indicador permanente de "você está no Clube X", o caso (f) acontece na primeir
 **Recomendo (proposta):** um seletor de negócio na web, obrigatório para quem tem ao menos uma
 participação `ACTIVE`, e invisível para quem não tem — o autônomo não pode pagar por isto.
 
+> ✅ **Aceito e feito no Epic 5.5.4**, em 2026-08-29, exatamente nessa forma. O `iam.md` §10 foi
+> reescrito: a metade que dizia *"sem seletor de contexto"* caiu, e a §10.1 registra as três regras
+> de forma. A terceira é a que não estava na proposta e importa tanto quanto: **é filtro de
+> consulta, nunca de tela.**
+
 **(c) A duplicata entre carteiras do mesmo clube vira oráculo entre colegas.** O marcador de
 possível duplicata (`students.md` §9.2) compara a carteira inteira. Para o membro, isso
 revelaria a existência de fichas que ele não pode ver. **Recomendo (proposta):** o membro só vê
@@ -584,12 +589,23 @@ domínio, não como erro 500 — a tela diz que já existe um acesso para aquela
 negócio, e o dono resolve apagando a ficha errada (`students.md` §7.5). **A regra precisa
 existir antes da tela**, senão a Fase 5.5 entrega um 500 reproduzível.
 
+> ✅ **Conferido e ajustado no Epic 5.5.4**, em 2026-08-29 — e o achado estava meio certo. O
+> tratamento **já existia** desde a Fase 5: `InviteService.ligar` traduz a violação de
+> `uq_students_professional_user` em 409, e um teste passou a exercitar o caminho com duas fichas
+> de verdade. O que estava errado era a **frase**: ela mandava o aluno "entrar na sua conta para
+> ver a agenda", como se não houvesse nada a fazer. Agora ela diz quem conserta e como — apagar
+> ficha é célula do dono, e o aluno que lê a mensagem não pode fazer nada sozinho.
+
 **(e) O membro que traz o próprio aluno para o clube perde esse aluno ao sair.** É consequência
 correta de E2 + E9, e é a que mais tem chance de virar briga: ele digita a ficha, ele dá as
 aulas, e a ficha é do clube. **Recomendo (proposta):** a tela de criar ficha dentro de um clube
 diz, antes de salvar — *"Este aluno entra na carteira do Clube X. Se você sair da equipe, a ficha
 continua com o clube."* É o mesmo tipo de aviso que a Fase 5 já dá antes de o profissional
 escrever sobre outra pessoa: **quem vai perder alguma coisa descobre antes, não depois.**
+
+> ✅ **Aceito e feito no Epic 5.5.4**, com uma mudança: o aviso aparece **na criação e na edição**,
+> e não só na criação. Quem abre a ficha de um aluno do clube meses depois pode nunca ter visto a
+> tela de cadastro dela — e é justamente aí que ele esqueceu de quem é aquela ficha.
 
 **(f) Não existe mover ficha entre carteiras**, por causa do invariante 1. O engano —
 cadastrar o aluno particular na carteira do clube — se conserta apagando e redigitando, o que só

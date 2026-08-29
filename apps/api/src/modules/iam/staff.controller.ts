@@ -16,6 +16,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   Res,
 } from '@nestjs/common';
@@ -25,7 +26,12 @@ import { CurrentUser } from './auth/current-user.decorator';
 import { Public } from './auth/public.decorator';
 import { LimitarCadastro, LimitarConvite } from './auth/rate-limit';
 import { RespostaDeSessao, SessaoHttp, clienteDe, etiquetaDeAparelho } from './auth/sessao-http';
-import { AcceptStaffInviteDto, CreateStaffInviteDto, UpdateStaffStatusDto } from './dto/staff.dto';
+import {
+  AcceptStaffInviteDto,
+  CreateStaffInviteDto,
+  ListStaffQuery,
+  UpdateStaffStatusDto,
+} from './dto/staff.dto';
 import { StaffService } from './services/staff.service';
 
 /**
@@ -49,8 +55,11 @@ export class StaffController {
 
   @Get()
   @ApiOperation({ summary: 'A equipe do profissional, e os convites ainda de pé' })
-  async equipe(@CurrentUser() user: AuthenticatedUser): Promise<StaffTeam> {
-    return this.staff.equipe(user.id);
+  async equipe(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ListStaffQuery,
+  ): Promise<StaffTeam> {
+    return this.staff.equipe(user.id, query.negocio);
   }
 
   @Get('memberships')

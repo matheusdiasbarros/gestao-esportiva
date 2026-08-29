@@ -103,6 +103,22 @@ export default async function Painel() {
         </section>
       ) : null}
 
+      {sessao.professionalId ? (
+        <section className="rounded-xl border border-(--color-border) bg-(--color-surface-muted) p-6">
+          <h2 className="text-sm font-medium">Sua equipe</h2>
+          <p className="mt-1 text-sm text-(--color-ink-muted)">
+            Se outros professores dão aula pelo seu negócio, é aqui que você os convida e associa
+            alunos a eles. Também é onde você vê de quais equipes você faz parte.
+          </p>
+          <Link
+            href="/painel/equipe"
+            className="mt-4 inline-block rounded-lg border border-(--color-border) px-3 py-1.5 text-xs font-medium"
+          >
+            Ver equipe
+          </Link>
+        </section>
+      ) : null}
+
       {sessao.signupSlug ? (
         <section className="rounded-xl border border-(--color-border) bg-(--color-surface-muted) p-6">
           <h2 className="mb-3 text-sm font-medium">Seu link para captar alunos</h2>

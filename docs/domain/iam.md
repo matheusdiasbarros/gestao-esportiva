@@ -349,8 +349,32 @@ e-mail que nunca chegaria.
 
 Quando a mesma conta é profissional e aluno, alguma tela precisa dizer qual chapéu ela está
 usando. Recorte do MVP, deliberadamente enxuto: **a web é do profissional, o app é do aluno.**
-Sem seletor de contexto, sem menu de troca. Se o professor quiser ver as aulas que ele faz como
-aluno, abre o app.
+Sem menu de troca de papel. Se o professor quiser ver as aulas que ele faz como aluno, abre o app.
+
+### 10.1 O seletor de negócio ✱
+
+**Reescrito em 2026-08-29, na Fase 5.5.** A frase acima dizia também *"sem seletor de contexto"*, e
+essa metade caiu. Ela valia enquanto papel e carteira eram a mesma coisa; a equipe separou os dois.
+
+O papel continua sem seletor. **A carteira ganhou um**, e ele responde a outra pergunta: não *"sou
+professor ou aluno agora?"*, e sim *"em qual carteira eu estou trabalhando?"*. Um membro de dois
+clubes tem **três** carteiras — a de cada negócio e a particular dele —, e a pergunta passa a ter
+três respostas possíveis onde antes tinha uma.
+
+Sem ele, o professor cadastra o primeiro aluno na carteira errada na primeira semana, e **isso não
+tem conserto**: `professional_id` nunca muda depois de gravado, e mover ficha entre carteiras não
+existe. Um erro sem desfazer é o tipo de coisa que a tela tem que impedir antes, não explicar
+depois.
+
+**Três regras de forma**, e cada uma tem motivo:
+
+1. **Invisível para quem não faz parte de equipe nenhuma.** É a maior parte das contas, e o
+   autônomo não pode pagar por um conceito que não é dele.
+2. **Sempre visível para quem faz parte**, e não escondido atrás de um menu. Ele é um indicador de
+   estado antes de ser um controle: o valor errado só se percebe se ele estiver na tela.
+3. **É filtro de consulta, nunca de tela.** A carteira escolhida vai como parâmetro para a API, que
+   aplica a regra do membro no banco. Filtrar no navegador entregaria a lista inteira e esconderia
+   parte dela.
 
 ## 11. Pendências registradas
 

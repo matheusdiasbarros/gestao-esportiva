@@ -5,11 +5,15 @@ import {
   StudentFilter,
   StudentStatus,
   type InviteIssued,
+  type StaffMemberRow,
+  type StaffMembershipRow,
+  type StaffTeam,
   type StudentRow,
 } from '@gestao/types';
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError, apiFetch } from '@/lib/api';
 import { FichaForm } from './ficha-form';
+import { ProfessoresDaFicha } from './professores-da-ficha';
 
 /**
  * A carteira de alunos.
@@ -23,6 +27,11 @@ import { FichaForm } from './ficha-form';
  * como remendo — não havia carteira onde pendurá-lo. Duas listas com a mesma ação divergem no dia
  * em que uma das duas ganha uma regra nova, e a decisão de convidar se toma olhando a carteira: é
  * o marcador "já tem conta" que acende o botão, na mesma linha.
+ *
+ * **A Fase 5.5 acrescentou o seletor de negócio**, e ele muda o significado de tudo o que está
+ * abaixo dele: quem faz parte de duas equipes tem **três** carteiras — a de cada negócio e a
+ * particular. Sem o seletor, a primeira ficha cai na carteira errada na primeira semana, e isso
+ * **não tem conserto**: `professional_id` nunca muda, e mover ficha entre carteiras não existe.
  */
 const ESTADOS: Record<StudentStatus, string> = {
   [StudentStatus.Active]: 'Ativo',
@@ -48,24 +57,59 @@ const FILTROS: { valor: StudentFilter; rotulo: string }[] = [
   { valor: StudentFilter.All, rotulo: 'Todos' },
 ];
 
+/** O valor do seletor que quer dizer "a minha carteira". Vazio, porque a API omite o parâmetro. */
+const MINHA = '';
+
 export function Carteira({ emailVerificado }: { emailVerificado: boolean }) {
   const [fichas, setFichas] = useState<StudentRow[] | null>(null);
+  const [participacoes, setParticipacoes] = useState<StaffMembershipRow[]>([]);
+  const [equipe, setEquipe] = useState<StaffMemberRow[]>([]);
+  const [negocio, setNegocio] = useState<string>(MINHA);
   const [filtro, setFiltro] = useState<StudentFilter>(StudentFilter.Current);
   const [busca, setBusca] = useState('');
   const [criando, setCriando] = useState(false);
   const [editando, setEditando] = useState<StudentRow | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
+  const souDono = negocio === MINHA;
+  const nomeDoNegocio =
+    participacoes.find((p) => p.ownerProfessionalId === negocio)?.ownerName ?? null;
+
+  // As participações mudam raras vezes e não dependem de filtro nem de busca: carregar junto da
+  // lista faria duas requisições a cada tecla digitada na busca.
+  useEffect(() => {
+    apiFetch<StaffMembershipRow[]>('/staff/memberships')
+      .then(setParticipacoes)
+      .catch(() => {
+        // Sem as participações o seletor não aparece e a carteira própria continua funcionando.
+        // Transformar isto em erro tiraria a tela de quem não faz parte de equipe nenhuma.
+      });
+  }, []);
+
+  // Quem atende cada ficha só é editável na carteira própria, e o nome de cada professor vem
+  // daqui. Na carteira de um negócio a lista não é usada — e pedi-la seria pedir o que o membro
+  // não precisa.
+  useEffect(() => {
+    if (!souDono) {
+      setEquipe([]);
+      return;
+    }
+    apiFetch<StaffTeam>('/staff')
+      .then((time) => setEquipe(time.members.filter((m) => m.status === 'ACTIVE')))
+      .catch(() => setEquipe([]));
+  }, [souDono]);
+
   const carregar = useCallback(async () => {
     setErro(null);
     try {
       const query = new URLSearchParams({ filter: filtro });
       if (busca.trim()) query.set('busca', busca.trim());
+      if (negocio) query.set('negocio', negocio);
       setFichas(await apiFetch<StudentRow[]>(`/students?${query.toString()}`));
     } catch {
       setErro('Não consegui carregar sua carteira agora.');
     }
-  }, [filtro, busca]);
+  }, [filtro, busca, negocio]);
 
   useEffect(() => {
     void carregar();
@@ -146,6 +190,8 @@ export function Carteira({ emailVerificado }: { emailVerificado: boolean }) {
         </h2>
         <FichaForm
           ficha={editando ?? undefined}
+          negocio={negocio || undefined}
+          nomeDoNegocio={nomeDoNegocio}
           aoSalvar={() => {
             setCriando(false);
             setEditando(null);
@@ -162,6 +208,34 @@ export function Carteira({ emailVerificado }: { emailVerificado: boolean }) {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* **Só aparece para quem faz parte de alguma equipe.** O autônomo — que é a maior parte
+          das contas — não pode pagar por um conceito que não é dele. */}
+      {participacoes.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-(--color-ok) bg-(--color-surface-muted) p-3">
+          <label htmlFor="negocio" className="text-xs font-medium">
+            Carteira
+          </label>
+          <select
+            id="negocio"
+            value={negocio}
+            onChange={(e) => setNegocio(e.target.value)}
+            className="rounded-lg border border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-sm"
+          >
+            <option value={MINHA}>Meus alunos particulares</option>
+            {participacoes.map((participacao) => (
+              <option key={participacao.id} value={participacao.ownerProfessionalId}>
+                {participacao.ownerName}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-(--color-ink-muted)">
+            {souDono
+              ? 'Estes alunos são seus. Quem lidera as equipes de que você participa não os vê.'
+              : `Estes alunos são de ${nomeDoNegocio}. Você vê só os que foram associados a você.`}
+          </p>
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap items-center gap-3">
         <input
           value={busca}
@@ -209,7 +283,9 @@ export function Carteira({ emailVerificado }: { emailVerificado: boolean }) {
         <p className="text-sm text-(--color-ink-muted)">
           {busca.trim()
             ? 'Nenhum aluno com esse nome.'
-            : 'Sua carteira está vazia. Cadastre o primeiro aluno — ele não precisa ter conta.'}
+            : souDono
+              ? 'Sua carteira está vazia. Cadastre o primeiro aluno — ele não precisa ter conta.'
+              : `Nenhum aluno de ${nomeDoNegocio} associado a você ainda.`}
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
@@ -218,10 +294,13 @@ export function Carteira({ emailVerificado }: { emailVerificado: boolean }) {
               key={ficha.id}
               ficha={ficha}
               emailVerificado={emailVerificado}
+              souDono={souDono}
+              equipe={equipe}
               aoEditar={() => setEditando(ficha)}
               aoApagar={() => void apagar(ficha)}
               aoMudarEstado={(status) => void mudarEstado(ficha, status)}
               aoTransferirAcesso={() => void transferirAcesso(ficha)}
+              aoRecarregar={() => void carregar()}
             />
           ))}
         </ul>
@@ -233,19 +312,32 @@ export function Carteira({ emailVerificado }: { emailVerificado: boolean }) {
 interface PropsDaFicha {
   ficha: StudentRow;
   emailVerificado: boolean;
+  /**
+   * Estou olhando a minha carteira, ou a de um negócio de que faço parte?
+   *
+   * **Esconder botão não é autorização** — o servidor recusa cada uma destas ações com 404 para
+   * quem não é dono, e é lá que a regra vive. Aqui a razão é outra: o membro não pode descobrir
+   * o que ele não pode fazer clicando e recebendo erro.
+   */
+  souDono: boolean;
+  equipe: StaffMemberRow[];
   aoEditar: () => void;
   aoApagar: () => void;
   aoMudarEstado: (status: StudentStatus) => void;
   aoTransferirAcesso: () => void;
+  aoRecarregar: () => void;
 }
 
 function Ficha({
   ficha,
   emailVerificado,
+  souDono,
+  equipe,
   aoEditar,
   aoApagar,
   aoMudarEstado,
   aoTransferirAcesso,
+  aoRecarregar,
 }: PropsDaFicha) {
   const encerrada = ficha.status === StudentStatus.Ended;
 
@@ -265,21 +357,27 @@ function Ficha({
               de novo — dois cliques, e o estado volta a dizer a verdade enquanto isso. */}
           {!encerrada ? <Acao onClick={aoEditar}>Editar</Acao> : null}
 
-          {ficha.status === StudentStatus.Active ? (
-            <Acao onClick={() => aoMudarEstado(StudentStatus.Paused)}>Pausar</Acao>
-          ) : (
-            <Acao onClick={() => aoMudarEstado(StudentStatus.Active)}>Reativar</Acao>
-          )}
+          {/* Pausar, encerrar, reativar e apagar são células do dono. O membro atende o aluno;
+              decidir se ele continua sendo aluno do negócio é de quem é o negócio. */}
+          {souDono ? (
+            <>
+              {ficha.status === StudentStatus.Active ? (
+                <Acao onClick={() => aoMudarEstado(StudentStatus.Paused)}>Pausar</Acao>
+              ) : (
+                <Acao onClick={() => aoMudarEstado(StudentStatus.Active)}>Reativar</Acao>
+              )}
 
-          {!encerrada ? (
-            <Acao onClick={() => aoMudarEstado(StudentStatus.Ended)}>Encerrar</Acao>
+              {!encerrada ? (
+                <Acao onClick={() => aoMudarEstado(StudentStatus.Ended)}>Encerrar</Acao>
+              ) : null}
+
+              {/* Encerrar é o normal; apagar é para a ficha criada por engano (§7.5). Por isso o
+                  vermelho está aqui, e não em "Encerrar". */}
+              <Acao onClick={aoApagar} perigo>
+                Apagar
+              </Acao>
+            </>
           ) : null}
-
-          {/* Encerrar é o normal; apagar é para a ficha criada por engano (§7.5). Por isso o
-              vermelho está aqui, e não em "Encerrar". */}
-          <Acao onClick={aoApagar} perigo>
-            Apagar
-          </Acao>
         </div>
       </div>
 
@@ -295,14 +393,24 @@ function Ficha({
 
       {/* O aviso dos 18 anos (§8.3). **Avisa e oferece** — não decide arranjo de família, e
           também não finge que não viu. Virar `SELF` sozinho tiraria o acesso do pai que paga sem
-          ninguém pedir; não fazer nada deixaria o pai com o dado de um adulto. */}
+          ninguém pedir; não fazer nada deixaria o pai com o dado de um adulto.
+
+          O membro **vê o aviso e não age**: transferir o acesso muda quem enxerga dado pessoal de
+          um terceiro, e essa é decisão de controlador (`staff.md` §7.1). Esconder o aviso dele
+          seria pior — ele é quem conversa com o aluno toda semana. */}
       {ficha.adultUnderGuardian && !encerrada ? (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-(--color-ok) p-3">
           <p className="text-xs">
             <strong>{ficha.fullName}</strong> já tem 18 anos. O acesso ainda é de{' '}
             {ficha.guardianName}.
           </p>
-          <Acao onClick={aoTransferirAcesso}>Passar o acesso para ele</Acao>
+          {souDono ? (
+            <Acao onClick={aoTransferirAcesso}>Passar o acesso para ele</Acao>
+          ) : (
+            <span className="text-xs text-(--color-ink-muted)">
+              Quem passa o acesso é quem lidera o negócio.
+            </span>
+          )}
         </div>
       ) : null}
 
@@ -317,6 +425,12 @@ function Ficha({
           casos; esconder o botão evita a pessoa descobrir a regra por um erro. */}
       {!ficha.hasAccount && !encerrada ? (
         <Convite ficha={ficha} emailVerificado={emailVerificado} />
+      ) : null}
+
+      {/* Só na carteira própria, e só quando existe equipe: sem ninguém para associar, o controle
+          seria uma pergunta sem resposta possível. */}
+      {souDono && equipe.length > 0 && !encerrada ? (
+        <ProfessoresDaFicha ficha={ficha} equipe={equipe} aoSalvar={aoRecarregar} />
       ) : null}
     </li>
   );
