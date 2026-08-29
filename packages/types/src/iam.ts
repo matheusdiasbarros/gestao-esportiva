@@ -198,4 +198,4 @@ export interface InviteDetails {
 }
 
 /** Tamanho mínimo de senha (ADR-004): sem exigência de maiúscula, número ou símbolo. */
-export const MINIMUM_PASSWORD_LENGTH = 6;
+export const MINIMUM_PASSWORD_LENGTH = 10;
