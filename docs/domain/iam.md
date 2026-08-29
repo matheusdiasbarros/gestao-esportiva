@@ -147,6 +147,37 @@ participante · `próprio` = só sobre a própria conta.
 | | dar baixa manual | não | não | dono | não |
 | | estornar | não | não | dono | não |
 
+### 6.1 O membro da equipe
+
+Acrescentado em 2026-08-28, junto da Fase 5.5. A matriz completa, com as vinte e quatro células,
+está em [`staff.md`](staff.md); aqui fica o resumo e a regra que as governa.
+
+> **A célula do membro nunca é "sim" sozinha.** É sempre *"sim, no que está associado a mim"* —
+> duas condições, e não uma: **participação ativa** na equipe daquele dono, **e** associação
+> minha com aquele recurso. Só a primeira entregaria a carteira inteira do clube.
+
+| Recurso | Dono | Membro da equipe |
+| --- | :-: | :-: |
+| Listar a carteira | inteira | **só as fichas dele** |
+| Criar ficha no negócio | sim | sim — nasce associada a ele |
+| Ver e editar contato, objetivos, observações | sim | só as dele |
+| Convidar o aluno a criar conta | sim | só as dele |
+| Pausar, encerrar, apagar, transferir acesso | sim | **não** |
+| Associar ou trocar o professor de uma ficha | sim | **não** |
+| Convidar e remover membro da equipe | sim | não |
+| Sair da equipe | sim (remove) | sim (sai) |
+| Qualquer valor em dinheiro | sim | **não, em nada** |
+
+**A participação é conferida no banco a cada requisição, e não viaja no token.** Se viajasse, o
+ex-membro continuaria entrando por até 15 minutos depois de sair — o tempo de vida do token de
+acesso —, e a promessa de que o acesso termina no mesmo instante seria falsa. O custo é uma
+consulta a mais por requisição, e está aceito na ADR-006 §3.
+
+**Um invariante que não cabe no banco:** uma ficha **nunca** é associada ao profissional cuja
+conta é a dessa mesma ficha. Sem isso, a aluna que também é professora do clube leria as
+observações privadas escritas sobre ela. A regra cruza `students`, `professionals` e `users`, e
+por isso mora na aplicação, com teste.
+
 > **Nota — "editar contato da ficha" mudou de `part.` para `não`**, decidido em 2026-08-26 na
 > abertura da Fase 5. A ficha é do profissional, e ele é o **controlador** do que ela diz
 > (`students.md` §3.1): correção nela passa por ele, que é para onde a lei aponta. O direito de
@@ -172,8 +203,15 @@ participante · `próprio` = só sobre a própria conta.
    do administrador já resolve o caso de suporte descrito nas personas.
 4. **Toda leitura de dado pessoal por administrador gera log** com `actor_id`, recurso e
    identificador — e **sem** o conteúdo do dado. Log estruturado, sem tabela de auditoria nova.
-5. **Não existe permissão granular.** Três papéis e duas relações. Delegação (secretária,
-   sócio) não é persona do MVP; o mecanismo nasce quando houver o caso concreto.
+5. ~~**Não existe permissão granular.**~~ **Deixou de ser verdade em 2026-08-28**, quando chegou
+   o caso concreto que esta própria regra exigia: o gestor com professores dando aula por ele, e
+   o clube com professores próprios. Ver §6.1 e [`staff.md`](staff.md).
+
+   O que passou a existir é **um papel a mais, e fixo**: *membro da equipe*. **Não** é permissão
+   marcável por pessoa, e a diferença sustenta o §4 — dois papéis fixos continuam sendo
+   *derivados do dado*, porque dono é de quem é o negócio e membro é quem tem participação ativa.
+   Uma lista de caixinhas por funcionário seria um motor de permissões, com estado que pode
+   discordar do dado, e foi recusada.
 6. **Toda célula "não pode" desta matriz precisa de um teste.** Célula sem teste é lacuna, não
    é decisão.
 

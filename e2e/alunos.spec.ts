@@ -37,6 +37,7 @@ const CAMPOS_DA_FICHA = [
   'possibleDuplicate',
   'privateNotes',
   'status',
+  'teacherIds',
 ];
 
 test.describe.configure({ mode: 'serial' });

@@ -1360,18 +1360,23 @@ revelando ficha de colega; e os três tetos que foram calibrados para autônomo 
         podendo. Sem ele os testes deixariam a equipe do Rodrigo crescer a cada execução da suíte,
         que é o resíduo entre execuções que o DT-010 ensinou a não deixar. As **consequências** do
         encerramento continuam na 5.5.5
-- [ ] **Epic 5.5.3 — Associação do aluno e a regra de acesso**
-  - [ ] `student_teachers`: quais professores atendem cada ficha. **Tabela e não coluna**, porque
+- [x] **Epic 5.5.3 — Associação do aluno e a regra de acesso** ✅ 2026-08-29 — 13 testes de API.
+      **A primeira rodada de sabotagem passou verde nas duas condições**, e o motivo era um
+      defeito meu: `ver()` chamava `escopoDaCarteira` uma segunda vez, e essa guarda duplicada
+      **mascarava** a que estava sendo testada. Somado a isso, a ficha "alheia" do teste não tinha
+      professor nenhum — então a comparação *qual* professor nunca era exercitada. Corrigidos os
+      dois, cada sabotagem derruba o teste certo
+  - [x] `student_teachers`: quais professores atendem cada ficha. **Tabela e não coluna**, porque
         um aluno pode ter vários (E7). O argumento ficou mais forte com a leitura do código em
         2026-08-28: existe `uq_students_professional_user`, então uma conta só pode ter **uma**
         ficha por profissional — para o aluno do clube que tem conta, "duas fichas para duas
         modalidades" não é nem representável. A tabela deixou de ser a opção melhor e virou a única
-  - [ ] `professional_id` da ficha **nunca muda**. Trocar o professor mexe só na associação
-  - [ ] `AccessService` ganha a regra **membro da equipe**, com **duas** condições: estou na
+  - [x] `professional_id` da ficha **nunca muda**. Trocar o professor mexe só na associação
+  - [x] `AccessService` ganha a regra **membro da equipe**, com **duas** condições: estou na
         equipe deste dono com status `ACTIVE`, **e** estou associado a este recurso. Só a
         primeira entregaria a carteira inteira do clube
-  - [ ] Não é decorator, pela mesma razão registrada no Epic 2.3: guard não conhece recurso
-  - [ ] **Rever as NOVE portas de entrada da ficha, uma a uma.** Eu tinha escrito oito e contei
+  - [x] Não é decorator, pela mesma razão registrada no Epic 2.3: guard não conhece recurso
+  - [x] **Rever as NOVE portas de entrada da ficha, uma a uma.** Eu tinha escrito oito e contei
         errado, porque `fichaComoDono` **existe duas vezes com significados diferentes** — método
         de autorização no `AccessService` e função de formatação em `ficha-em-linha.ts`. São
         **seis** com esse nome (`students.service` :105, :150, :235, :285, :321 e
@@ -1382,19 +1387,20 @@ revelando ficha de colega; e os três tetos que foram calibrados para autônomo 
         inteira do dono. O comentário do `invite.service.ts` já tinha avisado: *"respondida em
         cada serviço, uma delas um dia responde diferente — e a que responder diferente será a
         que vaza"*
-  - [ ] **Dois métodos nomeados, nunca um com bandeira `permitirMembro`.** Booleano em ponto de
+  - [x] **Dois métodos nomeados, nunca um com bandeira `permitirMembro`.** Booleano em ponto de
         chamada é invisível na revisão (ADR-006)
-  - [ ] **`StudentsService.marcadores()` vaza por outro caminho** (`students.service.ts:358-366`):
+  - [x] **`StudentsService.marcadores()` vaza por outro caminho** (`students.service.ts:358-366`):
         varre a carteira inteira do dono para calcular `possibleDuplicate`. Para um membro, isso
         responde sobre fichas de colegas que ele não pode ver
-  - [ ] **Invariante novo, e é vazamento, não vocabulário:** uma ficha **nunca** pode ser
+  - [x] **Invariante novo, e é vazamento, não vocabulário:** uma ficha **nunca** pode ser
         associada ao profissional que é a conta daquela ficha. Sem isso, o dono associa a ficha
         da Marina à própria Marina quando ela vira membro, e ela lê as observações privadas
         escritas sobre ela — furando a decisão O2 da Fase 5. Não dá `CHECK`: cruza três tabelas.
         Regra de aplicação, com teste
-  - [ ] A matriz de `iam.md` §6 ganha a coluna do membro, e `iam.md` §7.5 é **reescrita** — "não
+  - [x] A matriz de `iam.md` §6 ganha a coluna do membro, e `iam.md` §7.5 é **reescrita** — "não
         existe permissão granular" deixou de ser verdade
-  - [ ] **Vinte e quatro casos com teste**, não quinze: são catorze recusas e dez restrições, e
+  - [ ] **Vinte e quatro casos com teste**, não quinze — *treze entregues aqui; os que dependem
+        de tela e de encerramento entram nos Epics 5.5.4 e 5.5.5*: são catorze recusas e dez restrições, e
         restrição precisa de dois testes — o que é permitido no que é meu, e o que é recusado no
         que não é. A matriz completa está em `docs/domain/staff.md`, que fechou oito células que
         a spec não tinha. As três que mais importam são de **API**: o membro não alcança ficha

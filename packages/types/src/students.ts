@@ -62,6 +62,14 @@ export interface StudentRow {
    */
   invite: StandingInvite | null;
   /**
+   * Quais profissionais atendem esta ficha — `docs/domain/staff.md`.
+   *
+   * **Não confundir com propriedade.** O dono da ficha é quem tem a carteira, e ele nunca muda;
+   * isto diz quem *dá a aula*, e pode ser mais de um (decisão E7). Vazio é o caso normal de quem
+   * não tem equipe: o autônomo atende os próprios alunos sem precisar declarar nada.
+   */
+  teacherIds: string[];
+  /**
    * O aluno já completou 18 anos, e o acesso continua sendo do responsável — `students.md` §8.3.
    *
    * **Derivado da data, nunca guardado.** Uma coluna "já avisei" discordaria do dado no dia em

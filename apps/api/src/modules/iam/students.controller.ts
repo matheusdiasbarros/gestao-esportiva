@@ -10,6 +10,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -20,6 +21,7 @@ import {
   ChangeStudentStatusDto,
   CreateStudentDto,
   ListStudentsQuery,
+  SetStudentTeachersDto,
   UpdateStudentDto,
 } from './dto/student.dto';
 import { StudentsService } from './services/students.service';
@@ -62,8 +64,21 @@ export class StudentsController {
   async criar(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateStudentDto,
+    // Em qual carteira a ficha nasce. Ausente é a própria; com o negócio, ela nasce na carteira
+    // dele **e associada a quem cadastrou** (decisão E9).
+    @Query('negocio') negocio?: string,
   ): Promise<StudentRow> {
-    return this.alunos.criar(user.id, dto);
+    return this.alunos.criar(user.id, dto, negocio);
+  }
+
+  @Put(':id/teachers')
+  @ApiOperation({ summary: 'Define quem atende esta ficha. Substitui a lista inteira' })
+  async definirProfessores(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe({ version: '7' })) id: string,
+    @Body() dto: SetStudentTeachersDto,
+  ): Promise<StudentRow> {
+    return this.alunos.definirProfessores(user.id, id, dto.professionalIds);
   }
 
   @Get(':id')

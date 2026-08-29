@@ -87,16 +87,30 @@ export class InviteService {
    * permanente de quem nunca aceitou — a lista é a fila de trabalho do profissional, não uma
    * lista de pendências que ele precise zerar.
    */
-  async listar(userId: string): Promise<InviteRow[]> {
-    const professionalId = await this.access.carteiraDe(userId);
-    // Lista vazia, não erro: quem não é profissional simplesmente não tem carteira, e a tela
-    // já não mostra a seção. Recusar aqui transformaria um estado normal em falha.
-    if (!professionalId) return [];
+  async listar(userId: string, negocio?: string): Promise<InviteRow[]> {
+    // **Esta é uma das três portas que o grep não achava.** Ela resolve propriedade por
+    // `carteiraDe` mais um `WHERE`, e não por `fichaComoDono` — então a revisão das chamadas de
+    // `fichaComoDono` passaria direto por aqui, e um membro receberia a carteira inteira do dono.
+    // Lista vazia, e não erro, para quem não é profissional: a conta de aluno simplesmente não
+    // tem carteira, e a tela já não mostra a seção. Recusar transformaria um estado normal em
+    // falha — e foi o que aconteceu quando o escopo entrou sem esta guarda.
+    if (!negocio && !(await this.access.carteiraDe(userId))) return [];
 
-    const fichas = await this.students.find({
-      where: { professionalId, userId: IsNull() },
-      order: { fullName: 'ASC' },
-    });
+    const { professionalId, professorId } = await this.access.escopoDaCarteira(userId, negocio);
+
+    const fichas = await this.students
+      .createQueryBuilder('ficha')
+      .where('ficha.professional_id = :professionalId', { professionalId })
+      .andWhere('ficha.user_id IS NULL')
+      .andWhere(
+        professorId
+          ? `EXISTS (SELECT 1 FROM student_teachers st
+                      WHERE st.student_id = ficha.id AND st.professional_id = :professorId)`
+          : 'TRUE',
+        { professorId },
+      )
+      .orderBy('ficha.full_name', 'ASC')
+      .getMany();
     if (fichas.length === 0) return [];
 
     const ativos = await this.invites.find({
@@ -357,7 +371,9 @@ export class InviteService {
     userId: string,
     studentId: string,
   ): Promise<{ student: Student; dono: User }> {
-    const student = await this.access.fichaComoDono(userId, studentId);
+    // O membro convida os alunos que atende — é a célula "convidar o aluno a criar conta: só as
+    // dele" da matriz. Quem não é dono nem professor da ficha recebe 404, como sempre.
+    const student = await this.access.fichaComoDonoOuProfessor(userId, studentId);
 
     if (student.userId !== null) {
       throw new ConflictException('Esta ficha já está ligada a uma conta.');

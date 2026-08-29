@@ -1,6 +1,7 @@
 import {
   AccessHolder,
   MAX_STUDENTS_POR_PROFISSIONAL,
+  StaffStatus,
   StudentFilter,
   StudentStatus,
   type StudentRow,
@@ -10,10 +11,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, IsNull, MoreThan, Repository } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
 import { CreateStudentDto, ListStudentsQuery, UpdateStudentDto } from '../dto/student.dto';
+import { Professional } from '../entities/professional.entity';
+import { StaffMember } from '../entities/staff-member.entity';
 import { StudentInvite } from '../entities/student-invite.entity';
+import { StudentTeacher } from '../entities/student-teacher.entity';
 import { Student } from '../entities/student.entity';
 import { User, UserStatus } from '../entities/user.entity';
-import { AccessService } from './access.service';
+import { AccessService, type EscopoDaCarteira } from './access.service';
 import { normalizarEmail } from './auth.service';
 import { fichaComoDono, type MarcadoresDaFicha } from './ficha-em-linha';
 import { menorPrecisaDeResponsavel } from './maioridade';
@@ -68,6 +72,9 @@ export class StudentsService {
     @InjectRepository(Student) private readonly students: Repository<Student>,
     @InjectRepository(StudentInvite) private readonly invites: Repository<StudentInvite>,
     @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(StudentTeacher) private readonly teachers: Repository<StudentTeacher>,
+    @InjectRepository(StaffMember) private readonly staff: Repository<StaffMember>,
+    @InjectRepository(Professional) private readonly professionals: Repository<Professional>,
     private readonly access: AccessService,
   ) {}
 
@@ -78,12 +85,23 @@ export class StudentsService {
    * dia em que a pessoa criasse conta, e ninguém recalcularia as linhas antigas.
    */
   async listar(userId: string, filtro: ListStudentsQuery): Promise<StudentRow[]> {
-    const professionalId = await this.carteira(userId);
+    const escopo = await this.access.escopoDaCarteira(userId, filtro.negocio);
+    const { professionalId, professorId } = escopo;
 
     const busca = filtro.busca?.trim();
     const linhas = await this.students
       .createQueryBuilder('ficha')
       .where('ficha.professional_id = :professionalId', { professionalId })
+      // A segunda condição da regra do membro, dentro da mesma consulta. Filtrar depois, em
+      // JavaScript, daria o mesmo resultado hoje e é o caminho que erra amanhã — quem
+      // acrescentar paginação pagina a lista errada.
+      .andWhere(
+        professorId
+          ? `EXISTS (SELECT 1 FROM student_teachers st
+                      WHERE st.student_id = ficha.id AND st.professional_id = :professorId)`
+          : 'TRUE',
+        { professorId },
+      )
       .andWhere('ficha.status IN (:...estados)', {
         estados: ESTADOS_DO_FILTRO[filtro.filter ?? StudentFilter.Current],
       })
@@ -97,18 +115,31 @@ export class StudentsService {
       .addOrderBy('ficha.full_name', 'ASC')
       .getMany();
 
-    const marcadores = await this.marcadores(professionalId, linhas);
+    const marcadores = await this.marcadores(professionalId, linhas, escopo);
     return linhas.map((ficha) => fichaComoDono(ficha, marcadores.get(ficha.id)));
   }
 
   async ver(userId: string, studentId: string): Promise<StudentRow> {
-    const ficha = await this.access.fichaComoDono(userId, studentId);
-    const marcadores = await this.marcadores(ficha.professionalId, [ficha]);
+    const ficha = await this.access.fichaComoDonoOuProfessor(userId, studentId);
+
+    // O escopo é **derivado do que já sabemos**, e não de uma segunda chamada a
+    // `escopoDaCarteira`. Chamá-la aqui reconferiria a participação que a linha acima acabou de
+    // conferir — e isso não é só desperdício: a segunda guarda **mascara** a primeira, e uma
+    // sabotagem na regra de acesso passava despercebida porque a duplicata a compensava. Aqui a
+    // autorização já aconteceu; isto só decide o alcance dos marcadores.
+    const minha = await this.access.carteiraDe(userId);
+    const escopo: EscopoDaCarteira = {
+      professionalId: ficha.professionalId,
+      professorId: ficha.professionalId === minha ? null : minha,
+    };
+
+    const marcadores = await this.marcadores(ficha.professionalId, [ficha], escopo);
     return fichaComoDono(ficha, marcadores.get(ficha.id));
   }
 
-  async criar(userId: string, dto: CreateStudentDto): Promise<StudentRow> {
-    const professionalId = await this.carteira(userId);
+  async criar(userId: string, dto: CreateStudentDto, negocio?: string): Promise<StudentRow> {
+    const escopo = await this.access.escopoDaCarteira(userId, negocio);
+    const { professionalId, professorId } = escopo;
 
     const existentes = await this.students.countBy({ professionalId });
     if (existentes >= MAX_STUDENTS_POR_PROFISSIONAL) {
@@ -141,13 +172,26 @@ export class StudentsService {
       endedAt: null,
     });
 
-    await this.students.insert(ficha);
-    const marcadores = await this.marcadores(professionalId, [ficha]);
+    await this.dataSource.transaction(async (manager) => {
+      await manager.insert(Student, ficha);
+      // Decisão E9: o membro cadastra na carteira do negócio, e a ficha **nasce associada a
+      // ele**. Sem isto ele criaria um aluno que no instante seguinte não consegue mais ver — e
+      // teria que pedir ao dono para devolvê-lo.
+      if (professorId) {
+        await manager.insert(StudentTeacher, {
+          id: uuidv7(),
+          studentId: ficha.id,
+          professionalId: professorId,
+        });
+      }
+    });
+
+    const marcadores = await this.marcadores(professionalId, [ficha], escopo);
     return fichaComoDono(ficha, marcadores.get(ficha.id));
   }
 
   async atualizar(userId: string, studentId: string, dto: UpdateStudentDto): Promise<StudentRow> {
-    const atual = await this.access.fichaComoDono(userId, studentId);
+    const atual = await this.access.fichaComoDonoOuProfessor(userId, studentId);
 
     // Ficha encerrada é somente leitura (`students.md` §7.2). Editar o telefone de quem saiu não
     // é erro de digitação do profissional — é sinal de que ele quis reativar, e reativar é uma
@@ -308,6 +352,96 @@ export class StudentsService {
   }
 
   /**
+   * Quem atende esta ficha — a lista inteira, substituída de uma vez.
+   *
+   * **Só o dono.** Trocar o professor de um aluno é decisão do negócio, e foi pedida assim: o
+   * membro atende quem lhe deram, e não escolhe. A recusa é 404 pela regra de sempre — um 403
+   * confirmaria que aquela ficha existe.
+   *
+   * Substituir a lista inteira, em vez de acrescentar e remover um a um, é o que torna a tela
+   * honesta: o que se vê é o que fica. Duas rotas separadas produziriam o estado intermediário em
+   * que a ficha ficou sem professor nenhum porque alguém removeu antes de acrescentar.
+   */
+  async definirProfessores(
+    userId: string,
+    studentId: string,
+    professionalIds: string[],
+  ): Promise<StudentRow> {
+    const ficha = await this.access.fichaComoDono(userId, studentId);
+    const desejados = [...new Set(professionalIds)];
+
+    await this.conferirProfessores(ficha, desejados);
+
+    await this.dataSource.transaction(async (manager) => {
+      // Apagar e reinserir, e não reconciliar: a lista tem no máximo algumas dezenas de linhas, e
+      // reconciliar exigiria comparar dois conjuntos para economizar nada.
+      await manager.delete(StudentTeacher, { studentId: ficha.id });
+      if (desejados.length > 0) {
+        await manager.insert(
+          StudentTeacher,
+          desejados.map((professionalId) => ({
+            id: uuidv7(),
+            studentId: ficha.id,
+            professionalId,
+          })),
+        );
+      }
+    });
+
+    return this.ver(userId, studentId);
+  }
+
+  /**
+   * Cada professor pedido pode mesmo atender esta ficha?
+   *
+   * Duas recusas, e a segunda não é óbvia:
+   *
+   * 1. **Precisa estar na equipe do dono da ficha** — ou ser o próprio dono, que atende os alunos
+   *    dele sem estar em equipe nenhuma.
+   * 2. **Não pode ser a conta do próprio aluno.** Quando a mesma pessoa é aluna de um clube *e*
+   *    professora dele, associá-la à própria ficha a faria ler as observações privadas escritas
+   *    **sobre ela** — furando a decisão O2 da Fase 5, que promete o contrário. Não dá para
+   *    resolver com `CHECK`: a regra cruza `students`, `professionals` e `users`.
+   */
+  private async conferirProfessores(ficha: Student, professionalIds: string[]): Promise<void> {
+    if (professionalIds.length === 0) return;
+
+    if (ficha.userId !== null) {
+      const daPropriaAluna = await this.professionals.find({
+        where: { id: In(professionalIds), userId: ficha.userId },
+        select: { id: true },
+      });
+      if (daPropriaAluna.length > 0) {
+        throw this.recusar(
+          'professionalIds',
+          'Esta ficha é da conta desta pessoa. Ela não pode ser a professora do próprio aluno.',
+        );
+      }
+    }
+
+    const daEquipe = await this.staff.find({
+      where: {
+        ownerProfessionalId: ficha.professionalId,
+        memberProfessionalId: In(professionalIds),
+        status: StaffStatus.Active,
+      },
+      select: { memberProfessionalId: true },
+    });
+
+    const permitidos = new Set([
+      ficha.professionalId,
+      ...daEquipe.map((linha) => linha.memberProfessionalId),
+    ]);
+
+    if (professionalIds.some((id) => !permitidos.has(id))) {
+      throw this.recusar(
+        'professionalIds',
+        'Só quem está na sua equipe pode atender um aluno da sua carteira.',
+      );
+    }
+  }
+
+  /**
    * Apagar a ficha. **De verdade, e não exclusão lógica.**
    *
    * A diferença para `locations`, que usa exclusão lógica, é que ali uma sessão passada aponta
@@ -335,6 +469,7 @@ export class StudentsService {
   private async marcadores(
     professionalId: string,
     fichas: Student[],
+    escopo: EscopoDaCarteira,
   ): Promise<Map<string, MarcadoresDaFicha>> {
     // Carteira vazia, ou filtro que não achou nada: sem isto, o `In([])` da consulta de convites
     // vira `IN (NULL)` e a lista vazia custaria três consultas para não responder nada.
@@ -357,10 +492,17 @@ export class StudentsService {
 
     // A duplicata é procurada na carteira **inteira**, e não só entre as fichas listadas: o
     // filtro pode estar escondendo justamente a outra metade do par.
-    const carteira = await this.students.find({
-      where: { professionalId },
-      select: { id: true, email: true, phone: true },
-    });
+    //
+    // **Só para o dono.** Para um membro, esta varredura responderia sobre fichas de colegas que
+    // ele não pode ver: "possível duplicata" acenderia por causa de um telefone que está numa
+    // ficha invisível para ele, e o marcador viraria um oráculo sobre a carteira alheia. Mesclar
+    // é do dono de qualquer forma (Fase 7), então o membro não perde nada que fosse dele.
+    const carteira = escopo.professorId
+      ? []
+      : await this.students.find({
+          where: { professionalId },
+          select: { id: true, email: true, phone: true },
+        });
 
     const quantos = (valor: string | null, campo: 'email' | 'phone'): number =>
       valor ? carteira.filter((outra) => outra[campo] === valor).length : 0;
@@ -380,6 +522,19 @@ export class StudentsService {
     });
     const conviteDe = new Map(emPe.map((invite) => [invite.studentId, invite]));
 
+    const associacoes = await this.teachers.find({
+      where: { studentId: In(fichas.map((f) => f.id)) },
+      select: { studentId: true, professionalId: true },
+      order: { professionalId: 'ASC' },
+    });
+    const professoresDe = new Map<string, string[]>();
+    for (const linha of associacoes) {
+      professoresDe.set(linha.studentId, [
+        ...(professoresDe.get(linha.studentId) ?? []),
+        linha.professionalId,
+      ]);
+    }
+
     return new Map(
       fichas.map((ficha) => {
         const invite = conviteDe.get(ficha.id);
@@ -396,6 +551,7 @@ export class StudentsService {
             invite: invite
               ? { kind: invite.kind, expiresAt: invite.expiresAt.toISOString() }
               : null,
+            teacherIds: professoresDe.get(ficha.id) ?? [],
           },
         ];
       }),

@@ -8,6 +8,7 @@ import {
   NotFoundException,
   Param,
   Post,
+  Query,
   Req,
   Res,
 } from '@nestjs/common';
@@ -37,8 +38,11 @@ export class InvitesController {
 
   @Get()
   @ApiOperation({ summary: 'As fichas da carteira que ainda não têm conta' })
-  async listar(@CurrentUser() user: AuthenticatedUser): Promise<InviteRow[]> {
-    return this.invites.listar(user.id);
+  async listar(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('negocio') negocio?: string,
+  ): Promise<InviteRow[]> {
+    return this.invites.listar(user.id, negocio);
   }
 
   @Post()

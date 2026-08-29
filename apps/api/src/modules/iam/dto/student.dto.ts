@@ -2,6 +2,7 @@ import {
   AccessHolder,
   MAX_GOALS_LENGTH,
   MAX_PRIVATE_NOTES_LENGTH,
+  MAX_STAFF_MEMBERS,
   MAX_STUDENT_NAME_LENGTH,
   MAX_STUDENT_PHONE_LENGTH,
   StudentFilter,
@@ -9,12 +10,15 @@ import {
 } from '@gestao/types';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsDateString,
   IsEmail,
   IsEnum,
   IsIn,
   IsOptional,
   IsString,
+  IsUUID,
   Length,
   MaxLength,
 } from 'class-validator';
@@ -149,4 +153,27 @@ export class ListStudentsQuery {
   @IsString()
   @MaxLength(MAX_STUDENT_NAME_LENGTH)
   busca?: string;
+
+  /**
+   * Em qual negócio esta requisição opera.
+   *
+   * Ausente é a carteira da própria conta. Quem faz parte de equipes tem **mais de uma** carteira
+   * — a própria e a de cada negócio —, e sem dizer qual, "listar meus alunos" deixa de ter uma
+   * resposta só. É o parâmetro que o seletor de negócio da tela preenche (decisão E18).
+   */
+  @ApiProperty({ required: false, description: 'A carteira do negócio. Ausente = a sua.' })
+  @IsOptional()
+  @IsUUID('7', { message: 'Negócio inválido.' })
+  negocio?: string;
+}
+
+export class SetStudentTeachersDto {
+  @ApiProperty({
+    type: [String],
+    description: 'A lista inteira de quem atende esta ficha. Substitui a anterior.',
+  })
+  @IsArray()
+  @ArrayMaxSize(MAX_STAFF_MEMBERS, { message: 'Professores demais para uma ficha só.' })
+  @IsUUID('7', { each: true, message: 'Professor inválido.' })
+  professionalIds: string[];
 }

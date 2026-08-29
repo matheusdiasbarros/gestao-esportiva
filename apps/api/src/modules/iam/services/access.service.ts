@@ -1,9 +1,27 @@
+import { StaffStatus } from '@gestao/types';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Professional } from '../entities/professional.entity';
+import { StaffMember } from '../entities/staff-member.entity';
 import { Student } from '../entities/student.entity';
 import { UserStatus } from '../entities/user.entity';
+
+/**
+ * Em qual carteira uma operação acontece, e com que alcance.
+ *
+ * Existe porque a conta que faz parte de equipes tem **mais de uma** carteira: a própria e a de
+ * cada negócio. Sem dizer qual, "listar meus alunos" deixa de ter uma resposta só.
+ */
+export interface EscopoDaCarteira {
+  /** De quem é a carteira. É o `professional_id` que as fichas carregam. */
+  professionalId: string;
+  /**
+   * Quando presente, **só as fichas associadas a este professor**. Nulo é a carteira inteira, e
+   * só o dono a recebe.
+   */
+  professorId: string | null;
+}
 
 /**
  * As duas relações que a matriz de permissões usa, num lugar só.
@@ -27,7 +45,55 @@ export class AccessService {
   constructor(
     @InjectRepository(Professional) private readonly professionals: Repository<Professional>,
     @InjectRepository(Student) private readonly students: Repository<Student>,
+    @InjectRepository(StaffMember) private readonly staff: Repository<StaffMember>,
   ) {}
+
+  /**
+   * Os negócios de que esta conta faz parte **agora**, como identificadores de carteira.
+   *
+   * Devolve donos, e não recursos, de propósito: é o que permite `scheduling`, `billing` e as
+   * fases seguintes filtrarem as **próprias** tabelas por esta lista, em vez de pedirem ao `iam`
+   * um `sessaoComoMembro()` que criaria dependência de mão dupla. A porta existe para tirar esse
+   * pedido da mesa antes de ele ser feito — ADR-006.
+   */
+  async equipesDe(userId: string): Promise<string[]> {
+    const professionalId = await this.carteiraDe(userId);
+    if (!professionalId) return [];
+
+    const participacoes = await this.staff.find({
+      where: { memberProfessionalId: professionalId, status: StaffStatus.Active },
+      select: { ownerProfessionalId: true },
+    });
+    return participacoes.map((linha) => linha.ownerProfessionalId);
+  }
+
+  /**
+   * Em qual carteira esta requisição opera, e com que alcance.
+   *
+   * Sem `negocioId`, é a carteira da própria conta, inteira. Com ele, é a de um negócio de que a
+   * conta faz parte — e aí **só as fichas associadas a ela**, que é a segunda condição da regra
+   * do membro. Negócio de que ela não faz parte responde 404, e não 403: dizer "existe, mas você
+   * não está nele" confirmaria a existência daquele profissional.
+   */
+  async escopoDaCarteira(userId: string, negocioId?: string): Promise<EscopoDaCarteira> {
+    const minha = await this.carteiraDe(userId);
+    if (!minha) throw this.inexistente();
+
+    if (!negocioId || negocioId === minha) {
+      return { professionalId: minha, professorId: null };
+    }
+
+    const participa = await this.staff.exists({
+      where: {
+        ownerProfessionalId: negocioId,
+        memberProfessionalId: minha,
+        status: StaffStatus.Active,
+      },
+    });
+    if (!participa) throw this.inexistente();
+
+    return { professionalId: negocioId, professorId: minha };
+  }
 
   /** A carteira desta conta, ou `null` se ela não é profissional. */
   async carteiraDe(userId: string): Promise<string | null> {
@@ -79,6 +145,50 @@ export class AccessService {
 
     const ficha = professionalId
       ? await this.students.findOneBy({ id: studentId, professionalId })
+      : null;
+
+    if (!ficha) throw this.inexistente();
+    return ficha;
+  }
+
+  /**
+   * A ficha, se ela for **do dono ou de um professor associado a ela**.
+   *
+   * **É um método separado, e não `fichaComoDono` com uma bandeira `permitirMembro`.** Bandeira
+   * booleana em ponto de chamada é invisível na revisão: quem lê `fichaComoDono(id, true)` não
+   * vê que acabou de abrir a ficha para a equipe inteira. Com dois nomes, a escolha aparece no
+   * diff — ADR-006.
+   *
+   * A condição do membro tem **duas** partes, e as duas estão na mesma consulta: existe
+   * participação **ativa** minha na equipe do dono desta ficha, **e** existe associação minha com
+   * esta ficha. Só a primeira entregaria a carteira inteira do clube.
+   *
+   * **A participação é conferida no banco a cada requisição**, e não lida do token. Se viajasse
+   * no token de acesso, o ex-membro continuaria entrando por até 15 minutos depois de sair — e a
+   * promessa de que o acesso termina no mesmo instante seria falsa.
+   */
+  async fichaComoDonoOuProfessor(userId: string, studentId: string): Promise<Student> {
+    const professionalId = await this.carteiraDe(userId);
+
+    const ficha = professionalId
+      ? await this.students
+          .createQueryBuilder('ficha')
+          .where('ficha.id = :studentId', { studentId })
+          .andWhere(
+            `(ficha.professional_id = :eu
+              OR EXISTS (
+                SELECT 1
+                  FROM student_teachers st
+                  JOIN staff_members sm
+                    ON sm.owner_professional_id = ficha.professional_id
+                   AND sm.member_professional_id = :eu
+                   AND sm.status = 'ACTIVE'
+                 WHERE st.student_id = ficha.id
+                   AND st.professional_id = :eu
+              ))`,
+            { eu: professionalId },
+          )
+          .getOne()
       : null;
 
     if (!ficha) throw this.inexistente();

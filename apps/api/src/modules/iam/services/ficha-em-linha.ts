@@ -53,12 +53,15 @@ export interface MarcadoresDaFicha {
   possibleDuplicate: boolean;
   /** O convite de pé, se houver. Vencido não conta — o índice parcial do banco não olha a data. */
   invite: StandingInvite | null;
+  /** Quais professores atendem esta ficha. Vazio na carteira de quem não tem equipe. */
+  teacherIds: string[];
 }
 
 const SEM_MARCADORES: MarcadoresDaFicha = {
   accountFound: false,
   possibleDuplicate: false,
   invite: null,
+  teacherIds: [],
 };
 
 /**
@@ -91,6 +94,7 @@ export function fichaComoDono(
     accountFound: marcadores.accountFound,
     possibleDuplicate: marcadores.possibleDuplicate,
     invite: marcadores.invite,
+    teacherIds: marcadores.teacherIds,
     // Sai daqui, e não dos `marcadores`: depende só da própria linha, então não há consulta a
     // esquecer. Um marcador que exige consulta pode chegar desligado de uma rota que não a fez;
     // este não pode chegar errado, porque a ficha sempre carrega a resposta consigo.

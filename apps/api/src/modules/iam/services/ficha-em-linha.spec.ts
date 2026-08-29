@@ -47,6 +47,7 @@ describe('fichaComoDono', () => {
       'possibleDuplicate',
       'privateNotes',
       'status',
+      'teacherIds',
     ]);
   });
 
@@ -132,11 +133,13 @@ describe('fichaComoDono', () => {
       accountFound: true,
       possibleDuplicate: true,
       invite: { kind: InviteKind.Link, expiresAt: '2026-08-29T12:00:00.000Z' },
+      teacherIds: ['01900000-0000-7000-8000-00000000f002'],
     });
 
     expect(ficha.accountFound).toBe(true);
     expect(ficha.possibleDuplicate).toBe(true);
     expect(ficha.invite).toEqual({ kind: 'LINK', expiresAt: '2026-08-29T12:00:00.000Z' });
+    expect(ficha.teacherIds).toEqual(['01900000-0000-7000-8000-00000000f002']);
   });
 });
 
