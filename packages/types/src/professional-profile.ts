@@ -69,6 +69,14 @@ export interface ProfessionalSportRow {
   experienceSinceYear: number | null;
   /** De um a três. Formato que ele não oferece **não tem linha** — nunca preço zero ou nulo. */
   prices: PriceRow[];
+  /**
+   * Em quais locais ele atende **esta** modalidade.
+   *
+   * **Lista vazia significa "em todos os meus locais"**, e não "em nenhum". É a única leitura
+   * que não invalida os perfis que existiam antes desta regra, e a que poupa o autônomo de um
+   * local só de preencher uma matriz para dizer o óbvio. A regra é dita uma vez, no serviço.
+   */
+  locationIds: string[];
 }
 
 export interface LocationRow {
@@ -85,6 +93,29 @@ export interface LocationRow {
   state: string;
   /** "Quadra 3, entrada pelos fundos". Para o aluno vinculado achar o lugar. */
   accessNotes: string | null;
+  /**
+   * As quadras, salas ou campos **dentro** deste local. **Nunca públicas.**
+   *
+   * Vêm junto do local, e não numa segunda requisição, porque não existem sem ele: espaço é
+   * parte de um local, e a tela os desenha dentro do mesmo bloco.
+   */
+  spaces: SpaceRow[];
+}
+
+/**
+ * Uma quadra, sala ou campo **dentro** de um local.
+ *
+ * **Não confundir com `LocationKind.PublicSpace`.** Praia e praça são *tipo de local*; quadra e
+ * sala são *parte de um local*. A colisão de nomes foi notada na Fase 5.5 e resolvida assim: o
+ * tipo continua sendo `kind`, e `Space` é só isto aqui.
+ *
+ * **Sem endereço próprio** — o local já tem o dele. Um espaço serve para responder à única
+ * pergunta que a agenda vai fazer: *duas aulas podem acontecer ao mesmo tempo aqui?*
+ */
+export interface SpaceRow {
+  id: string;
+  /** "Quadra 1", "Sala 2", "Campo de areia". */
+  name: string;
 }
 
 /**
@@ -141,6 +172,14 @@ export interface PublicProfile {
 export interface PublicProfileSport {
   name: string;
   experienceSinceYear: number | null;
+  /**
+   * Onde **esta** modalidade acontece. Bairro, cidade e UF — nunca o nome do local nem a rua.
+   *
+   * Acrescentado em 2026-08-29. Antes a página listava modalidades de um lado e bairros do
+   * outro, sem relação: quem lia *"Tênis, Beach Tennis"* e *"Jurerê, Centro"* não tinha como
+   * saber o que acontece onde, e podia aparecer no lugar errado.
+   */
+  areas: PublicProfileArea[];
 }
 
 export interface PublicProfileArea {
@@ -200,6 +239,18 @@ export const MAX_BIO_LENGTH = 600;
 export const MAX_CREDENTIALS_LENGTH = 600;
 export const MAX_SPORTS_POR_PROFISSIONAL = 10;
 export const MAX_LOCATIONS_POR_PROFISSIONAL = 20;
+
+/**
+ * Quantas quadras, salas ou campos cabem num local.
+ *
+ * **Mitigação, não capacidade**, como todos os tetos deste projeto. Uma arena com mais de trinta
+ * quadras existe; quando aparecer, o número sobe com o caso na mão. O que ele impede hoje é uma
+ * conta comprometida encher a tabela.
+ */
+export const MAX_SPACES_POR_LOCAL = 30;
+
+/** O nome de um espaço cabe em pouco: "Quadra 1", "Sala de dança", "Campo de areia". */
+export const MAX_SPACE_NAME_LENGTH = 80;
 
 /** Rede contra dedo errado, não teto de mercado: R$ 1.000.000 por aula. */
 export const MAX_PRICE_CENTS = 100_000_000;

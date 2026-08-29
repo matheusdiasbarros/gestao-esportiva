@@ -1,4 +1,10 @@
-import { LocationKind, MAX_LOCATIONS_POR_PROFISSIONAL, type LocationRow } from '@gestao/types';
+import {
+  LocationKind,
+  MAX_LOCATIONS_POR_PROFISSIONAL,
+  MAX_SPACES_POR_LOCAL,
+  type LocationRow,
+  type SpaceRow,
+} from '@gestao/types';
 import {
   ConflictException,
   Injectable,
@@ -6,11 +12,12 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
 import { ehViolacaoDeUnicidade } from '../../../common/database/violacao-de-unicidade';
-import { CreateLocationDto, UpdateLocationDto } from '../dto/location.dto';
+import { CreateLocationDto, SpaceDto, UpdateLocationDto } from '../dto/location.dto';
 import { Location } from '../entities/location.entity';
+import { Space } from '../entities/space.entity';
 
 /**
  * Onde o profissional atende.
@@ -22,7 +29,10 @@ import { Location } from '../entities/location.entity';
  */
 @Injectable()
 export class LocationsService {
-  constructor(@InjectRepository(Location) private readonly locations: Repository<Location>) {}
+  constructor(
+    @InjectRepository(Location) private readonly locations: Repository<Location>,
+    @InjectRepository(Space) private readonly spaces: Repository<Space>,
+  ) {}
 
   /** Principal primeiro, depois por ordem de cadastro. É a ordem do seletor da agenda. */
   async listar(professionalId: string): Promise<LocationRow[]> {
@@ -30,7 +40,11 @@ export class LocationsService {
       where: { professionalId },
       order: { isPrimary: 'DESC', createdAt: 'ASC' },
     });
-    return linhas.map((local) => this.emLinha(local));
+
+    // Uma consulta para todos os espaços, e não uma por local.
+    const porLocal = await this.espacosDe(linhas.map((local) => local.id));
+
+    return linhas.map((local) => this.emLinha(local, porLocal.get(local.id) ?? []));
   }
 
   async criar(professionalId: string, dto: CreateLocationDto): Promise<LocationRow> {
@@ -133,7 +147,89 @@ export class LocationsService {
       })
       .catch((erro: unknown) => this.traduzirConflito(erro));
 
-    return this.emLinha(atualizado);
+    return this.emLinha(atualizado, (await this.espacosDe([id])).get(id) ?? []);
+  }
+
+  /**
+   * Acrescenta uma quadra, sala ou campo a um local.
+   *
+   * **O tipo do local é copiado para a linha**, e é o que faz o banco recusar espaço em casa de
+   * aluno: a chave estrangeira aponta para o par *(id, kind)*, e um `CHECK` local barra
+   * `STUDENT_HOME`. Copiar aqui não é escolher — é repetir o que o banco vai conferir de todo
+   * jeito, e uma cópia divergente é recusada pela chave.
+   */
+  async criarEspaco(professionalId: string, locationId: string, dto: SpaceDto): Promise<SpaceRow> {
+    const local = await this.locations.findOneBy({ id: locationId, professionalId });
+    if (!local) throw this.inexistente();
+
+    if (local.kind === LocationKind.StudentHome) {
+      throw this.recusar(
+        'name',
+        'Atendimento na casa do aluno não tem quadra nem sala — o espaço é do aluno.',
+      );
+    }
+
+    const existentes = await this.spaces.countBy({ locationId });
+    if (existentes >= MAX_SPACES_POR_LOCAL) {
+      throw this.recusar(
+        'name',
+        `Este local já tem ${MAX_SPACES_POR_LOCAL} espaços. Exclua um para cadastrar outro.`,
+      );
+    }
+
+    const espaco = { id: uuidv7(), locationId, locationKind: local.kind, name: dto.name };
+    try {
+      await this.spaces.insert(espaco);
+    } catch (erro) {
+      if (ehViolacaoDeUnicidade(erro, 'uq_spaces_nome')) {
+        throw this.recusar('name', 'Já existe um espaço com este nome neste local.');
+      }
+      throw erro;
+    }
+
+    return { id: espaco.id, name: espaco.name };
+  }
+
+  async renomearEspaco(
+    professionalId: string,
+    locationId: string,
+    spaceId: string,
+    dto: SpaceDto,
+  ): Promise<SpaceRow> {
+    await this.espacoDoProfissional(professionalId, locationId, spaceId);
+
+    try {
+      await this.spaces.update({ id: spaceId }, { name: dto.name });
+    } catch (erro) {
+      if (ehViolacaoDeUnicidade(erro, 'uq_spaces_nome')) {
+        throw this.recusar('name', 'Já existe um espaço com este nome neste local.');
+      }
+      throw erro;
+    }
+
+    return { id: spaceId, name: dto.name };
+  }
+
+  /** Exclusão lógica, como em `locations`: a Fase 6 vai pendurar aula aqui. */
+  async removerEspaco(professionalId: string, locationId: string, spaceId: string): Promise<void> {
+    await this.espacoDoProfissional(professionalId, locationId, spaceId);
+    await this.spaces.softDelete({ id: spaceId });
+  }
+
+  /**
+   * O espaço existe, é deste local, e o local é desta conta?
+   *
+   * As três perguntas numa consulta só. Conferir o local e o espaço em dois passos daria o mesmo
+   * resultado hoje e é o caminho que erra amanhã — 404 nos três casos, pela regra de sempre.
+   */
+  private async espacoDoProfissional(
+    professionalId: string,
+    locationId: string,
+    spaceId: string,
+  ): Promise<void> {
+    const dono = await this.locations.exists({ where: { id: locationId, professionalId } });
+    const existe = dono && (await this.spaces.exists({ where: { id: spaceId, locationId } }));
+    if (!existe) throw this.inexistente();
   }
 
   /**
@@ -217,7 +313,26 @@ export class LocationsService {
    * uma frase em vez de "erro interno"; escolher um vencedor no lugar dela seria decidir qual
    * das duas abas ela quis.
    */
+  private recusar(field: string, message: string): UnprocessableEntityException {
+    return new UnprocessableEntityException({ validationErrors: [{ field, message }] });
+  }
+
   private traduzirConflito(erro: unknown): never {
+    // A cascata do `fk_spaces_location` levou o tipo novo para as quadras, e o
+    // `ck_spaces_sem_casa_do_aluno` barrou. O banco está certo e a mensagem crua não ajuda
+    // ninguém: quem tentou mudar o tipo precisa saber que o obstáculo são as quadras dele.
+    if (String(erro).includes('ck_spaces_sem_casa_do_aluno')) {
+      throw new UnprocessableEntityException({
+        validationErrors: [
+          {
+            field: 'kind',
+            message:
+              'Este local tem quadras ou salas cadastradas. Exclua-as antes de mudar para atendimento na casa do aluno.',
+          },
+        ],
+      });
+    }
+
     if (ehViolacaoDeUnicidade(erro, 'uq_locations_principal')) {
       throw new ConflictException(
         'Outro local foi marcado como principal ao mesmo tempo. Recarregue a página e tente de novo.',
@@ -233,7 +348,34 @@ export class LocationsService {
    * resposta, e no dia em que a tabela ganhar uma coluna nova é aqui que alguém decide se ela
    * sai — em vez de descobrir que já saiu.
    */
-  private emLinha(local: Location): LocationRow {
+  /**
+   * Os espaços de um conjunto de locais, agrupados.
+   *
+   * O `find` do TypeORM já esconde as linhas com `deleted_at` preenchido — é o que a coluna
+   * marcada com `@DeleteDateColumn` compra. Quem escrever SQL cru aqui um dia precisa lembrar
+   * disso à mão.
+   */
+  private async espacosDe(locationIds: string[]): Promise<Map<string, SpaceRow[]>> {
+    // Sem isto, o `In([])` de uma lista vazia vira `IN (NULL)` e custa uma ida ao banco para
+    // não responder nada.
+    if (locationIds.length === 0) return new Map();
+
+    const linhas = await this.spaces.find({
+      where: { locationId: In(locationIds) },
+      order: { name: 'ASC' },
+    });
+
+    const porLocal = new Map<string, SpaceRow[]>();
+    for (const espaco of linhas) {
+      porLocal.set(espaco.locationId, [
+        ...(porLocal.get(espaco.locationId) ?? []),
+        { id: espaco.id, name: espaco.name },
+      ]);
+    }
+    return porLocal;
+  }
+
+  private emLinha(local: Location, spaces: SpaceRow[] = []): LocationRow {
     return {
       id: local.id,
       name: local.name,
@@ -244,6 +386,7 @@ export class LocationsService {
       city: local.city,
       state: local.state,
       accessNotes: local.accessNotes,
+      spaces,
     };
   }
 }

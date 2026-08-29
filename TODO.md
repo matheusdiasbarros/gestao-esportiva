@@ -1493,39 +1493,37 @@ revelando ficha de colega; e os três tetos que foram calibrados para autônomo 
   - [ ] ~~O ex-membro guarda as aulas com o nome do aluno (E15)~~ → **pela mesma razão.** Hoje
         ele não guarda nada, porque não há nada a guardar; a tela não promete um histórico que
         não existe
-- [ ] **Epic 5.5.6 — Espaços, o local de cada modalidade, e o que a Fase 6 herda**
-  - [ ] **`professional_sport_locations`: qual modalidade acontece em qual local** — trazido pelo
-        dono em 2026-08-29, com o caso *"dou tênis num clube e beach tennis em outro, e os dois
-        clubes têm as duas quadras"*. Entra **aqui**, e não na Fase 6, porque este épico já abre
-        `locations` para os espaços: é uma migration em vez de duas, e um bloco de tela em vez de
-        dois. A Fase 6 recebe a regra pronta, que é o que o épico se propõe a fazer.
-        Par *(professional_sport_id, location_id)* único; **zero linhas significa "atendo em
-        todos os meus locais"**, que é a única leitura que não invalida os perfis existentes nem
-        obriga o autônomo de um local a preencher matriz. Detalhe em
+- [x] **Epic 5.5.6 — Espaços, o local de cada modalidade, e o que a Fase 6 herda** ✅ 2026-08-29
+      — 12 testes de API e tela, **três provados quebrando**. Duas tabelas, **oito garantias
+      exercitadas contra o banco de verdade** dentro de uma transação desfeita, e a migration
+      aplicada, revertida e reaplicada
+  - [x] **`professional_sport_locations`: qual modalidade acontece em qual local.** Par único;
+        **zero linhas significa "em todos os meus locais"**, que é a única leitura que não
+        esvazia a página pública de todo perfil criado antes desta regra. Detalhe em
         [`professional-profile.md`](docs/domain/professional-profile.md) §7.1b
-  - [ ] A página pública passa a dizer **o que acontece onde**, em vez de duas listas soltas —
-        hoje "Tênis, Beach Tennis" e "Jardim da Penha, Praia do Canto" aparecem lado a lado sem
-        relação, e quem lê pode aparecer no lugar errado. A lista fechada de campos muda, e o
-        teste dela precisa mudar junto **no mesmo commit**
-  - [ ] `spaces` como filha de `locations`, dentro de `professional-profile`: nome da quadra,
-        sala ou campo, **sem endereço próprio** — o local já tem o dele. Com
-        **`UNIQUE (location_id, id)`**, senão a chave composta da Fase 6 não é sequer criável, e
-        com **exclusão lógica**, pelo mesmo motivo de `locations`
-  - [ ] `STUDENT_HOME` não aceita espaço, e o banco recusa — mesma forma do `CHECK` que a Fase 3
-        usa para o endereço
-  - [ ] Tela: as quadras dentro do bloco de locais que a Fase 3 já entrega
-  - [ ] Os espaços **não** saem em resposta pública. A lista fechada de campos da Fase 3 não muda,
-        e o teste dela precisa continuar verde
-  - [ ] Escrever, para a Fase 6 receber pronto: `sessions` nasce com `teacher_id` **anulável**,
-        `location_id` e `space_id`, com **chave estrangeira composta** entre os dois últimos —
-        aula na Quadra 1 do local errado não é representável
-  - [ ] Escrever, para a Fase 6 receber pronto: **duas** travas de exclusão, uma por professor e
-        outra por espaço, ambas **só para aula não cancelada**
-  - [ ] Escrever, para a Fase 6 receber pronto: **a disponibilidade é declarada por negócio**
-        (decisão E19). O `DETAIL` do erro `23P01` do PostgreSQL **carrega os valores da linha em
-        conflito** — período e professor da aula do outro clube. A tradução mora em
-        `common/database/`, ao lado de `ehViolacaoDeUnicidade`, e o detalhe **nunca** sai na
-        resposta
+  - [x] A página pública passa a dizer **o que acontece onde** — cada modalidade com os bairros
+        dela, em vez de duas listas soltas. **A lista fechada mudou, e o teste dela no mesmo
+        commit.** O identificador do local entra na montagem e morre dentro dela: sabotar a
+        tradução para deixá-lo sair derruba um teste
+  - [x] `spaces` como filha de `locations`: nome da quadra, sala ou campo, **sem endereço
+        próprio**. `UNIQUE (location_id, id)` — sem ele a chave composta da Fase 6 não é sequer
+        criável — e exclusão lógica, pelo mesmo motivo de `locations`
+  - [x] **`STUDENT_HOME` não aceita espaço, e o banco recusa.** Não deu para ser um `CHECK`
+        simples: ele só enxerga a própria linha, e o tipo mora em `locations`. A saída foi trazer
+        o tipo junto por **chave estrangeira composta** em `(id, kind)`, com um `CHECK` local —
+        **este projeto não tem trigger nenhuma**, e criar a primeira para isto seria introduzir
+        um mecanismo inteiro. De brinde, com `ON UPDATE CASCADE`: **um local com quadras não vira
+        casa do aluno**, e a recusa vem traduzida em vez de erro de banco
+  - [x] Tela: as quadras dentro do bloco de locais que a Fase 3 já entrega, recolhidas até
+        alguém abrir — quem tem uma quadra só não precisa cadastrá-la
+  - [x] Os espaços **não** saem em resposta pública, e nem são selecionados na consulta dela. O
+        teste da lista fechada da Fase 3 continua verde
+  - [x] **Escrito para a Fase 6, e deliberadamente não construído** — `sessions` com
+        `teacher_id` anulável e chave composta, as duas travas de exclusão, a disponibilidade por
+        negócio e a tradução do `DETAIL` do `23P01`. Criar `sessions` agora seria construir o
+        núcleo da agenda sem a agenda, e preempção da ADR de modelagem temporal que o
+        `architect` da Fase 6 precisa escrever. **A especificação está no cabeçalho da Fase 6**,
+        em quatro itens numerados
 
 ### Decisões da fase
 
@@ -1753,6 +1751,35 @@ gatilhos do agente ao mesmo tempo
 > e por espaço, ambas só para aula não cancelada. A trava do professor **atravessa negócios**, e
 > a recusa não pode dizer em qual deles ele está — isso é requisito, não acabamento.
 > Disponibilidade passa a ser por professor. O teste de concorrência dobra.
+
+> ### O que a Fase 5.5 deixou escrito para esta fase, e **não** construiu
+>
+> Fechado no Epic 5.5.6, em 2026-08-29. **Nada disto virou tabela**, e a ausência é decisão:
+> criar `sessions` agora seria construir o núcleo da agenda sem a agenda, e preempção do trabalho
+> que o `architect` desta fase precisa fazer com a ADR de modelagem temporal na mão. O que existe
+> é a especificação, e o que ela poupa é a descoberta tardia.
+>
+> **1. `sessions` nasce com três colunas que parecem opcionais e não são.**
+> `teacher_id` **anulável** — é o que permite a aula futura perder o professor quando alguém sai
+> da equipe, sem ser cancelada (E16). `location_id` e `space_id`, com **chave estrangeira
+> composta** `(location_id, space_id)` apontando para `spaces(location_id, id)`: o par único já
+> existe no banco desde o Epic 5.5.6, e sem ele a chave composta **não é sequer criável**. O que
+> ela impede é "aula na Quadra 1 do local errado" — um estado que, sem a chave, é representável e
+> só aparece quando alguém abre a agenda do dia.
+>
+> **2. Duas travas de exclusão, não uma.** Uma por **professor** e outra por **espaço**, ambas
+> `EXCLUDE USING gist` com `btree_gist`, e ambas **só para aula não cancelada**. A do espaço
+> impede duas aulas na mesma quadra; a do professor impede a mesma pessoa em dois lugares. Sem a
+> segunda, o clube com cinco professores marca cinco aulas simultâneas na quadra única.
+>
+> **3. A trava do professor atravessa negócios, e o `DETAIL` do erro vaza.** O PostgreSQL devolve
+> no `DETAIL` do erro `23P01` **os valores da linha em conflito** — período e professor da aula do
+> outro clube. Isso é a agenda de um cliente entregue a outro. A tradução mora em
+> `common/database/`, ao lado de `ehViolacaoDeUnicidade`, e o `DETAIL` **nunca** sai na resposta:
+> a recusa diz que o horário está ocupado, e não onde nem com quem.
+>
+> **4. A disponibilidade é declarada por negócio** (decisão E19), e não uma só para a pessoa.
+> Quem dá aula em dois clubes tem duas grades, e a trava de conflito é que as concilia.
 
 > **Requisitos trazidos pelo dono em 2026-08-29**, antes de a fase abrir. Não são sugestões: são
 > o comportamento pedido, e a abertura da fase os transforma em decisões numeradas.

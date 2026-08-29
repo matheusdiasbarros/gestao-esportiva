@@ -11,11 +11,13 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
 import { ehViolacaoDeUnicidade } from '../../../common/database/violacao-de-unicidade';
 import { SportsService } from '../../sports/services/sports.service';
 import { AddSportDto, PriceInputDto, UpdateSportDto } from '../dto/sport.dto';
+import { Location } from '../entities/location.entity';
+import { ProfessionalSportLocation } from '../entities/professional-sport-location.entity';
 import { ProfessionalSportPrice } from '../entities/professional-sport-price.entity';
 import { ProfessionalSport } from '../entities/professional-sport.entity';
 
@@ -49,6 +51,10 @@ export class ProfessionalSportsService {
   constructor(
     @InjectRepository(ProfessionalSport)
     private readonly vinculos: Repository<ProfessionalSport>,
+    @InjectRepository(ProfessionalSportLocation)
+    private readonly locaisDaModalidade: Repository<ProfessionalSportLocation>,
+    @InjectRepository(Location)
+    private readonly locations: Repository<Location>,
     private readonly sports: SportsService,
   ) {}
 
@@ -65,6 +71,7 @@ export class ProfessionalSportsService {
     });
 
     const modalidades = await this.sports.porIds(vinculos.map((vinculo) => vinculo.sportId));
+    const locais = await this.locaisPorModalidade(vinculos.map((vinculo) => vinculo.id));
 
     return vinculos
       .map((vinculo) => {
@@ -76,6 +83,7 @@ export class ProfessionalSportsService {
           id: vinculo.id,
           sport: sport ?? { id: vinculo.sportId, name: '—', status: 'ARCHIVED' as const },
           experienceSinceYear: vinculo.experienceSinceYear,
+          locationIds: locais.get(vinculo.id) ?? [],
           prices: [...vinculo.prices]
             .sort(
               (a, b) =>
@@ -110,6 +118,8 @@ export class ProfessionalSportsService {
       });
     }
 
+    const locais = await this.locaisPermitidos(professionalId, dto.locationIds);
+
     const sport = await this.resolverModalidade(professionalId, dto);
     const vinculo = { id: uuidv7(), professionalId, sportId: sport.id, experienceSinceYear };
 
@@ -125,6 +135,7 @@ export class ProfessionalSportsService {
             amountCents: preco.amountCents,
           })),
         );
+        await this.gravarLocais(manager, vinculo.id, locais);
       });
     } catch (erro) {
       if (ehViolacaoDeUnicidade(erro, 'uq_professional_sports_par')) {
@@ -150,10 +161,21 @@ export class ProfessionalSportsService {
     const mudaAno = dto.experienceSinceYear !== undefined;
     const experienceSinceYear = mudaAno ? this.anoDeInicio(dto.experienceSinceYear ?? null) : null;
     const precos = dto.prices ? this.semFormatoRepetido(dto.prices) : null;
+    const mudaLocais = dto.locationIds !== undefined;
+    const locais = mudaLocais ? await this.locaisPermitidos(professionalId, dto.locationIds) : [];
 
     await this.vinculos.manager.transaction(async (manager) => {
       if (mudaAno) {
         await manager.update(ProfessionalSport, { id }, { experienceSinceYear });
+      }
+
+      if (mudaLocais) {
+        // A lista enviada substitui a que estava lá, inteira — mesma forma dos preços, e pelo
+        // mesmo motivo: é assim que o formulário funciona, com todos os locais à vista e
+        // marcados os que valem. E é o único jeito de **voltar** para "atendo em todos": mandar
+        // a lista vazia.
+        await manager.delete(ProfessionalSportLocation, { professionalSportId: id });
+        await this.gravarLocais(manager, id, locais);
       }
 
       if (!precos) return;
@@ -196,6 +218,79 @@ export class ProfessionalSportsService {
    * validador para um caso só. Mandar os dois não é ambiguidade que dê para resolver por
    * precedência: quem manda os dois não sabe qual quer.
    */
+  /**
+   * Em quais locais cada modalidade acontece, para um conjunto de vínculos.
+   *
+   * **Lista vazia significa "em todos os meus locais"**, e a ausência de linha é justamente
+   * como isso é representado. Não há valor especial a interpretar: quem nunca escolheu local
+   * nenhum atende em todos, que é o estado de todo perfil criado antes desta regra existir.
+   */
+  private async locaisPorModalidade(ids: string[]): Promise<Map<string, string[]>> {
+    if (ids.length === 0) return new Map();
+
+    const linhas = await this.locaisDaModalidade.find({
+      where: { professionalSportId: In(ids) },
+      select: { professionalSportId: true, locationId: true },
+    });
+
+    const porModalidade = new Map<string, string[]>();
+    for (const linha of linhas) {
+      porModalidade.set(linha.professionalSportId, [
+        ...(porModalidade.get(linha.professionalSportId) ?? []),
+        linha.locationId,
+      ]);
+    }
+    return porModalidade;
+  }
+
+  /**
+   * Os locais pedidos existem e são **deste** profissional?
+   *
+   * A conferência é obrigatória mesmo com as duas pontas pertencendo à mesma pessoa: o
+   * identificador vem do corpo da requisição, e nada impede alguém de mandar o de outro. Sem
+   * isto, a página pública dele passaria a anunciar o bairro de um estranho.
+   *
+   * Locais excluídos não contam — `find` já os esconde pela coluna de exclusão lógica.
+   */
+  private async locaisPermitidos(
+    professionalId: string,
+    pedidos: string[] | undefined,
+  ): Promise<string[]> {
+    const desejados = [...new Set(pedidos ?? [])];
+    if (desejados.length === 0) return [];
+
+    const meus = await this.locations.find({
+      where: { id: In(desejados), professionalId },
+      select: { id: true },
+    });
+
+    if (meus.length !== desejados.length) {
+      throw new UnprocessableEntityException({
+        validationErrors: [
+          {
+            field: 'locationIds',
+            message: 'Escolha apenas locais que estão no seu perfil.',
+          },
+        ],
+      });
+    }
+
+    return desejados;
+  }
+
+  private async gravarLocais(
+    manager: EntityManager,
+    professionalSportId: string,
+    locationIds: string[],
+  ): Promise<void> {
+    if (locationIds.length === 0) return;
+
+    await manager.insert(
+      ProfessionalSportLocation,
+      locationIds.map((locationId) => ({ id: uuidv7(), professionalSportId, locationId })),
+    );
+  }
+
   private async resolverModalidade(professionalId: string, dto: AddSportDto) {
     const escolheu = Boolean(dto.sportId);
     const digitou = Boolean(dto.sportName);

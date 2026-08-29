@@ -1,4 +1,4 @@
-import { LocationKind, UFS_DO_BRASIL } from '@gestao/types';
+import { LocationKind, MAX_SPACE_NAME_LENGTH, UFS_DO_BRASIL } from '@gestao/types';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsEnum, IsIn, IsOptional, IsString, Length, MaxLength } from 'class-validator';
@@ -83,3 +83,21 @@ export class CreateLocationDto {
  * pessoa fica sem entender. O serviço trata isso.
  */
 export class UpdateLocationDto extends PartialType(CreateLocationDto) {}
+
+/**
+ * Uma quadra, sala ou campo. **Só o nome.**
+ *
+ * Sem endereço — o local já tem o dele —, sem tipo e sem capacidade. Um espaço existe para
+ * responder à única pergunta que a agenda vai fazer: *duas aulas podem acontecer aqui ao mesmo
+ * tempo?* Campo que não ajuda a responder isso não entra, e o que o modelo não tem ninguém
+ * preenche por engano.
+ */
+export class SpaceDto {
+  @ApiProperty({ example: 'Quadra 1', description: 'Como ele chama esse espaço na agenda.' })
+  @Trim()
+  @IsString()
+  @Length(1, MAX_SPACE_NAME_LENGTH, {
+    message: `O nome do espaço cabe em ${MAX_SPACE_NAME_LENGTH} caracteres.`,
+  })
+  name: string;
+}

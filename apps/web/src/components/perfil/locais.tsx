@@ -4,6 +4,7 @@ import {
   LocationKind,
   MAX_LOCATIONS_POR_PROFISSIONAL,
   UFS_DO_BRASIL,
+  MAX_SPACE_NAME_LENGTH,
   type LocationRow,
 } from '@gestao/types';
 import { useId, useState } from 'react';
@@ -127,6 +128,12 @@ export function BlocoLocais({
                   </BotaoSecundario>
                 </div>
               </div>
+
+              {/* As quadras ficam **dentro** do bloco do local, e não numa seção própria: um
+                  espaço não existe sem o local, e separá-los faria a pessoa procurar em dois
+                  lugares para responder uma pergunta só. Casa do aluno não tem quadra — e o
+                  banco recusa, não é só a tela que esconde. */}
+              {local.kind === 'STUDENT_HOME' ? null : <Espacos local={local} agir={agir} />}
             </li>
           ),
         )}
@@ -382,6 +389,107 @@ function Texto({
           {dica}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * As quadras, salas ou campos de um local.
+ *
+ * **A agenda da Fase 6 é a única razão de isto existir.** Um espaço serve para responder se duas
+ * aulas podem acontecer ao mesmo tempo no mesmo lugar — e é por isso que ele não tem endereço,
+ * tipo nem capacidade: nada disso ajuda a responder essa pergunta.
+ *
+ * Quem tem uma quadra só não precisa cadastrá-la. O bloco fica recolhido até alguém abrir, e a
+ * lista vazia é estado normal e permanente, não pendência.
+ */
+function Espacos({
+  local,
+  agir,
+}: {
+  local: LocationRow;
+  agir: (caminho: string, init: RequestInit, mensagem: string) => Promise<void>;
+}) {
+  const [aberto, setAberto] = useState(local.spaces.length > 0);
+  const [nome, setNome] = useState('');
+  const [salvando, setSalvando] = useState(false);
+
+  const base = `/professionals/me/locations/${local.id}/spaces`;
+
+  async function acrescentar(evento: React.FormEvent) {
+    evento.preventDefault();
+    if (!nome.trim()) return;
+    setSalvando(true);
+    await agir(
+      base,
+      { method: 'POST', body: JSON.stringify({ name: nome.trim() }) },
+      'Não foi possível cadastrar o espaço.',
+    );
+    setNome('');
+    setSalvando(false);
+  }
+
+  if (!aberto) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAberto(true)}
+        className="mt-2 text-xs text-(--color-ink-muted) underline-offset-2 hover:underline"
+      >
+        Cadastrar quadras ou salas deste local
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-3 border-t border-(--color-border) pt-3">
+      <p className="text-xs font-medium">Quadras, salas e campos</p>
+      <p className="mt-0.5 text-xs text-(--color-ink-muted)">
+        Só se houver mais de um, e duas aulas puderem acontecer ao mesmo tempo aqui. Isto não
+        aparece na sua página pública.
+      </p>
+
+      {local.spaces.length > 0 ? (
+        <ul className="mt-2 flex flex-wrap gap-2">
+          {local.spaces.map((espaco) => (
+            <li
+              key={espaco.id}
+              className="flex items-center gap-2 rounded-full border border-(--color-border) px-3 py-1 text-xs"
+            >
+              {espaco.name}
+              <button
+                type="button"
+                aria-label={`Excluir ${espaco.name}`}
+                onClick={() => {
+                  if (!window.confirm(`Excluir ${espaco.name}?`)) return;
+                  void agir(
+                    `${base}/${espaco.id}`,
+                    { method: 'DELETE' },
+                    'Não foi possível excluir o espaço.',
+                  );
+                }}
+                className="text-(--color-ink-muted)"
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <form onSubmit={acrescentar} className="mt-2 flex flex-wrap items-center gap-2">
+        <input
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          placeholder="Quadra 1"
+          aria-label={`Nome do espaço em ${local.name}`}
+          maxLength={MAX_SPACE_NAME_LENGTH}
+          className="flex-1 rounded-lg border border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-xs"
+        />
+        <BotaoSecundario type="submit" disabled={salvando}>
+          Acrescentar
+        </BotaoSecundario>
+      </form>
     </div>
   );
 }

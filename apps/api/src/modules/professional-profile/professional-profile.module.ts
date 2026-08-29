@@ -5,8 +5,10 @@ import { IamModule } from '../iam/iam.module';
 import { SportsModule } from '../sports/sports.module';
 import { Location } from './entities/location.entity';
 import { ProfessionalProfile } from './entities/professional-profile.entity';
+import { ProfessionalSportLocation } from './entities/professional-sport-location.entity';
 import { ProfessionalSportPrice } from './entities/professional-sport-price.entity';
 import { ProfessionalSport } from './entities/professional-sport.entity';
+import { Space } from './entities/space.entity';
 import { LocationsController } from './locations.controller';
 import { PhotosController } from './photos.controller';
 import { ProfessionalProfileController } from './professional-profile.controller';
@@ -45,7 +47,9 @@ import { PublicProfileService } from './services/public-profile.service';
       ProfessionalProfile,
       ProfessionalSport,
       ProfessionalSportPrice,
+      ProfessionalSportLocation,
       Location,
+      Space,
     ]),
   ],
   controllers: [

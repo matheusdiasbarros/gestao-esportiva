@@ -58,12 +58,15 @@ export class PublicProfileService {
       this.vinculos.find({
         where: { professionalId },
         select: { sportId: true, experienceSinceYear: true },
+        relations: { locations: true },
       }),
       this.locations.find({
         where: { professionalId },
         // Sem `name`, sem `street_address`, sem `access_notes`, sem `is_primary`. Só o que a
         // tabela do §9 marca como público.
-        select: { kind: true, neighborhood: true, city: true, state: true },
+        // O `id` entra na seleção **só para casar modalidade com local**, e não chega à
+        // resposta: `montarPerfilPublico` traduz identificador em bairro e devolve só o bairro.
+        select: { id: true, kind: true, neighborhood: true, city: true, state: true },
       }),
     ]);
 
@@ -82,6 +85,7 @@ export class PublicProfileService {
                   name: modalidade.name,
                   status: modalidade.status,
                   experienceSinceYear: vinculo.experienceSinceYear,
+                  locationIds: vinculo.locations.map((ligacao) => ligacao.locationId),
                 },
               ]
             : [];
@@ -98,7 +102,11 @@ export class PublicProfileService {
         // Ele continua usando a modalidade na carteira e na agenda; o que espera a revisão é a
         // vitrine, e a tela de perfil diz isso com todas as letras.
         .filter((linha) => linha.status === SportStatus.Approved)
-        .map(({ name, experienceSinceYear }) => ({ name, experienceSinceYear }))
+        .map(({ name, experienceSinceYear, locationIds }) => ({
+          name,
+          experienceSinceYear,
+          locationIds,
+        }))
         .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
       locations: locais,
     });

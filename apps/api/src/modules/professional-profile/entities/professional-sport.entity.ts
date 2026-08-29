@@ -1,5 +1,6 @@
 import { Column, Entity, Index, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../../database/base.entity';
+import type { ProfessionalSportLocation } from './professional-sport-location.entity';
 import type { ProfessionalSportPrice } from './professional-sport-price.entity';
 
 /**
@@ -41,4 +42,11 @@ export class ProfessionalSport extends BaseEntity {
    */
   @OneToMany('ProfessionalSportPrice', (preco: ProfessionalSportPrice) => preco.professionalSport)
   prices: ProfessionalSportPrice[];
+
+  /** Onde esta modalidade acontece. **Vazio significa em todos os locais** — §7.1b. */
+  @OneToMany(
+    'ProfessionalSportLocation',
+    (ligacao: ProfessionalSportLocation) => ligacao.professionalSport,
+  )
+  locations: ProfessionalSportLocation[];
 }

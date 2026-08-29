@@ -14,13 +14,28 @@ export interface DadosDaPaginaPublica {
   bio: string | null;
   /** Já convertido no endereço da nossa rota — o caminho em disco não chega até aqui. */
   photoUrl: string | null;
-  sports: { name: string; experienceSinceYear: number | null }[];
-  locations: {
-    kind: LocationKind;
-    neighborhood: string | null;
-    city: string;
-    state: string;
+  sports: {
+    name: string;
+    experienceSinceYear: number | null;
+    /** **Vazio significa "em todos os locais"** — §7.1b. A tradução é feita abaixo. */
+    locationIds: string[];
   }[];
+  locations: LocalPublico[];
+}
+
+/**
+ * Um local, como a montagem da página o enxerga.
+ *
+ * **O `id` está aqui e não sai na resposta.** Ele existe só para casar cada modalidade com os
+ * bairros dela; `montarPerfilPublico` recebe identificador e devolve bairro. É a única exceção
+ * ao "nenhum identificador entra neste tipo", e ela é local: o campo morre dentro da função.
+ */
+export interface LocalPublico {
+  id: string;
+  kind: LocationKind;
+  neighborhood: string | null;
+  city: string;
+  state: string;
 }
 
 /**
@@ -42,6 +57,18 @@ export function montarPerfilPublico(dados: DadosDaPaginaPublica): PublicProfile 
     sports: dados.sports.map((sport) => ({
       name: sport.name,
       experienceSinceYear: sport.experienceSinceYear,
+      // **O identificador do local não sai daqui**, e é por isso que a tradução é feita nesta
+      // função e não no serviço: o que entra é uma lista de identificadores, o que sai é uma
+      // lista de bairros. Um `id` na resposta pública seria a mesma classe de vazamento que a
+      // lista fechada de campos existe para impedir.
+      //
+      // Lista vazia quer dizer "em todos os meus locais" (`professional-profile.md` §7.1b), e
+      // é aqui que essa regra vira comportamento — uma vez, num lugar só.
+      areas: areasDistintas(
+        sport.locationIds.length === 0
+          ? dados.locations
+          : dados.locations.filter((local) => sport.locationIds.includes(local.id)),
+      ),
     })),
     areas: areasDistintas(dados.locations),
     // Sim/não, nunca a lista de locais do tipo. É útil para quem procura e não revela endereço.
@@ -60,7 +87,7 @@ export function montarPerfilPublico(dados: DadosDaPaginaPublica): PublicProfile 
  * linhas carrega informação — qual é o principal, qual foi cadastrado primeiro —, e ordenar
  * pelo conteúdo é o que apaga esse rastro sem tornar a resposta imprevisível a cada chamada.
  */
-function areasDistintas(locations: DadosDaPaginaPublica['locations']): PublicProfileArea[] {
+function areasDistintas(locations: LocalPublico[]): PublicProfileArea[] {
   const porChave = new Map<string, PublicProfileArea>();
 
   for (const local of locations) {

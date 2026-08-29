@@ -12,6 +12,7 @@ import { montarPerfilPublico, type DadosDaPaginaPublica } from './perfil-publico
  * As duas existem: esta prova a regra, aquela prova que a regra é a que está no ar.
  */
 const arena = {
+  id: '01900000-0000-7000-8000-0000000000a1',
   kind: LocationKind.PartnerVenue,
   neighborhood: 'Jurerê',
   city: 'Florianópolis',
@@ -22,7 +23,9 @@ const completo: DadosDaPaginaPublica = {
   professionalName: 'Rodrigo Almeida',
   bio: 'Dou aula de beach tennis há dez anos.',
   photoUrl: 'professionals/photos/abc.webp?v=1',
-  sports: [{ name: 'Beach tennis', experienceSinceYear: 2016 }],
+  // Lista de locais vazia: significa "em todos os meus locais" (§7.1b), que é o estado de todo
+  // perfil criado antes de a regra existir — e o caso que precisa continuar funcionando.
+  sports: [{ name: 'Beach tennis', experienceSinceYear: 2016, locationIds: [] }],
   locations: [arena],
 };
 
@@ -63,7 +66,56 @@ describe('montarPerfilPublico', () => {
     // A modalidade pública carrega nome e ano, e nada de valor. É a decisão D2 lida ao
     // contrário: o aluno **vinculado** vê preço; o visitante, não.
     const publico = montarPerfilPublico(completo);
-    expect(Object.keys(publico.sports[0] ?? {}).sort()).toEqual(['experienceSinceYear', 'name']);
+    expect(Object.keys(publico.sports[0] ?? {}).sort()).toEqual([
+      'areas',
+      'experienceSinceYear',
+      'name',
+    ]);
+  });
+
+  describe('onde cada modalidade acontece', () => {
+    const praia = { ...arena, id: '01900000-0000-7000-8000-0000000000a2', neighborhood: 'Centro' };
+
+    it('sem local escolhido, a modalidade sai com todas as áreas dele', () => {
+      // **É a regra que sustenta todos os perfis anteriores a esta mudança.** Se lista vazia
+      // significasse "em nenhum lugar", todo profissional cadastrado antes de 2026-08-29 teria
+      // a página pública esvaziada sem ninguém mexer em nada.
+      const publico = montarPerfilPublico({ ...completo, locations: [arena, praia] });
+
+      expect(publico.sports[0]?.areas.map((area) => area.neighborhood)).toEqual([
+        'Centro',
+        'Jurerê',
+      ]);
+    });
+
+    it('com local escolhido, sai só a área daquele local', () => {
+      const publico = montarPerfilPublico({
+        ...completo,
+        sports: [
+          { name: 'Tênis', experienceSinceYear: null, locationIds: [arena.id] },
+          { name: 'Beach tennis', experienceSinceYear: null, locationIds: [praia.id] },
+        ],
+        locations: [arena, praia],
+      });
+
+      const porModalidade = new Map(
+        publico.sports.map((sport) => [sport.name, sport.areas.map((area) => area.neighborhood)]),
+      );
+      expect(porModalidade.get('Tênis')).toEqual(['Jurerê']);
+      expect(porModalidade.get('Beach tennis')).toEqual(['Centro']);
+    });
+
+    it('o identificador do local não sai na resposta', () => {
+      // Ele entra na montagem só para casar modalidade com bairro, e morre dentro da função.
+      // Um `id` na resposta pública é a mesma classe de vazamento que a lista fechada impede.
+      const publico = montarPerfilPublico({
+        ...completo,
+        sports: [{ name: 'Tênis', experienceSinceYear: null, locationIds: [arena.id] }],
+        locations: [arena, praia],
+      });
+
+      expect(JSON.stringify(publico)).not.toContain(arena.id);
+    });
   });
 
   describe('áreas de atendimento', () => {

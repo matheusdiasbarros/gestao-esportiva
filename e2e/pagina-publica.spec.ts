@@ -48,7 +48,11 @@ interface PerfilPublico {
   professionalName: string;
   photoUrl: string | null;
   bio: string | null;
-  sports: { name: string; experienceSinceYear: number | null }[];
+  sports: {
+    name: string;
+    experienceSinceYear: number | null;
+    areas: { neighborhood: string | null; city: string; state: string }[];
+  }[];
   areas: { neighborhood: string | null; city: string; state: string }[];
   travelsToStudent: boolean;
 }
@@ -182,9 +186,14 @@ test.describe('A resposta da API', () => {
   test('os objetos de dentro também são fechados', async ({ request }) => {
     const perfil = await lerComoEstranho(request);
 
-    // A modalidade sai com nome e ano. **Sem preço**, sem identificador, sem estado de
-    // curadoria: o aluno vinculado vê preço (decisão D2), o visitante não.
-    expect(Object.keys(perfil.sports[0] ?? {}).sort()).toEqual(['experienceSinceYear', 'name']);
+    // A modalidade sai com nome, ano e **as áreas onde ela acontece** — este último desde
+    // 2026-08-29. Sem preço, sem identificador, sem estado de curadoria: o aluno vinculado vê
+    // preço (decisão D2), o visitante não.
+    expect(Object.keys(perfil.sports[0] ?? {}).sort()).toEqual([
+      'areas',
+      'experienceSinceYear',
+      'name',
+    ]);
 
     // A área sai com bairro, cidade e UF. Sem nome de local, sem rua, sem identificador.
     expect(Object.keys(perfil.areas[0] ?? {}).sort()).toEqual(['city', 'neighborhood', 'state']);

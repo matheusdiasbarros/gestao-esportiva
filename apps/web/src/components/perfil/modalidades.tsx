@@ -7,6 +7,7 @@ import {
   MIN_EXPERIENCE_YEAR,
   SessionFormat,
   normalizarNomeDeModalidade,
+  type LocationRow,
   type ProfessionalSportRow,
   type SportRow,
 } from '@gestao/types';
@@ -53,9 +54,11 @@ function paraEnvio(precos: Precos) {
 
 export function BlocoModalidades({
   modalidades,
+  locais,
   recarregar,
 }: {
   modalidades: ProfessionalSportRow[];
+  locais: LocationRow[];
   recarregar: () => Promise<void>;
 }) {
   const [catalogo, setCatalogo] = useState<SportRow[]>([]);
@@ -107,6 +110,7 @@ export function BlocoModalidades({
             >
               <Formulario
                 modalidade={modalidade}
+                locais={locais}
                 aoTerminar={async () => {
                   setEditando(null);
                   await recarregar();
@@ -141,6 +145,19 @@ export function BlocoModalidades({
                           )
                           .join(' · ')}
                   </p>
+
+                  {/* Onde esta modalidade acontece. Só aparece para quem tem **mais de um**
+                      local: com um só, a resposta é sempre a mesma e a linha seria ruído. */}
+                  {locais.length > 1 ? (
+                    <p className="mt-0.5 text-xs text-(--color-ink-muted)">
+                      {modalidade.locationIds.length === 0
+                        ? 'Em todos os seus locais'
+                        : `Em ${locais
+                            .filter((local) => modalidade.locationIds.includes(local.id))
+                            .map((local) => local.name)
+                            .join(', ')}`}
+                    </p>
+                  ) : null}
 
                   {/* A segunda frase entrou em 2026-08-29, junto da regra que tira a modalidade
                       pendente da página pública. Sem ela, o profissional cadastra "Beach Tenis",
@@ -184,6 +201,7 @@ export function BlocoModalidades({
             <Formulario
               catalogo={catalogo}
               jaCadastradas={modalidades}
+              locais={locais}
               aoTerminar={async () => {
                 setAcrescentando(false);
                 await recarregar();
@@ -223,12 +241,14 @@ function Formulario({
   modalidade,
   catalogo = [],
   jaCadastradas = [],
+  locais = [],
   aoTerminar,
   aoCancelar,
 }: {
   modalidade?: ProfessionalSportRow;
   catalogo?: SportRow[];
   jaCadastradas?: ProfessionalSportRow[];
+  locais?: LocationRow[];
   aoTerminar: () => Promise<void>;
   aoCancelar: () => void;
 }) {
@@ -244,6 +264,11 @@ function Formulario({
   );
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  // **Nenhum marcado significa "em todos os meus locais"**, e é o estado inicial de toda
+  // modalidade criada antes desta regra. A tela diz isso em voz alta em vez de deixar o
+  // profissional achar que esqueceu de preencher algo.
+  const [locaisEscolhidos, setLocaisEscolhidos] = useState<string[]>(modalidade?.locationIds ?? []);
 
   const jaTem = new Set(jaCadastradas.map((linha) => normalizarNomeDeModalidade(linha.sport.name)));
   const repetida =
@@ -264,6 +289,7 @@ function Formulario({
       ...(editando ? {} : digitando ? { sportName: nomeDigitado.trim() } : { sportId }),
       experienceSinceYear: ano === '' ? null : Number(ano),
       prices: escolhidos,
+      locationIds: locaisEscolhidos,
     };
 
     try {
@@ -373,6 +399,40 @@ function Formulario({
             : 'O ano em que começou. Opcional — e é ano, não quantidade de anos, para não ficar desatualizado sozinho.'}
         </p>
       </div>
+
+      {/* **Onde esta modalidade acontece.**
+          Só aparece para quem tem mais de um local — com um só, perguntar seria pedir que a
+          pessoa confirme o óbvio. E nenhum marcado quer dizer "em todos", não "em nenhum": é o
+          estado de todo perfil criado antes desta regra, e obrigar a marcar transformaria uma
+          regra nova em trabalho retroativo para todo mundo. */}
+      {locais.length > 1 ? (
+        <fieldset className="flex flex-col gap-2">
+          <legend className="text-sm font-medium">Onde você dá esta modalidade</legend>
+          <p className="text-xs text-(--color-ink-muted)">
+            Deixe tudo desmarcado se você a atende em todos os seus locais. Isto aparece na sua
+            página pública, junto do bairro.
+          </p>
+          {locais.map((local) => (
+            <label key={local.id} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={locaisEscolhidos.includes(local.id)}
+                onChange={(evento) =>
+                  setLocaisEscolhidos((atual) =>
+                    evento.target.checked
+                      ? [...atual, local.id]
+                      : atual.filter((id) => id !== local.id),
+                  )
+                }
+              />
+              {local.name}
+              <span className="text-xs text-(--color-ink-muted)">
+                {[local.neighborhood, local.city].filter(Boolean).join(', ')}
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      ) : null}
 
       <fieldset className="flex flex-col gap-2">
         <legend className="text-sm font-medium">Formatos e preços</legend>

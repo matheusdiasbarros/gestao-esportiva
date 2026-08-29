@@ -443,6 +443,37 @@ não imprimir nenhum dos dois — nem para `STUDENT_HOME`, nem para os outros ti
 simplesmente volta a ficar incompleto. Bloquear seria inventar uma trava para proteger uma
 disponibilidade que ainda não existe.
 
+### 7.5 Espaços dentro do local ✱
+
+**Acrescentado em 2026-08-29, no Epic 5.5.6, e a razão é a Fase 6.** Um espaço é a quadra, a
+sala ou o campo **dentro** de um local. Ele existe para responder a uma única pergunta:
+*duas aulas podem acontecer ao mesmo tempo aqui?* Tudo o que não ajuda a responder isso ficou
+de fora — sem endereço, sem tipo, sem capacidade, sem foto.
+
+**Não confundir com `LocationKind.PublicSpace`.** Praia e praça são *tipo de local*; quadra e
+sala são *parte de um local*. A colisão de nomes foi notada na abertura da Fase 5.5 e resolvida
+mantendo `kind` para o tipo e reservando `Space` só para a parte.
+
+| Regra | Como é garantida |
+| --- | --- |
+| Nome único por local, ignorando maiúscula | índice parcial `uq_spaces_nome` sobre `lower(name)`, só entre os vivos |
+| Exclusão **lógica** | mesmo motivo de `locations`: a Fase 6 pendura aula aqui, e uma aula passada precisa continuar dizendo em qual quadra aconteceu |
+| **`STUDENT_HOME` não tem espaço** | `CHECK` sobre uma cópia do tipo do local, e chave estrangeira composta em `(id, kind)` |
+| Um local **com quadras** não vira "casa do aluno" | cai de graça da regra acima, com `ON UPDATE CASCADE` |
+| Teto de 30 por local | mitigação, não capacidade — como todos os tetos deste projeto |
+
+**Por que a cópia do tipo, e por que ela não é desnormalização por descuido.** Um `CHECK` só
+enxerga a própria linha, então *"o tipo do local não pode ser STUDENT_HOME"* não é expressável
+em `spaces` — a informação mora em `locations`. As duas saídas são trigger ou trazer o tipo
+junto pela chave estrangeira. **Este projeto não tem trigger nenhuma**, e criar a primeira para
+isto seria introduzir um mecanismo inteiro; a chave composta usa o que já existe. A cópia não
+pode divergir: a própria chave a recusa.
+
+O efeito colateral é bem-vindo, e é o que fecha a regra pelos dois lados: com
+`ON UPDATE CASCADE`, tentar mudar para "casa do aluno" um local que tem quadras faz a cascata
+levar o tipo proibido para elas, o `CHECK` barra, e a transação volta inteira. Quem tem quadra
+cadastrada não atende em domicílio.
+
 ## 8. Foto
 
 Uma foto de perfil. **Sem galeria** — o `mvp.md` diz "sem mídia elaborada", e o Epic 3.3
@@ -513,6 +544,8 @@ Legenda: `sim` = qualquer visitante · `part.` = aluno com ficha ativa naquele p
 | Desde quando atende cada modalidade | **sim** | sim | sim | sim |
 | Preço por modalidade e formato | **não** | sim | sim | sim |
 | Bairro + cidade + UF, **distintos e agregados** | **sim** | sim | sim | sim |
+| Bairro + cidade + UF **de cada modalidade** ✱ | **sim** | sim | sim | sim |
+| Nome da quadra, sala ou campo (`spaces`) ✱ | **não** | sim | sim | sim |
 | "Atende na casa do aluno" (sim/não) | **sim** | sim | sim | sim |
 | Nome do local | não | sim | sim | sim |
 | Rua e número | **não** | sim | sim | sim |
@@ -523,6 +556,18 @@ Legenda: `sim` = qualquer visitante · `part.` = aluno com ficha ativa naquele p
 | Slug e estado do link público | não | não | sim | sim |
 | Data de nascimento | não | não | sim | sim |
 | Documento (CPF/CNPJ) | — | — | — | — |
+
+> **As duas linhas com ✱ entraram em 2026-08-29**, no Epic 5.5.6.
+>
+> **A área por modalidade é campo novo e público.** Antes a página listava modalidades de um
+> lado e bairros do outro, sem relação: quem lia não sabia o que acontece onde, e podia aparecer
+> no lugar errado. Não é dado de um tipo novo — bairro, cidade e UF já eram públicos —, é a
+> mesma informação com a correlação que faltava. A lista fechada mudou junto, e o teste dela
+> também, no mesmo commit.
+>
+> **O nome do espaço não é público, e nunca será por acidente**: ele nem é selecionado na
+> consulta da página. É configuração interna, e responde a uma pergunta da agenda — *duas aulas
+> cabem aqui ao mesmo tempo?* —, não a uma de quem está escolhendo professor.
 
 **Sobre a última linha: documento não é coletado nesta fase. (proposta)** O `iam.md` §6 prevê
 a permissão, mas prever não é criar. CPF só ganha consumidor na Fase 9 (recebimento, e

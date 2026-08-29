@@ -1,4 +1,4 @@
-import { Role, type AuthenticatedUser, type LocationRow } from '@gestao/types';
+import { Role, type AuthenticatedUser, type LocationRow, type SpaceRow } from '@gestao/types';
 import {
   Body,
   Controller,
@@ -14,7 +14,7 @@ import {
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../iam/auth/current-user.decorator';
 import { Papeis } from '../iam/auth/papeis.decorator';
-import { CreateLocationDto, UpdateLocationDto } from './dto/location.dto';
+import { CreateLocationDto, SpaceDto, UpdateLocationDto } from './dto/location.dto';
 import { LocationsService } from './services/locations.service';
 import { ProfissionalAtual } from './services/profissional-atual';
 
@@ -68,5 +68,45 @@ export class LocationsController {
     @Param('id', new ParseUUIDPipe({ version: '7' })) id: string,
   ): Promise<void> {
     await this.locais.remover(await this.profissional.id(user.id), id);
+  }
+
+  // ------------------------------------------------------------------ espaços dentro do local
+  //
+  // Aninhadas debaixo do local, e não em `/spaces`, porque um espaço **não existe sem o local**:
+  // o caminho já carrega a propriedade, e não há como pedir um espaço sem dizer de qual local
+  // ele é. Elas devolvem o espaço, e não o local inteiro — a tela recarrega a lista de qualquer
+  // forma, e devolver o local aqui daria duas fontes para o mesmo dado.
+
+  @Post(':id/spaces')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Acrescenta uma quadra, sala ou campo a um local' })
+  async criarEspaco(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe({ version: '7' })) id: string,
+    @Body() dto: SpaceDto,
+  ): Promise<SpaceRow> {
+    return this.locais.criarEspaco(await this.profissional.id(user.id), id, dto);
+  }
+
+  @Patch(':id/spaces/:spaceId')
+  @ApiOperation({ summary: 'Renomeia um espaço' })
+  async renomearEspaco(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe({ version: '7' })) id: string,
+    @Param('spaceId', new ParseUUIDPipe({ version: '7' })) spaceId: string,
+    @Body() dto: SpaceDto,
+  ): Promise<SpaceRow> {
+    return this.locais.renomearEspaco(await this.profissional.id(user.id), id, spaceId, dto);
+  }
+
+  @Delete(':id/spaces/:spaceId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Exclui um espaço' })
+  async removerEspaco(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe({ version: '7' })) id: string,
+    @Param('spaceId', new ParseUUIDPipe({ version: '7' })) spaceId: string,
+  ): Promise<void> {
+    await this.locais.removerEspaco(await this.profissional.id(user.id), id, spaceId);
   }
 }

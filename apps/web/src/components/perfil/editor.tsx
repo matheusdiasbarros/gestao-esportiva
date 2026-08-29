@@ -64,7 +64,14 @@ export function EditorDePerfil({ nome }: { nome: string }) {
       <Completude completeness={perfil.completeness} />
       <BlocoFoto photoUrl={perfil.photoUrl} nome={nome} recarregar={recarregar} />
       <BlocoSobreMim bio={perfil.bio} credentials={perfil.credentials} recarregar={recarregar} />
-      <BlocoModalidades modalidades={perfil.sports} recarregar={recarregar} />
+      {/* Os locais entram aqui também: escolher onde cada modalidade acontece exige tê-los à
+          mão, e o perfil já os traz na mesma resposta. Buscar de novo criaria duas fontes para
+          a mesma lista, e a segunda desatualiza. */}
+      <BlocoModalidades
+        modalidades={perfil.sports}
+        locais={perfil.locations}
+        recarregar={recarregar}
+      />
       <BlocoLocais locais={perfil.locations} recarregar={recarregar} />
     </div>
   );

@@ -342,6 +342,23 @@ uma vez, e a chave estrangeira composta do invariante 5 impede "Quadra 1" na sed
 | ✱ Teto de espaços por local: **20** **(proposta)** | mesmo número e mesmo motivo do teto de locais: a lista aparece em seletor. É rede contra laço acidental, não capacidade |
 | ✱ Apagar um espaço com aula futura marcada nele: **bloqueado**, a partir da Fase 6 **(proposta)** | mesma regra que `professional-profile.md` §7.4 já escreveu para local. Escrita aqui para a Fase 6 não redescobrir |
 
+> **Construído em 2026-08-29, no Epic 5.5.6.** As três propostas com ✱ foram aceitas, e duas
+> mudaram de forma ao virar código:
+>
+> **O teto virou 30, e não 20.** O número de `locations` foi copiado sem pensar: um local tem no
+> máximo vinte endereços porque cadastrar endereço é trabalho; uma arena com trinta quadras é uma
+> arena comum. É mitigação, e mitigação se calibra pelo caso real.
+>
+> **A recusa de espaço em `STUDENT_HOME` não deu para ser um `CHECK` simples.** Ele só enxerga a
+> própria linha, e o tipo mora em `locations`. As alternativas eram trigger — este projeto não
+> tem nenhuma, e criar a primeira para isto introduziria um mecanismo inteiro — ou trazer o tipo
+> junto por **chave estrangeira composta** em `(id, kind)`. Foi a segunda. De brinde, com
+> `ON UPDATE CASCADE`: **um local com quadras não vira casa do aluno**, porque a cascata levaria
+> o tipo proibido para elas e o `CHECK` barra.
+>
+> A terceira — bloquear a exclusão de espaço com aula futura — continua sendo da Fase 6, porque
+> não existe aula.
+
 **A trava de espaço só pega quem cadastra espaço.** O autônomo nunca cria quadra, então
 `space_id` é nulo e ele nunca é travado — a praia continua aceitando duas aulas às 7h. Quem quer
 a trava opta por ela cadastrando quadras. **Não existe regra "se tem equipe"**: cai da modelagem.

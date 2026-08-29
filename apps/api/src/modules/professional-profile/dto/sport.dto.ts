@@ -1,4 +1,5 @@
 import {
+  MAX_LOCATIONS_POR_PROFISSIONAL,
   MAX_PRICE_CENTS,
   MAX_SPORT_NAME_LENGTH,
   MIN_PRICE_CENTS,
@@ -92,6 +93,20 @@ export class AddSportDto {
   @ValidateNested({ each: true })
   @Type(() => PriceInputDto)
   prices: PriceInputDto[];
+
+  /**
+   * Em quais dos meus locais eu atendo **esta** modalidade.
+   *
+   * **Ausente ou vazio significa "em todos"**, e não "em nenhum" — é a única leitura que não
+   * invalida os perfis criados antes desta regra, e a que poupa quem tem um local só de
+   * preencher uma matriz para dizer o óbvio. Ver `professional-profile.md` §7.1b.
+   */
+  @ApiProperty({ required: false, type: [String], description: 'Vazio = todos os meus locais.' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_LOCATIONS_POR_PROFISSIONAL)
+  @IsUUID('7', { each: true, message: 'Local inválido.' })
+  locationIds?: string[];
 }
 
 /**
@@ -118,4 +133,18 @@ export class UpdateSportDto {
   @ValidateNested({ each: true })
   @Type(() => PriceInputDto)
   prices?: PriceInputDto[];
+
+  /**
+   * Substitui a lista inteira de locais desta modalidade, como `prices` faz com os preços.
+   *
+   * **Mandar a lista vazia é a forma de voltar para "atendo em todos os meus locais"** — e é
+   * por isso que "ausente" e "vazio" precisam significar coisas diferentes aqui: ausente é
+   * "não mexa", vazio é "todos".
+   */
+  @ApiProperty({ required: false, type: [String], description: 'Vazio = todos os meus locais.' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_LOCATIONS_POR_PROFISSIONAL)
+  @IsUUID('7', { each: true, message: 'Local inválido.' })
+  locationIds?: string[];
 }
