@@ -1299,27 +1299,34 @@ revelando ficha de colega; e os três tetos que foram calibrados para autônomo 
 
 ### Épicos e tarefas
 
-- [ ] **Epic 5.5.1 — A participação na equipe**
-  - [ ] **O vocabulário entra no `glossary.md` antes da migration** — o `product` já escreveu, e
+- [x] **Epic 5.5.1 — A participação na equipe** ✅ 2026-08-29
+  - [x] **O vocabulário entra no `glossary.md` antes da migration** — o `product` já escreveu, e
         aqui é conferir que o código obedece. Quatro regras: "equipe" vira `staff`, nunca `team`
         (um clube vai querer *equipe de competição*); **"vínculo" continua sendo só a relação do
         aluno com o profissional**, e a de equipe chama-se **participação**; **"professor"
         nomeia três coisas** que não coincidem, então em código `teacher` é só *quem atende a
         ficha* e **não existe tabela `teachers`**; e `Space` colide com `LocationKind.PublicSpace`
         — praia e praça são *tipo de local*, quadra e sala são *parte de um local*
-  - [ ] Migration com `staff_invites`, `staff_members` e `student_teachers` — revisada à mão e
-        revertível. **Podar o que o `migration:generate` apaga**: `CHECK` e índice parcial não
-        existem no modelo de entidades (`tech-debt.md`)
-  - [ ] `CHECK` que torna a auto-participação não representável: `owner_professional_id <> member_professional_id`
-  - [ ] Estados `ACTIVE` e `ENDED` numa **função pura**, no padrão de `vinculo.ts` — testada em
-        todas as combinações, e provada quebrando
-  - [ ] Ex-membro convidado de novo **reativa a mesma linha**, como a ficha encerrada do aluno.
-        **Guardar as datas de cada entrada e saída** — sem isso o art. 18, VII ("quem teve acesso
-        aos meus dados, e quando") fica sem resposta. Custa uma coluna
-  - [ ] `PAUSED` **não existe**, e o motivo fica escrito: quem afasta encerra, quem volta é reativado
+  - [x] Migration `CriaEquipe` com `staff_invites`, `staff_members` e `student_teachers` —
+        escrita à mão, **aplicada, revertida e reaplicada**. **Treze garantias exercitadas contra
+        o banco**: seis recusas e sete aceites, todas conferidas uma a uma
+  - [x] `CHECK` que torna a auto-participação não representável: `owner_professional_id <> member_professional_id`
+  - [x] Estados `ACTIVE` e `ENDED` numa **função pura** (`participacao.ts`), no padrão de
+        `vinculo.ts` — 7 testes, e **provada quebrando**: sabotar a tabela de transições derruba
+        dois deles
+  - [x] ~~Ex-membro convidado de novo **reativa a mesma linha**~~ → **errado, e corrigido na
+        implementação.** Reaproveitar a linha apagaria quando a pessoa entrou e saiu de cada vez —
+        que é exatamente o que o art. 18, VII pergunta, e que o mesmo item exigia guardar. As duas
+        metades se contradiziam. **Voltar é linha nova**, uma por passagem, com a unicidade no
+        índice parcial `uq_staff_members_ativa`. Sai de graça, sem coluna de histórico, e a ficha
+        do aluno continua reativando a mesma linha porque **é outra coisa**: um registro sobre uma
+        pessoa, não um período
+  - [x] `PAUSED` **não existe**, e o motivo fica escrito: quem afasta encerra, quem volta entra de novo
   - [ ] **O token de acesso não ganha claim de equipe** (ADR-006 §3). Se ganhasse, o ex-membro
         manteria acesso por até 15 minutos, e a promessa de que o acesso some **no mesmo
-        instante** seria falsa. Custo aceito: uma consulta a mais por requisição
+        instante** seria falsa. Custo aceito: uma consulta a mais por requisição.
+        *Decidido e escrito na entidade; o teste que afirma a ausência entra no Epic 5.5.3, junto
+        da regra de acesso que ele protege*
 - [ ] **Epic 5.5.2 — Convite e aceite**
   - [ ] `POST /staff/invites` — token de uso único guardado como **hash**, 7 dias, e-mail do dono
         verificado exigido, e o mesmo teto do convite de aluno reaproveitado

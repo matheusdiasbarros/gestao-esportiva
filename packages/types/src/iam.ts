@@ -57,6 +57,28 @@ export const AccessHolder = {
 
 export type AccessHolder = (typeof AccessHolder)[keyof typeof AccessHolder];
 
+/**
+ * Estado da **participação** de um profissional na equipe de outro — `docs/domain/staff.md`.
+ *
+ * **Nunca chamada de "vínculo".** Vínculo é a relação do aluno com o profissional, e usar a mesma
+ * palavra para as duas coisas envenena a documentação tanto quanto usar duas para uma só.
+ *
+ * Dois estados, e não três. `PAUSED` foi considerado — o professor afastado — e recusado: quem
+ * afasta encerra, e quem volta entra de novo. Um terceiro estado pediria uma tabela de transições
+ * própria para resolver um caso que ainda não apareceu.
+ *
+ * E `ENDED` **não volta** para `ACTIVE`. Diferente da ficha do aluno, que reativa a mesma linha
+ * porque é um registro sobre uma pessoa, a participação é um **período**: quem sai e volta teve
+ * dois, e cada um é uma linha. É o que responde ao art. 18, VII da LGPD — *"quem teve acesso aos
+ * meus dados, e quando"* — sem nenhuma coluna de histórico.
+ */
+export const StaffStatus = {
+  Active: 'ACTIVE',
+  Ended: 'ENDED',
+} as const;
+
+export type StaffStatus = (typeof StaffStatus)[keyof typeof StaffStatus];
+
 /** Identificação de quem está autenticado, devolvida pela API após login e renovação. */
 export interface AuthenticatedUser {
   id: string;
