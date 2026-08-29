@@ -1327,22 +1327,39 @@ revelando ficha de colega; e os três tetos que foram calibrados para autônomo 
         instante** seria falsa. Custo aceito: uma consulta a mais por requisição.
         *Decidido e escrito na entidade; o teste que afirma a ausência entra no Epic 5.5.3, junto
         da regra de acesso que ele protege*
-- [ ] **Epic 5.5.2 — Convite e aceite**
-  - [ ] `POST /staff/invites` — token de uso único guardado como **hash**, 7 dias, e-mail do dono
+- [x] **Epic 5.5.2 — Convite e aceite** ✅ 2026-08-29 — 12 testes de API, dois deles provados
+      quebrando. **Achou um defeito de produção que não era desta fase:** `GET /auth/me` herdava o
+      teto global de 120/min por IP, e a web o chama **do servidor**, então os 120 eram o teto da
+      plataforma inteira somando todos os usuários — logout aleatório a partir de ~2 páginas por
+      segundo. Registrado no `tech-debt.md`; o conserto definitivo é da Fase 18
+  - [x] `POST /staff/invites` — token de uso único guardado como **hash**, 7 dias, e-mail do dono
         verificado exigido, e o mesmo teto do convite de aluno reaproveitado
-  - [ ] **A emissão não pode diferir entre e-mail com e sem conta.** A spec apontava para o lado
+  - [x] **A emissão não pode diferir entre e-mail com e sem conta.** A spec apontava para o lado
         errado, e a leitura do código em 2026-08-28 corrigiu: o convite de aluno **já responde
         `hasAccount`**, mas na tela de **aceite**, e ali é defensável — quem abriu o link controla
         aquela caixa e não descobre nada que já não saiba. O risco é na **emissão**, se a resposta
         ao dono mudasse conforme o destinatário. Hoje não muda; o convite de equipe copia essa
         forma, e o teste vem antes do código
-  - [ ] Aceite nas duas portas: quem já tem conta vira membro; quem não tem **cria conta e nasce
+  - [x] Aceite nas duas portas: quem já tem conta vira membro; quem não tem **cria conta e nasce
         profissional completo**, com carteira e link "treine comigo" próprios (decisão E1)
-  - [ ] Revogar convite pendente; no máximo um válido por destinatário e por dono
-  - [ ] **Nada existe antes do aceite** — o dono não pode adicionar ninguém à força. Teste que
+  - [x] **A conta criada pelo convite de equipe NÃO nasce verificada**, ao contrário da que nasce
+        do convite endereçado de aluno. **As duas metades se sustentam:** lá o link só existe na
+        caixa do destinatário, e abri-lo prova o controle dela; aqui o token volta na resposta,
+        para o aceite ser testável ponta a ponta — e com o token na mão do dono, a prova some. Se
+        a conta nascesse verificada, um clube criaria contas verificadas em endereços que não
+        controla. Não verificar não abre nada novo: o cadastro aberto já permite conta não
+        verificada em qualquer endereço
+  - [x] **O e-mail do corpo é ignorado no aceite** — vale o do convite. Teste manda um endereço
+        diferente de propósito: se vencesse, o dono convidaria um e outro entraria na equipe dele
+  - [x] Revogar convite pendente; no máximo um válido por destinatário e por dono
+  - [x] **Nada existe antes do aceite** — o dono não pode adicionar ninguém à força. Teste que
         afirma a ausência de qualquer rota que crie membro sem token
-  - [ ] Convite para o e-mail do próprio dono: recusa **no aceite**, não na emissão — recusar na
+  - [x] Convite para o e-mail do próprio dono: recusa **no aceite**, não na emissão — recusar na
         emissão diria ao emissor de quem é aquele endereço. Mesma lógica do §7.2
+  - [x] **Antecipado do Epic 5.5.5:** `PATCH /staff/:id/status` para encerrar, com os dois lados
+        podendo. Sem ele os testes deixariam a equipe do Rodrigo crescer a cada execução da suíte,
+        que é o resíduo entre execuções que o DT-010 ensinou a não deixar. As **consequências** do
+        encerramento continuam na 5.5.5
 - [ ] **Epic 5.5.3 — Associação do aluno e a regra de acesso**
   - [ ] `student_teachers`: quais professores atendem cada ficha. **Tabela e não coluna**, porque
         um aluno pode ter vários (E7). O argumento ficou mais forte com a leitura do código em

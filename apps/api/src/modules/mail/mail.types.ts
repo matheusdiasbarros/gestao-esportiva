@@ -15,6 +15,8 @@ export const MailKind = {
   ResetPassword: 'RESET_PASSWORD',
   /** Convite endereçado: o profissional chama alguém que já tem ficha na carteira dele. */
   StudentInvite: 'STUDENT_INVITE',
+  /** Convite de equipe: um profissional chama outro para dar aula por ele. */
+  StaffInvite: 'STAFF_INVITE',
   /** Aviso ao profissional de que o convite foi aceito, e por quem. */
   InviteAccepted: 'INVITE_ACCEPTED',
   /** Confirmação do endereço **novo** numa troca de e-mail. Vai para o endereço novo. */
@@ -50,6 +52,26 @@ export interface StudentInviteJob extends Base {
   /** Quem convidou. É o que faz a pessoa reconhecer a mensagem em vez de apagá-la. */
   professionalName: string;
   /** Quantos dias o convite vale, para o texto poder dizer. */
+  diasDeValidade: number;
+}
+
+/**
+ * Convite de equipe.
+ *
+ * O texto é deliberadamente diferente do convite de aluno, e não só por cortesia: quem recebe
+ * este vira **profissional na plataforma**, com carteira própria. A mensagem precisa dizer isso,
+ * senão a pessoa aceita achando que virou aluna do clube.
+ *
+ * **Nenhuma palavra de emprego.** Nem "funcionário", nem "contratação", nem "vaga". A plataforma
+ * não conhece o arranjo entre as duas pessoas — CLT, MEI, parceria, nada — e um e-mail em nome
+ * dela afirmando vínculo empregatício é prova documental numa disputa que não é nossa (decisão
+ * E17, `docs/domain/staff.md`).
+ */
+export interface StaffInviteJob extends Base {
+  kind: typeof MailKind.StaffInvite;
+  link: string;
+  /** Quem convidou. */
+  ownerName: string;
   diasDeValidade: number;
 }
 
@@ -96,6 +118,7 @@ export type MailJob =
   | VerifyEmailJob
   | ResetPasswordJob
   | StudentInviteJob
+  | StaffInviteJob
   | InviteAcceptedJob
   | ChangeEmailJob
   | EmailChangeRequestedJob;

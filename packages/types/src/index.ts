@@ -3,4 +3,5 @@ export * from './http';
 export * from './iam';
 export * from './professional-profile';
 export * from './sports';
+export * from './staff';
 export * from './students';

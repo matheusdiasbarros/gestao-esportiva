@@ -89,6 +89,41 @@ export function montarMensagem(job: MailJob): MensagemPronta {
         `),
       };
 
+    case MailKind.StaffInvite:
+      // Diz, com todas as letras, que a conta é dela e vai junto. Sem isso a pessoa aceita
+      // achando que virou aluna do clube — e é a diferença que decide se ela aceita.
+      //
+      // **Nenhuma palavra de emprego** (decisão E17): a plataforma não conhece o arranjo entre as
+      // duas, e um e-mail em nome dela afirmando vínculo é prova documental numa disputa alheia.
+      return {
+        subject: `${job.ownerName} convidou você para dar aula na equipe`,
+        text: [
+          `Olá, ${job.name}.`,
+          '',
+          `${job.ownerName} usa a Gestão Esportiva para organizar as aulas, e convidou você a`,
+          'dar aula na equipe. Você vê a agenda e os alunos que atende por lá.',
+          '',
+          'A conta é sua: os alunos particulares que você cadastrar continuam seus, e vão com',
+          'você se um dia sair da equipe.',
+          '',
+          `Aceite por aqui (o convite vale ${job.diasDeValidade} dias):`,
+          job.link,
+          '',
+          'Se você não conhece essa pessoa, ignore esta mensagem. Nada acontece.',
+        ].join('\n'),
+        html: envelope(`
+          <p>Olá, ${escapar(job.name)}.</p>
+          <p><strong>${escapar(job.ownerName)}</strong> usa a Gestão Esportiva para organizar as
+             aulas, e convidou você a dar aula na equipe. Você vê a agenda e os alunos que
+             atende por lá.</p>
+          <p><strong>A conta é sua.</strong> Os alunos particulares que você cadastrar continuam
+             seus, e vão com você se um dia sair da equipe.</p>
+          ${botao(job.link, 'Aceitar o convite')}
+          <p style="color:#666">O convite vale <strong>${job.diasDeValidade} dias</strong>. Se
+             você não conhece essa pessoa, ignore esta mensagem — nada acontece.</p>
+        `),
+      };
+
     case MailKind.InviteAccepted:
       // Traz o e-mail de quem aceitou de propósito. É o único jeito de o profissional perceber
       // que o link avulso foi parar na mão errada, e a mensagem diz o que fazer nesse caso.

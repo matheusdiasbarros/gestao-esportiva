@@ -27,13 +27,18 @@ import {
 } from './auth/rate-limit';
 import { Professional } from './entities/professional.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
+import { StaffInvite } from './entities/staff-invite.entity';
+import { StaffMember } from './entities/staff-member.entity';
 import { StudentInvite } from './entities/student-invite.entity';
+import { StudentTeacher } from './entities/student-teacher.entity';
 import { Student } from './entities/student.entity';
 import { UserToken } from './entities/user-token.entity';
 import { UserIdentity } from './entities/user-identity.entity';
 import { User } from './entities/user.entity';
 import { InvitesController } from './invites.controller';
+import { StaffController } from './staff.controller';
 import { StudentsController } from './students.controller';
+import { StaffService } from './services/staff.service';
 import { StudentsService } from './services/students.service';
 import { AccessService } from './services/access.service';
 import { AdminService } from './services/admin.service';
@@ -100,11 +105,20 @@ import { UserTokenService } from './services/user-token.service';
       Professional,
       Student,
       StudentInvite,
+      StaffInvite,
+      StaffMember,
+      StudentTeacher,
       RefreshToken,
       UserToken,
     ]),
   ],
-  controllers: [AuthController, InvitesController, StudentsController, AdminController],
+  controllers: [
+    AuthController,
+    InvitesController,
+    StaffController,
+    StudentsController,
+    AdminController,
+  ],
   providers: [
     PasswordService,
     RolesService,
@@ -114,6 +128,7 @@ import { UserTokenService } from './services/user-token.service';
     AccessService,
     AuthService,
     InviteService,
+    StaffService,
     StudentsService,
     AdminService,
     AuditoriaDeLeitura,

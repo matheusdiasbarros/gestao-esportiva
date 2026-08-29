@@ -21,6 +21,7 @@ import {
   LimitarRecuperacao,
   LimitarReenvioDeVerificacao,
   LimitarRenovacao,
+  LimitarSessaoAtual,
   LimitarTrocaDeEmail,
 } from './auth/rate-limit';
 import {
@@ -215,6 +216,7 @@ export class AuthController {
   }
 
   @Get('me')
+  @LimitarSessaoAtual()
   @ApiOperation({ summary: 'Quem está autenticado, com os dados frescos do banco' })
   async quemSouEu(@CurrentUser() user: AuthenticatedUser): Promise<AuthenticatedUser> {
     // Consulta o banco em vez de devolver o que veio no token. Custa uma ida a mais, e paga:

@@ -212,6 +212,29 @@ export const LimitarEnvioDeFoto = (): MethodDecorator & ClassDecorator =>
   Throttle({ [LIMITE_IP]: { limit: 20, ttl: 60 * MINUTO } });
 
 /**
+ * `GET /auth/me`: **1200 por minuto por IP**, e o número alto é o conserto de um defeito real.
+ *
+ * A rota herdava o teto global de 120/min, e isso **não é um orçamento por pessoa**: toda página
+ * protegida da web chama `/auth/me` **do servidor do Next**, não do navegador. Para a API, a
+ * requisição vem do IP do servidor web — então os 120 eram o teto da plataforma **inteira**,
+ * somando todos os usuários. Cerca de duas visualizações de página por segundo, no total, antes
+ * de o 429 virar `sessao = null` e o `/painel` mandar a pessoa para `/entrar`.
+ *
+ * **O sintoma é logout aleatório**, e ele não menciona limite em lugar nenhum. Foi assim que
+ * apareceu: a suíte de ponta a ponta cresceu na Fase 5.5 e dez testes de perfil passaram a falhar
+ * em `toHaveURL('/painel')` — os mesmos testes que passam sozinhos. Duas hipóteses anteriores
+ * foram medidas e descartadas antes desta (o teto de cadastro estava em 91 de 100).
+ *
+ * **O conserto certo é outro, e não cabe aqui:** fazer o IP de quem realmente navega chegar até a
+ * API, para a contagem voltar a ser por pessoa. Isso mexe em `trust proxy` e no cliente de API da
+ * web, e é decisão de quem for endurecer produção (Fase 18). Enquanto isso, o teto alto é
+ * defensável pelo custo: `/auth/me` é uma leitura indexada e a derivação de papéis, não há o que
+ * exaurir.
+ */
+export const LimitarSessaoAtual = (): MethodDecorator & ClassDecorator =>
+  Throttle({ [LIMITE_IP]: { limit: 1200, ttl: MINUTO } });
+
+/**
  * Renovação: teto alto de propósito, e sem alvo — não há e-mail no corpo, então a contagem por
  * alvo se pula sozinha. O app renova sem a pessoa pedir e várias abas renovam em paralelo;
  * bloquear renovação legítima desloga usuário sem motivo nenhum.

@@ -95,6 +95,19 @@ export class AuthService {
     dados: DadosDeCadastro,
     client: ClientType,
     deviceLabel: string | null,
+    /**
+     * Trabalho que precisa acontecer **dentro** da mesma transação do cadastro.
+     *
+     * Existe para o aceite do convite de equipe, e pelo mesmo motivo que a versão de aluno já
+     * tinha: criar a conta e só então falhar ao entrar na equipe deixaria a pessoa logada, sem
+     * equipe, e com o convite gasto — sem nenhum caminho de volta a não ser pedir outro.
+     *
+     * Recebe o `professionalId` além do `userId`, porque é ele que a participação referencia.
+     */
+    naMesmaTransacao?: (
+      manager: EntityManager,
+      ids: { userId: string; professionalId: string },
+    ) => Promise<void>,
   ): Promise<SessaoAberta> {
     const email = normalizarEmail(dados.email);
     this.validarCadastro(dados, email);
@@ -127,12 +140,15 @@ export class AuthService {
           passwordChangedAt: agora,
         });
 
+        const professionalId = uuidv7();
         await manager.insert(Professional, {
-          id: uuidv7(),
+          id: professionalId,
           userId,
           signupSlug: gerarSlug(),
           signupLinkEnabled: true,
         });
+
+        await naMesmaTransacao?.(manager, { userId, professionalId });
       });
     } catch (erro) {
       // Não existe SELECT antes do INSERT de propósito: entre a consulta e a gravação cabe
@@ -783,7 +799,7 @@ export function primeiroNome(nomeCompleto: string): string {
 }
 
 /** Slug aleatório, não derivado do nome: previsível permitiria varrer a plataforma. */
-function gerarSlug(): string {
+export function gerarSlug(): string {
   return randomBytes(9).toString('base64url');
 }
 
