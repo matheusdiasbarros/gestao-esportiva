@@ -17,7 +17,7 @@ import { ehViolacaoDeUnicidade } from '../../../common/database/violacao-de-unic
 import { MailService } from '../../mail/mail.service';
 import { MailKind } from '../../mail/mail.types';
 import { GuardianAssistance } from '../entities/guardian-assistance.entity';
-import { User } from '../entities/user.entity';
+import { User, UserStatus } from '../entities/user.entity';
 import { idadeEm, normalizarEmail, primeiroNome } from './dados-da-conta';
 import { precisaDeAssistencia } from './idade-de-cadastro';
 import { hashDe } from './token.service';
@@ -96,10 +96,22 @@ export class GuardianAssistanceService {
    */
   async pendente(userId: string): Promise<boolean> {
     const user = await this.users.findOneBy({ id: userId });
-    if (!user) return false;
+    // Conta que não existe não é "liberada": é pergunta malformada. Responder `false` aqui
+    // significaria "pode marcar aula" para um identificador inventado.
+    if (!user) throw new NotFoundException('Conta não encontrada.');
 
-    const estado = await this.estadoDe(user);
-    return estado !== null && estado.status !== GuardianAssistanceStatus.Confirmed;
+    // **Derivado da idade, e não da existência da linha.** Este `if` é a única saída por `false`.
+    if (!precisaDeAssistencia(idadeEm(user.birthDate))) return false;
+
+    // **Fail-closed, e é o conserto do achado #1 da revisão de segurança da fase.** Antes isto
+    // lia `estadoDe`, que devolve `null` para duas coisas diferentes: "não é exigida" e "não
+    // encontrei o pedido". O chamador não distinguia as duas, então **a ausência de linha era
+    // lida como liberação** — e a Fase 6 ia consultar esta função no primeiro épico.
+    //
+    // Ausência de linha agora responde **pendente**. É a resposta certa: se a assistência é
+    // exigida e não há confirmação nenhuma registrada, ela não aconteceu.
+    const pedido = await this.maisRecente(userId);
+    return pedido?.confirmedAt == null;
   }
 
   /**
@@ -111,8 +123,30 @@ export class GuardianAssistanceService {
    */
   async gravarPedido(
     manager: EntityManager,
-    entrada: { userId: string; studentName: string; guardianName: string; guardianEmail: string },
+    entrada: {
+      userId: string;
+      studentName: string;
+      birthDate: string;
+      guardianName: string;
+      guardianEmail: string;
+    },
   ): Promise<PedidoDeAssistencia> {
+    // **Nenhuma linha de assistência para quem não precisa de assistência** — achado #3. O
+    // invariante mora aqui, e não só na validação do cadastro, porque é aqui que a linha nasce:
+    // sem esta guarda, um adulto que preenchesse os dois campos ganhava uma linha, um e-mail
+    // enviado a um estranho, e um link público que renderiza **nome e data de nascimento
+    // escolhidos por ele** — uma página de phishing hospedada no nosso domínio.
+    if (!precisaDeAssistencia(idadeEm(entrada.birthDate))) {
+      throw new UnprocessableEntityException({
+        validationErrors: [
+          {
+            field: 'guardianEmail',
+            message: 'Só quem tem 16 ou 17 anos precisa indicar um responsável.',
+          },
+        ],
+      });
+    }
+
     const tokenEmClaro = randomBytes(32).toString('base64url');
 
     await manager.insert(GuardianAssistance, {
@@ -196,6 +230,19 @@ export class GuardianAssistanceService {
     const user = await this.contaAssistida(userId);
     const email = normalizarEmail(guardianEmail);
 
+    // **Depois de assistido não há o que trocar** — achado #2 da revisão de segurança da fase.
+    // Sem esta recusa, uma conta já confirmada continuava disparando pedidos para endereços
+    // escolhidos por quem chama, indefinidamente e **sem perder nada**: o painel seguia dizendo
+    // `CONFIRMED` o tempo todo. Era um canhão de e-mail apontado para terceiros, saindo do nosso
+    // domínio. O índice `uq_guardian_assistances_confirmada` já diz que a resposta é definitiva;
+    // isto é a mesma regra, chegando antes do banco.
+    const jaAssistido = await this.pedidos.exists({
+      where: { userId, confirmedAt: Not(IsNull()) },
+    });
+    if (jaAssistido) {
+      throw new ConflictException('Sua conta já foi confirmada. Não há mais o que trocar.');
+    }
+
     this.recusarProprioEndereco(user, email);
     await this.recusarQuemJaDisseNao(userId, email);
 
@@ -213,6 +260,7 @@ export class GuardianAssistanceService {
       return this.gravarPedido(manager, {
         userId,
         studentName: user.fullName,
+        birthDate: user.birthDate,
         guardianName,
         guardianEmail: email,
       });
@@ -226,13 +274,30 @@ export class GuardianAssistanceService {
     const pedido = await this.pedidos.findOneBy({ tokenHash: hashDe(tokenEmClaro) });
     if (!pedido) return null;
 
-    // Vencido só bloqueia quem ainda não decidiu: quem já confirmou merece ver "está confirmado"
-    // em vez de "link expirado", que pareceria que a decisão dele se perdeu.
-    const desfecho = this.desfecho(pedido);
-    if (desfecho === GuardianAssistanceStatus.Pending && this.vencido(pedido)) return null;
+    // **O link morre para todos os desfechos, e não só para o pendente** — achado #4 da revisão
+    // de segurança da fase. Antes a validade só valia para `Pending`, e o efeito era duplo: o
+    // link já usado continuava devolvendo **nome e data de nascimento de um adolescente para
+    // sempre**, e os quatro jeitos de o link estar morto deixavam de responder igual —
+    // inexistente e vencido davam 404, já usado e recusado davam 200. Distinguir é o oráculo que
+    // esta página não pode ser.
+    //
+    // **Não custa UX nenhuma:** o recibo "Confirmado. Obrigado." é montado do estado local do
+    // componente depois do clique, não de uma releitura.
+    if (this.vencido(pedido)) return null;
 
     const user = await this.users.findOneBy({ id: pedido.userId });
-    if (!user) return null;
+    // Conta suspensa ou anonimizada não tem link vivo — todo fluxo irmão do `iam` confere isto,
+    // e este não conferia (achado #7). E a idade: passados os 18, a assistência deixou de ser
+    // exigida, então o link não descreve mais nada que importe.
+    if (!user || user.status !== UserStatus.Active) return null;
+    if (!precisaDeAssistencia(idadeEm(user.birthDate))) return null;
+
+    // **E o link morre quando alguém já decidiu.** Vencimento sozinho não bastava: um pedido
+    // confirmado ontem não está vencido, e continuava devolvendo nome e data de nascimento de um
+    // adolescente por mais sete dias. O documento desta fase pede o contrário, no caso M —
+    // *"o segundo clique cai na tela de link morto"*.
+    const desfecho = this.desfecho(pedido);
+    if (desfecho !== GuardianAssistanceStatus.Pending) return null;
 
     return {
       studentName: user.fullName,
@@ -272,10 +337,21 @@ export class GuardianAssistanceService {
   private async decidir(tokenEmClaro: string, campo: 'confirmedAt' | 'declinedAt'): Promise<void> {
     const pedido = await this.pedidos.findOneBy({ tokenHash: hashDe(tokenEmClaro) });
 
-    if (
-      !pedido ||
-      (this.desfecho(pedido) === GuardianAssistanceStatus.Pending && this.vencido(pedido))
-    ) {
+    // A mesma disciplina de `descrever`, e pelo mesmo motivo: vencido é vencido para qualquer
+    // desfecho, e conta suspensa ou já maior de idade não tem link que decida nada.
+    const dono = pedido ? await this.users.findOneBy({ id: pedido.userId }) : null;
+    const vale =
+      pedido &&
+      dono &&
+      !this.vencido(pedido) &&
+      // Já decidido é link morto, como em `descrever`. O botão da tela fica desabilitado durante
+      // a requisição, então o clique duplo não chega aqui — e o segundo acesso, esse sim, deve
+      // encontrar a mesma porta fechada que qualquer outro link gasto.
+      this.desfecho(pedido) === GuardianAssistanceStatus.Pending &&
+      dono.status === UserStatus.Active &&
+      precisaDeAssistencia(idadeEm(dono.birthDate));
+
+    if (!pedido || !vale) {
       throw new NotFoundException('Este link expirou ou já foi usado. Peça um novo.');
     }
 

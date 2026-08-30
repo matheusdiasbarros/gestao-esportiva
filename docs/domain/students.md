@@ -9,7 +9,7 @@ matriz base em [`iam.md`](iam.md) — **este documento não reabre nada de lá**
 Convenções de dados em [ADR-003](../adr/ADR-003-identificadores-e-convencoes-de-dados.md);
 fronteira entre módulos em [ADR-005](../adr/ADR-005-fronteira-do-perfil-profissional.md).
 
-Última atualização: 2026-08-26
+Última atualização: 2026-08-30
 
 **Como ler as marcas deste documento:**
 
@@ -379,6 +379,37 @@ não precisar redescobri-lo, exatamente como o `professional-profile.md` §7.4 f
 Apagar não é o mesmo que encerrar, e a tela precisa deixar isso óbvio: **encerrar é o normal,
 apagar é para a ficha criada por engano.**
 
+### 7.6 Dois filhos, um pai, um professor — o caso que a unicidade impede ✱
+
+**Descoberto em 2026-08-30**, ao acrescentar à seed uma ficha de criança abaixo de 12 anos: o
+banco recusou.
+
+`uq_students_professional_user` garante **uma ficha por conta em cada carteira**, e a garantia é
+boa — ela é o que impede uma conta de aparecer duas vezes na mesma carteira e o que a Fase 5.5
+apoiou para traduzir a colisão do aceite de convite. Mas ela tem uma consequência que ninguém
+tinha escrito:
+
+> **Um pai com dois filhos no mesmo professor não consegue acompanhar os dois pela conta dele.**
+> A conta dele liga na ficha do primeiro; a do segundo fica sem conta.
+
+Não é hipótese: é escolinha de sábado de manhã, e é comum.
+
+**Por que não é conserto de uma linha.** A coluna `students.user_id` responde *"que conta acessa
+esta ficha"*, e hoje ela responde para dois arranjos diferentes — o aluno adulto acessando a
+própria ficha, e o responsável acessando a do filho. Só o segundo precisa de vários. Trocar a
+unicidade por *(professional_id, user_id, …)* alguma coisa reabre a pergunta que a restrição
+resolve, e a resposta certa provavelmente é **separar os dois arranjos**: quem acessa como titular
+e quem acessa como responsável não são a mesma relação, e hoje são a mesma coluna.
+
+**Fica registrado e não resolvido nesta fase.** A Fase 5.7 é sobre a conta de quem tem 16, e este
+caso é sobre a ficha de quem tem 8 — misturar os dois faria a fase perder o fim reconhecível.
+
+**Gatilho para reabrir:** o primeiro pai que reclamar, ou a Fase 11, que é quando o responsável
+ganha tela própria e o problema deixa de ser invisível.
+
+**Contorno, enquanto isso:** o profissional cadastra as duas fichas normalmente, e liga a conta do
+pai a uma delas. A outra funciona por inteiro — só não é acessível pela conta dele.
+
 ## 8. Menor de idade e responsável — decisão D3
 
 ### 8.1 A regra
@@ -403,7 +434,7 @@ o responsável, com a conta dele. O que faltava era a regra fina:
 | `GUARDIAN` exige `guardian_name` | garantido por `CHECK` (§5.2). Sem o nome, o convite não sabe a quem se dirige |
 | Com `GUARDIAN`, `email` e `phone` da ficha são **do responsável** | é para lá que o convite vai, e é o número que o professor liga |
 | A ficha com `GUARDIAN` só se liga à conta **do responsável** | consequência da anterior: o convite vai ao e-mail dele |
-| Menor **nunca** tem conta ligada à ficha dele | é D9. Se ele tem 16 e um e-mail, o e-mail não serve aqui |
+| Menor de **16** nunca tem conta ligada à ficha dele ✱ | é D9, revisada na Fase 5.7. **De 16 a 17 ele pode ter conta**, com a assistência de um responsável confirmada por link (`iam.md` §8.1) — e aí a ficha dele é `SELF` como a de um adulto. Abaixo de 16 o aceite dos Termos é nulo, e quem acessa continua sendo o responsável. A frase antiga dizia *"menor nunca tem conta"* e citava justamente os 16 como exemplo do que não valia |
 
 **Essa regra de idade não pode morar no banco, e o motivo merece ficar escrito:** ela depende
 da data de hoje. Um `CHECK` que compara `birth_date` com `now()` não é imutável e passaria a
@@ -709,7 +740,7 @@ conta não ativa; a regra continua valendo depois desta fase.
 ## 15. O que precisa do dono — e eu não decidi
 
 A célula do `iam.md` §6 saiu daqui: foi decidida em 2026-08-26 e está fechada na §10.1. Restam
-três — e **duas delas não são do dono, são de um advogado**. Elas estão aqui porque alguém
+quatro — e **três delas não são do dono, são de um advogado**. Elas estão aqui porque alguém
 precisa contratá-lo, e essa parte é dele.
 
 ### 15.1 O que acontece com a carteira quando **o profissional** exclui a conta
@@ -758,6 +789,39 @@ Privacidade não existem (`iam.md` §11), e o aceite é gravado com versão
 `v0-desenvolvimento`. Esta fase é a primeira que grava dado pessoal de gente que **não é
 usuária da plataforma** — o que muda a pendência de "pré-requisito de lançamento" para
 "pré-requisito do primeiro usuário real".
+
+### 15.4 A base legal da ficha de criança com **menos de 12 anos** ✱
+
+**Acrescentada pela Fase 5.7, em 2026-08-30, e é a lacuna que aquela fase existiu para expor.**
+
+**Contexto.** A ficha de qualquer aluno é criada sob **legítimo interesse** do profissional
+(§3.3) — inclusive a de uma criança de oito anos. A LGPD trata **criança** (menor de 12) de forma
+própria: o art. 14 §1 exige **consentimento específico e em destaque de ao menos um dos pais**, e
+há leitura forte de que legítimo interesse **não está disponível** nessa faixa. Dos 12 aos 18 a
+lei não exige consentimento parental expresso — só o "melhor interesse".
+
+**O número certo é 12, e não 18.** Este documento e o `iam.md` supunham que a régua de dados era
+a mesma da conta, e não é: **são duas leis diferentes**. A da conta é o Código Civil (capacidade
+para aceitar Termos, revisada para 16 na Fase 5.7); a do dado é a LGPD, e ela corta em 12.
+
+**O que está em dúvida não é o mecanismo — é a base legal inteira.** Não adianta desenhar uma
+tela de consentimento antes de saber se é consentimento que se aplica, de quem, e o que acontece
+com as fichas que já existem.
+
+**As perguntas, para um advogado:**
+
+1. Legítimo interesse cobre a ficha de uma criança de menos de 12, ou é preciso consentimento?
+2. Se for consentimento, de quem — do responsável indicado na ficha? E como provar que quem
+   consentiu é responsável, se a plataforma nunca falou com ele?
+3. O consentimento é do **profissional** (controlador) ou da **plataforma** (operadora)?
+4. O que acontece com as fichas de criança que já existem quando a resposta chegar?
+5. A recusa ou a revogação do consentimento obriga a apagar, ou a parar de tratar?
+6. O corte é na data de nascimento — e a data é **opcional** na ficha (§5.3). Ficha de criança sem
+   data declarada cai em qual regra?
+
+**O que a Fase 5.7 entregou aqui:** o registro com o número certo, e uma ficha na seed **abaixo
+de 12** (Theo Dias) para o caso não ser invisível. Nada mais — inventar a resposta seria pior do
+que não ter.
 
 ## 16. O que isto obriga no banco, na API e nas telas
 

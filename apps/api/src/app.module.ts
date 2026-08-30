@@ -11,6 +11,27 @@ import { ProfessionalProfileModule } from './modules/professional-profile/profes
 import { SportsModule } from './modules/sports/sports.module';
 import { RedisModule } from './redis/redis.module';
 
+/**
+ * Apaga o token do **caminho** da URL antes de ele chegar ao log.
+ *
+ * O `redact` cobre cabeçalho e corpo; o serializer acima arranca a query string. Sobrava o
+ * caminho — e a Fase 5.7 pôs um token de uso único nele, porque o link do responsável é uma
+ * navegação e navegação não manda corpo. Sem isto, o token aparecia **em claro e duas vezes por
+ * requisição** no log da API, e ele abre o nome e a data de nascimento de um adolescente.
+ *
+ * Só esta rota tem segredo no caminho hoje. Uma lista, e não uma heurística de "parece um token":
+ * heurística erra para os dois lados, e o preço de errar aqui é apagar um identificador que a
+ * investigação de um incidente precisava.
+ */
+const CAMINHOS_COM_SEGREDO = [/(\/auth\/guardian-assistance\/)[^/]+/];
+
+export function mascararSegredoNoCaminho(caminho: string): string {
+  return CAMINHOS_COM_SEGREDO.reduce(
+    (atual, padrao) => atual.replace(padrao, '$1<token>'),
+    caminho,
+  );
+}
+
 @Module({
   imports: [
     AppConfigModule,
@@ -63,7 +84,7 @@ import { RedisModule } from './redis/redis.module';
 
                 return {
                   ...serializado,
-                  url: caminho,
+                  url: mascararSegredoNoCaminho(caminho ?? ''),
                   ...(filtros.length > 0 ? { filtros } : {}),
                 };
               },

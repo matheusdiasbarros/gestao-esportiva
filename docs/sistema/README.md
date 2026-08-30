@@ -2,7 +2,7 @@
 
 Documentação de manutenção, escrita **para quem chega sem contexto** — pessoa ou IA.
 
-Última atualização: 2026-08-29
+Última atualização: 2026-08-30
 
 ---
 
@@ -67,3 +67,4 @@ mesmo commit. Documento por fase envelhece se ninguém fizer isso — e document
 | 4 | *(saiu do escopo — roda junto da 12)* | — |
 | 5 | Alunos | [fase-05-alunos.md](fase-05-alunos.md) |
 | 5.5 | Equipe | [fase-05-5-equipe.md](fase-05-5-equipe.md) |
+| 5.7 | Idade mínima e assistência do responsável | [fase-05-7-idade-minima.md](fase-05-7-idade-minima.md) |

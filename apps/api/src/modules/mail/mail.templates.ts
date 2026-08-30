@@ -163,6 +163,10 @@ export function montarMensagem(job: MailJob): MensagemPronta {
           'Nada é cobrado e nada acontece sozinho. Não vamos ficar mandando lembrete.',
           '',
           `Se você não conhece ${job.studentName}, ignore esta mensagem — nada acontece.`,
+          '',
+          'Guardamos o seu nome e o seu e-mail porque foram informados no cadastro, e porque',
+          'precisamos saber a quem escrevemos - inclusive para nao escrever de novo, se voce',
+          'nao autorizar. Nao usamos para nada alem disto.',
         ].join('\n'),
         html: envelope(`
           <p>Olá, ${escapar(job.name)}.</p>
@@ -184,6 +188,9 @@ export function montarMensagem(job: MailJob): MensagemPronta {
              aula. Nada é cobrado e nada acontece sozinho. Não vamos ficar mandando lembrete.</p>
           <p style="color:#666">O link vale <strong>${job.diasDeValidade} dias</strong>. Se você
              não conhece ${escapar(job.studentName)}, ignore esta mensagem — nada acontece.</p>
+          <p style="color:#666">Guardamos o seu nome e o seu e-mail porque foram informados no
+             cadastro, e porque precisamos saber a quem escrevemos — inclusive para não escrever
+             de novo, se você não autorizar. Não usamos para nada além disto.</p>
         `),
       };
 

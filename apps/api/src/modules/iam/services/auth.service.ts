@@ -48,8 +48,11 @@ export interface DadosDeCadastro {
    * Nome e e-mail de quem vai assistir o aceite dos Termos.
    *
    * **Obrigatórios quando a data de nascimento indica 16 ou 17 anos, e recusados fora dessa
-   * faixa.** Opcionais no tipo porque a maioria dos cadastros não os traz; a obrigatoriedade é
-   * calculada a partir da idade, e não de uma caixa que a pessoa marca — é o Epic 5.7.2.
+   * faixa.** As duas metades são conferidas em `validarCadastro`, e a segunda foi acrescentada
+   * pela revisão de segurança da fase — até então a frase era verdadeira só na primeira metade.
+   *
+   * Opcionais no tipo porque a maioria dos cadastros não os traz; a obrigatoriedade é calculada a
+   * partir da idade, e não de uma caixa que a pessoa marca — é o Epic 5.7.2.
    */
   guardianName?: string;
   guardianEmail?: string;
@@ -289,6 +292,7 @@ export class AuthService {
           pedido = await this.assistencia.gravarPedido(manager, {
             userId,
             studentName: nome,
+            birthDate: dados.birthDate,
             guardianName: dados.guardianName,
             guardianEmail: dados.guardianEmail,
           });
@@ -804,7 +808,19 @@ export class AuthService {
       erros.push({ field: 'birthDate', message: 'Data de nascimento inválida.' });
     } else if (idade < idadeMinima) {
       erros.push({ field: 'birthDate', message: recusaPorIdade(idade, idadeMinima) });
-    } else if (precisaDeAssistencia(idade)) {
+    } else if (!precisaDeAssistencia(idade)) {
+      // **Fora da faixa os dois campos são recusados, e não ignorados** — achado #3 da revisão de
+      // segurança da fase. Aceitá-los em silêncio gravava uma linha de assistência para um
+      // adulto, mandava e-mail a um estranho e criava um link público que renderiza **nome e data
+      // de nascimento escolhidos por quem preencheu o formulário**. Ignorar sem dizer nada
+      // também mentiria para quem preencheu de boa-fé.
+      if (dados.guardianName || dados.guardianEmail) {
+        erros.push({
+          field: 'guardianEmail',
+          message: 'Só quem tem 16 ou 17 anos precisa indicar um responsável.',
+        });
+      }
+    } else {
       // **Cobrado a partir da data digitada, e não de uma caixa que a pessoa marca.** Uma caixa
       // "sou menor de idade" seria desmarcada por quem quisesse pular o passo, e o formulário
       // ficaria pedindo a alguém que declare contra o próprio interesse.

@@ -39,6 +39,7 @@ Não são contas — não têm e-mail/senha, só existem como registro vinculado
 | --- | --- |
 | João Pereira | aluno de Rodrigo que nunca aceitou o convite — só tem telefone, sem conta |
 | Sofia Dias | menor de idade, ficha de Rodrigo — quem acessa é Carlos (responsável), não ela. A ficha traz `guardian_name = 'Carlos Dias'`, que a Fase 5 tornou obrigatório para `GUARDIAN` |
+| Theo Dias | **irmão da Sofia, e a única ficha abaixo de 12 anos** — a faixa em que a LGPD exige consentimento e o sistema usa legítimo interesse (`students.md` §15). Nasceu **sem conta ligada**, e não por escolha: Carlos já é a conta da ficha da Sofia, e `uq_students_professional_user` permite uma ficha por conta em cada carteira (`students.md` §7.6) |
 
 ---
 

@@ -4,7 +4,7 @@ Documento de domínio da Fase 2. Define quem é quem no sistema, quem pode fazer
 quê. Vocabulário obrigatório em [`glossary.md`](glossary.md); decisões técnicas de
 autenticação em [`../adr/ADR-004-estrategia-de-autenticacao.md`](../adr/ADR-004-estrategia-de-autenticacao.md).
 
-Última atualização: 2026-08-20
+Última atualização: 2026-08-30
 
 ---
 
@@ -263,7 +263,7 @@ e só exige verificação para *agir para fora* —, e a razão é a mesma: bloq
 pessoa por um passo que não é dela.
 
 > **Uma frase que precisa continuar verdadeira:** `MINIMUM_SIGNUP_AGE` (a conta) e
-> `IDADE_DE_MAIORIDADE` (a ficha) são **o mesmo número pelo mesmo motivo**. Se um jovem de 16
+> `IDADE_DE_ACESSO_PROPRIO` (a ficha) são **o mesmo número pelo mesmo motivo**. Se um jovem de 16
 > pode ter conta própria, a ficha dele pode ser `SELF`. Mover um sem o outro cria o estado
 > contraditório que a decisão D9 existe para impedir: uma ficha que o banco aceita e que nenhuma
 > conta pode acessar.
@@ -274,6 +274,32 @@ base legal da ficha de um adulto. O art. 14 §1 pede **consentimento** nessa fai
 interesse provavelmente não está disponível. Não é o mecanismo de consentimento que está em
 dúvida: é a **base legal inteira**. Registrado na §11 como pergunta de advogado, agora com o
 número — **12**, e não 18.
+
+> ✅ **Construído na Fase 5.7, em 2026-08-30.** Duas coisas mudaram de forma ao virar código, e
+> as duas são decisão do dono do produto:
+>
+> **A porta dos 16 abre só para conta de aluno.** A de **profissional** continua exigindo 18, e
+> **não por capacidade civil** — um jovem de 17 assistido assinaria os Termos validamente. É
+> decisão de produto: profissional **recebe dinheiro** (Fase 9) e **aparece na vitrine pública**
+> (Fase 12), e nenhum dos dois foi resolvido para menor de idade. São três constantes, então:
+> `MINIMUM_SIGNUP_AGE` (16), `IDADE_DE_CAPACIDADE_PLENA` (18, lei) e `MINIMUM_PROFESSIONAL_AGE`
+> (18, produto). As duas últimas coincidem em valor e não em motivo.
+>
+> **O responsável só assina.** Não ganha conta, login, acesso à agenda ou aos pagamentos. É o
+> oposto do *responsável da ficha* (`students.access_holder = 'GUARDIAN'`), que **recebe** o
+> acesso porque lá o aluno não tem conta — a mesma pessoa, atos diferentes. O glossário registra
+> a fronteira: **assistência é da conta; acesso do responsável é da ficha.**
+>
+> **A frase do bloqueio ficou pela metade, de propósito.** A §8.1 diz *"o que espera é agendar e
+> pagar"*, e os dois são de fases futuras. O que existe hoje é o portão —
+> `GuardianAssistanceService.pendente()` — para a Fase 6 consultar em vez de inventar a própria
+> pergunta. Ele é **fail-closed**: ausência de linha responde *pendente*, e não *liberado*. Foi
+> assim depois do achado #1 da revisão de segurança da fase; antes respondia o contrário.
+>
+> **E a assistência é registrada, não verificada.** Ninguém confere a data de nascimento nem o
+> parentesco — as duas são digitadas pela própria pessoa. O que o fluxo produz é o aceite dos
+> Termos deixar de ser anulável por falta de assistência, e **nada além disso**. Tratar isto como
+> prova de idade numa fase futura seria erro.
 
 ## 9. Fluxos de entrada
 

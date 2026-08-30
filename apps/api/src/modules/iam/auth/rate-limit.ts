@@ -78,7 +78,15 @@ export const LimitarLogin = (): MethodDecorator & ClassDecorator =>
  * o CI.
  */
 export const LimitarCadastro = (): MethodDecorator & ClassDecorator =>
-  Throttle({ [LIMITE_IP]: { limit: 100, ttl: 60 * MINUTO } });
+  Throttle({
+    [LIMITE_IP]: { limit: 100, ttl: 60 * MINUTO },
+    // **Três por endereço de destino**, acrescentado em 2026-08-30 pela revisão da Fase 5.7. O
+    // cadastro de aluno de 16 anos manda e-mail para um endereço **escolhido por quem preenche o
+    // formulário** — o do responsável —, e sem teto por destino três cadastros seguidos apontavam
+    // três mensagens para a mesma caixa. É a mesma defesa que `LimitarTrocaDeEmail` já tinha, e
+    // pelo mesmo motivo: quem escolhe o destinatário precisa de limite por destinatário.
+    [LIMITE_ALVO]: { limit: 3, ttl: 60 * MINUTO },
+  });
 
 /**
  * "Esqueci a senha": teto próprio, e não o do login.
@@ -252,6 +260,10 @@ export const LimitarAssistencia = (): MethodDecorator & ClassDecorator =>
   Throttle({
     [LIMITE_IP]: { limit: 60, ttl: 60 * MINUTO },
     [LIMITE_CONTA]: { limit: 5, ttl: 60 * MINUTO },
+    // **E três por endereço de destino.** O teto por conta sozinho não protege o terceiro: cinco
+    // mensagens por hora para **cinco pessoas diferentes** passavam, e a revisão da fase disparou
+    // exatamente isso. Quem recebe é quem precisa do limite.
+    [LIMITE_ALVO]: { limit: 3, ttl: 60 * MINUTO },
   });
 
 /**
@@ -308,9 +320,21 @@ export const LimitarRenovacao = (): MethodDecorator & ClassDecorator =>
 export function alvoDaRequisicao(req: Record<string, unknown>): string {
   // Sem converter para o `Request` do Express: a assinatura que o throttler entrega é um
   // objeto solto, e forçar o tipo aqui esconderia que o corpo pode simplesmente não existir.
-  const body = req.body as { email?: unknown } | undefined;
-  const email = typeof body?.email === 'string' ? body.email : '';
-  return email.trim().toLowerCase();
+  const body = req.body as { email?: unknown; guardianEmail?: unknown } | undefined;
+
+  // **`guardianEmail` vem primeiro, e a ordem é a regra inteira.** O alvo é *quem recebe a
+  // mensagem*, não quem se cadastra. No cadastro de um jovem de 16 a plataforma escreve para o
+  // responsável — um endereço escolhido por quem preenche o formulário —, e é esse que precisa de
+  // teto. Contar o e-mail da conta ali daria uma cota nova a cada cadastro, que é o oposto do que
+  // o limite existe para fazer.
+  const alvo =
+    typeof body?.guardianEmail === 'string'
+      ? body.guardianEmail
+      : typeof body?.email === 'string'
+        ? body.email
+        : '';
+
+  return alvo.trim().toLowerCase();
 }
 
 /**

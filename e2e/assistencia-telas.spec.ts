@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { promisify } from 'node:util';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, request, test, type Page } from '@playwright/test';
 
 /**
  * As telas da assistência do responsável — Fase 5.7, nos **dois** canais.
@@ -52,6 +52,26 @@ async function plantarToken(email: string): Promise<string> {
     `UPDATE guardian_assistances SET token_hash = '${hash}'
        WHERE user_id = (SELECT id FROM users WHERE email = '${email}')
          AND confirmed_at IS NULL AND declined_at IS NULL`,
+  );
+  return token;
+}
+
+/**
+ * Um pedido **vencido** para esta conta, e o token dele.
+ *
+ * Cria a linha direto no banco porque a API não tem rota que produza um pedido vencido — e o
+ * caso precisa existir: é um dos três jeitos de o link estar morto, e os três têm que responder
+ * igual.
+ */
+async function plantarTokenVencido(email: string): Promise<string> {
+  const token = randomUUID();
+  const hash = createHash('sha256').update(token).digest('hex');
+  await psql(
+    `INSERT INTO guardian_assistances
+       (id, user_id, guardian_name, guardian_email, token_hash, expires_at)
+     SELECT gen_random_uuid(), id, 'Vencido', 'vencido@exemplo.local', '${hash}',
+            now() - interval '1 day'
+       FROM users WHERE email = '${email}'`,
   );
   return token;
 }
@@ -146,14 +166,44 @@ test.describe('Do cadastro à confirmação, pela tela', () => {
 });
 
 test.describe('O link que não vale mais diz uma coisa só', () => {
-  test('inventado, expirado ou já usado — a mesma tela para os três', async ({ page }) => {
-    // **Requisito, não acabamento.** Distinguir "já confirmado" de "nunca existiu" transformaria
-    // esta página pública num verificador, e a resposta seria sobre um adolescente.
-    await page.goto(`/responsavel/confirmar/${randomUUID()}`);
+  /**
+   * **Os três casos, cada um exercitado de verdade.**
+   *
+   * A primeira versão deste teste tinha este título e fazia **um** `goto`, com um identificador
+   * inventado. "Já usado" nunca rodava — e, no código de então, ele mostrava a tela de
+   * confirmação com o nome do jovem, ou seja, o caso não exercitado se comportava ao contrário do
+   * que o título afirmava. Neste projeto o título de teste é lido como documentação, e a revisão
+   * de segurança da fase (achado #9) pegou exatamente isso.
+   */
+  test('inventado, vencido ou já usado — a mesma tela para os três', async ({ page }) => {
+    const email = novoEmail('tela-morta');
+    const contexto = await request.newContext();
+    await contexto.post('http://localhost:3333/api/v1/auth/signup/student', {
+      data: {
+        email,
+        fullName: 'Jovem do Link Morto',
+        birthDate: nascidoHa(17),
+        password: SENHA,
+        acceptedTerms: true,
+        guardianName: 'Pai do Link Morto',
+        guardianEmail: novoEmail('pai-morto'),
+      },
+    });
 
-    await expect(page.getByText(/Este link não vale mais/i)).toBeVisible();
-    await expect(
-      page.getByText(/quem pede um link novo é a pessoa que criou a conta/i),
-    ).toBeVisible();
+    const usado = await plantarToken(email);
+    await contexto.post('http://localhost:3333/api/v1/auth/guardian-assistance/confirm', {
+      data: { token: usado },
+    });
+
+    // Um pedido novo, para vencer: o antigo já foi consumido pela confirmação.
+    await contexto.dispose();
+    const vencido = await plantarTokenVencido(email);
+
+    for (const token of [randomUUID(), usado, vencido]) {
+      await page.goto(`/responsavel/confirmar/${token}`);
+      await expect(page.getByText(/Este link não vale mais/i)).toBeVisible();
+      // E nenhuma das três telas conta de quem era o pedido.
+      await expect(page.getByText(/Jovem do Link Morto/i)).toHaveCount(0);
+    }
   });
 });

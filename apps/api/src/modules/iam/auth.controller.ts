@@ -262,20 +262,28 @@ export class AuthController {
     return pedido;
   }
 
+  // **O token vai no corpo nos dois `POST`, e não no caminho** — achado #5 da revisão de
+  // segurança da fase. Era o único token de uso único do sistema que viajava na URL, e URL vai
+  // para log de servidor, log de proxy e histórico de navegador. A redação do logger cobre
+  // `req.body.token` justamente porque é assim que os outros três links do sistema viajam.
+  //
+  // O `GET` acima continua com o token no caminho porque **ele é o link**: quem clica no e-mail
+  // faz uma navegação, e navegação não manda corpo. Para esse, o caminho é mascarado no log.
+
   @Public()
-  @Post('guardian-assistance/:token/confirm')
+  @Post('guardian-assistance/confirm')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'O responsável confirma. É o que destrava a conta do jovem' })
-  async confirmarAssistencia(@Param('token') token: string): Promise<void> {
-    await this.assistencia.confirmar(token);
+  async confirmarAssistencia(@Body() dto: TokenDto): Promise<void> {
+    await this.assistencia.confirmar(dto.token);
   }
 
   @Public()
-  @Post('guardian-assistance/:token/decline')
+  @Post('guardian-assistance/decline')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'O responsável diz não. **Não** tranca a conta do jovem' })
-  async recusarAssistencia(@Param('token') token: string): Promise<void> {
-    await this.assistencia.recusar(token);
+  async recusarAssistencia(@Body() dto: TokenDto): Promise<void> {
+    await this.assistencia.recusar(dto.token);
   }
 
   @Get('me')

@@ -17,9 +17,9 @@ Escopo do MVP em [`docs/product/mvp.md`](docs/product/mvp.md).
 
 ## Estado atual
 
-**Fases 0, 1, 2, 3, 5 e 5.5 concluídas.** A próxima é a **Fase 5.7 (idade mínima de 16 anos, com
-assistência do responsável)**, e só então a Fase 6 (agenda). A Fase 4 saiu do escopo e roda junto
-da 12. O **Epic 2.6 (staging)** venceu e depende de conta em provedor.
+**Fases 0, 1, 2, 3, 5, 5.5 e 5.7 concluídas.** A próxima é a **Fase 6 (agenda)** — a de maior
+risco técnico do projeto. A Fase 4 saiu do escopo e roda junto da 12. O **Epic 2.6 (staging)**
+venceu e depende de conta em provedor.
 
 Funciona hoje: criar conta de profissional ou de aluno, entrar, sair, recuperar senha,
 confirmar e trocar e-mail, o link público "treine comigo" do professor, a autorização por papel
@@ -36,6 +36,10 @@ aceita **nasce profissional completo**, com carteira e link próprios, e quem pa
 escolhe na tela em qual negócio está trabalhando. O membro enxerga **só as fichas associadas a
 ele**, nunca a carteira inteira do clube, e nada de dinheiro. O perfil ganhou **espaços** (quadra,
 sala, campo) dentro de cada local, e cada modalidade diz em quais locais acontece.
+
+A idade mínima para conta de **aluno** é **16 anos**, com um responsável confirmando por link — a
+de **profissional** continua em 18, por decisão de produto. O responsável **só assina**: não ganha
+conta nem enxerga nada.
 
 Não existe ainda nada de agenda, aula, pagamento, nem tela do aluno — ele não vê a própria ficha
 em lugar nenhum, e isso é da Fase 11. **Nenhuma tela de perfil, carteira ou equipe existe no
@@ -66,8 +70,8 @@ pnpm --filter @gestao/api migration:run
 pnpm --filter @gestao/api seed            # dados de desenvolvimento, idempotente
 pnpm dev                                  # API :3333 · web :3000
 
-pnpm lint && pnpm typecheck && pnpm test  # 171 testes de unidade
-pnpm test:e2e                             # 245 testes de tela
+pnpm lint && pnpm typecheck && pnpm test  # 180 testes de unidade
+pnpm test:e2e                             # 269 testes de tela
 
 pnpm --filter @gestao/api test -- health.service   # um teste específico
 pnpm exec playwright test cadastro                 # um arquivo de tela

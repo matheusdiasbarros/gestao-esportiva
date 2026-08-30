@@ -208,9 +208,9 @@ test.describe('A assistência, do pedido à confirmação', () => {
   test('confirmar destrava, e é visível na sessão que já estava aberta', async () => {
     const token = await plantarToken(email);
 
-    expect((await anonimo.post(`${API}/auth/guardian-assistance/${token}/confirm`)).status()).toBe(
-      204,
-    );
+    expect(
+      (await anonimo.post(`${API}/auth/guardian-assistance/confirm`, { data: { token } })).status(),
+    ).toBe(204);
 
     // **Com a mesma sessão, sem entrar de novo**: o estado é conferido no banco a cada
     // requisição, e não lido do token. Se viajasse no token, o jovem esperaria 15 minutos.
@@ -222,7 +222,9 @@ test.describe('A assistência, do pedido à confirmação', () => {
 
   test('o mesmo link não confirma duas vezes', async () => {
     // Já usado: o token foi trocado no `plantarToken` anterior e gasto na confirmação.
-    const morto = await anonimo.post(`${API}/auth/guardian-assistance/${randomUUID()}/confirm`);
+    const morto = await anonimo.post(`${API}/auth/guardian-assistance/confirm`, {
+      data: { token: randomUUID() },
+    });
     expect(morto.status()).toBe(404);
   });
 });
@@ -254,9 +256,9 @@ test.describe('Recusar, e indicar outro', () => {
 
   test('a recusa não tranca a conta — ela só encerra o pedido', async () => {
     const token = await plantarToken(email);
-    expect((await anonimo.post(`${API}/auth/guardian-assistance/${token}/decline`)).status()).toBe(
-      204,
-    );
+    expect(
+      (await anonimo.post(`${API}/auth/guardian-assistance/decline`, { data: { token } })).status(),
+    ).toBe(204);
 
     const eu = await comoJovem.get(`${API}/auth/me`);
     expect(eu.status(), 'a recusa trancou a conta do jovem').toBe(200);
@@ -294,6 +296,94 @@ test.describe('Recusar, e indicar outro', () => {
     // O reenvio gera token novo de propósito: dois links vivos na caixa de alguém dariam
     // "já usado" no clique errado, sem explicação.
     expect((await anonimo.get(`${API}/auth/guardian-assistance/${antigo}`)).status()).toBe(404);
+  });
+});
+
+test.describe('O que a revisão de segurança fechou', () => {
+  /**
+   * Os consertos dos achados #1 a #4, cada um com o teste que faltava. A revisão pediu quatro
+   * `expect` antes de a fase fechar; estes são eles.
+   */
+  test('adulto que preenche os campos do responsável é recusado — achado #3', async () => {
+    // Sem esta recusa, um adulto ganhava uma linha de assistência, um e-mail disparado a um
+    // estranho, e um link público renderizando **nome e data de nascimento escolhidos por ele**.
+    const { status, corpo } = await cadastrarAluno(anonimo, {
+      email: novoEmail('adulto-com-responsavel'),
+      fullName: 'Adulto Esperto',
+      birthDate: nascidoHa(26),
+      guardianName: 'Vitima Inventada',
+      guardianEmail: novoEmail('vitima'),
+    });
+
+    expect(status, 'gravou assistência para quem não precisa de assistência').toBe(422);
+    expect(corpo).toContain('16 ou 17 anos');
+  });
+
+  test('depois de confirmado, não dá mais para trocar de responsável — achado #2', async () => {
+    const email = novoEmail('ja-confirmado');
+    await cadastrarAluno(anonimo, {
+      email,
+      fullName: 'Jovem Confirmado',
+      birthDate: nascidoHa(16),
+      guardianName: 'Mãe Confirmadora',
+      guardianEmail: novoEmail('mae-confirma'),
+    });
+
+    const token = await plantarToken(email);
+    expect(
+      (await anonimo.post(`${API}/auth/guardian-assistance/confirm`, { data: { token } })).status(),
+    ).toBe(204);
+
+    const comoJovem = await request.newContext();
+    await comoJovem.post(`${API}/auth/login`, { data: { email, password: SENHA } });
+
+    // Antes do conserto isto respondia 204, e continuava respondendo 204 indefinidamente — uma
+    // conta já assistida disparando mensagens para endereços escolhidos por quem chama.
+    const troca = await comoJovem.put(`${API}/auth/guardian-assistance`, {
+      data: { guardianName: 'Estranho', guardianEmail: novoEmail('estranho') },
+    });
+    expect(troca.status(), 'a conta confirmada continuou podendo disparar e-mail').toBe(409);
+
+    await comoJovem.dispose();
+  });
+
+  test('o link já usado morre, como o inventado e o vencido — achado #4', async () => {
+    const email = novoEmail('link-morto');
+    await cadastrarAluno(anonimo, {
+      email,
+      fullName: 'Jovem do Link',
+      birthDate: nascidoHa(17),
+      guardianName: 'Pai do Link',
+      guardianEmail: novoEmail('pai-link'),
+    });
+
+    const token = await plantarToken(email);
+    await anonimo.post(`${API}/auth/guardian-assistance/confirm`, { data: { token } });
+
+    // **Os quatro jeitos de o link estar morto respondem igual.** Antes, já usado devolvia 200
+    // com o nome e a data de nascimento do adolescente — para sempre.
+    const jaUsado = await anonimo.get(`${API}/auth/guardian-assistance/${token}`);
+    expect(jaUsado.status(), 'o link já usado continuou entregando dado do jovem').toBe(404);
+    expect(await jaUsado.text()).not.toContain('Jovem do Link');
+  });
+
+  test('o link vencido morre, e não conta que existiu', async () => {
+    const email = novoEmail('link-vencido');
+    await cadastrarAluno(anonimo, {
+      email,
+      fullName: 'Jovem Vencido',
+      birthDate: nascidoHa(17),
+      guardianName: 'Mãe Vencida',
+      guardianEmail: novoEmail('mae-vencida'),
+    });
+
+    const token = await plantarToken(email);
+    await psql(
+      `UPDATE guardian_assistances SET expires_at = now() - interval '1 day'
+         WHERE user_id = (SELECT id FROM users WHERE email = '${email}')`,
+    );
+
+    expect((await anonimo.get(`${API}/auth/guardian-assistance/${token}`)).status()).toBe(404);
   });
 });
 

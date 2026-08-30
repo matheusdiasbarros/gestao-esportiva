@@ -288,7 +288,7 @@ Composição do MVP definida na Fase 0 — ver [`docs/product/mvp.md`](docs/prod
 | 4 | Localização e área de atendimento | ⬜ | **não** | 3 |
 | 5 | Gestão de alunos | ⬜ | sim | 2, 3 |
 | 5.5 | Equipe | ✅ 2026-08-30 | sim | 2, 3, 5 |
-| 5.7 | Idade mínima e assistência | ⬜ | sim | 2, 5 |
+| 5.7 | Idade mínima e assistência | ✅ 2026-08-30 | sim | 2, 5 |
 | 6 | Agenda | ⬜ | sim | 3, 5, 5.5, 5.7 |
 | 7 | Pacotes e créditos | ⬜ | sim | 6 |
 | 8 | Turmas | ⬜ | reduzida | 6, 7 |
@@ -1682,7 +1682,7 @@ vazamento tem destinatário conhecido: o colega de equipe, o ex-membro, o clube 
 
 ---
 
-## Fase 5.7 — Idade mínima e assistência do responsável ⬜
+## Fase 5.7 — Idade mínima e assistência do responsável ✅
 
 > **Fase acrescentada em 2026-08-29**, do mesmo jeito e pelo mesmo motivo que a 5.5: meio número
 > para não renumerar catorze fases. **Pequena, e transversal** — mexe no cadastro (Fase 2) e na
@@ -1712,30 +1712,30 @@ gatilhos do agente ao mesmo tempo
 
 ### Épicos e tarefas
 
-- [ ] **Epic 5.7.1 — Os dois números, e por que eles andam juntos**
-  - [ ] `MINIMUM_SIGNUP_AGE` e `IDADE_DE_MAIORIDADE` passam a 16. **Os dois, no mesmo commit**:
+- [x] **Epic 5.7.1 — Os dois números, e por que eles andam juntos**
+  - [x] `MINIMUM_SIGNUP_AGE` e `IDADE_DE_MAIORIDADE` passam a 16. **Os dois, no mesmo commit**:
         se o jovem de 16 pode ter conta, a ficha dele pode ser `SELF`. Mover um sem o outro cria
         uma ficha que o banco aceita e que nenhuma conta consegue acessar
-  - [ ] O aviso de aniversário na ficha passa a acender aos **16**, não aos 18 (`students.md`
+  - [x] O aviso de aniversário na ficha passa a acender aos **16**, não aos 18 (`students.md`
         §8.3). A escolha de *avisar e oferecer*, em vez de transferir sozinho, não muda
-  - [ ] Teste de véspera e de dia exato do aniversário, nos dois números
-- [ ] **Epic 5.7.2 — A assistência, e o que ela bloqueia**
-  - [ ] Quem tem 16 ou 17 informa **nome e e-mail do responsável** no cadastro. O formulário
+  - [x] Teste de véspera e de dia exato do aniversário, nos dois números
+- [x] **Epic 5.7.2 — A assistência, e o que ela bloqueia**
+  - [x] Quem tem 16 ou 17 informa **nome e e-mail do responsável** no cadastro. O formulário
         pede isso a partir da data de nascimento digitada, e não por uma caixa que a pessoa marca
-  - [ ] O responsável recebe um link e **confirma**. Guardar quem assistiu, ao lado da versão e
+  - [x] O responsável recebe um link e **confirma**. Guardar quem assistiu, ao lado da versão e
         da data dos Termos que a D8a já grava — sem isso o aceite continua anulável, e a fase
         inteira teria trocado um número sem resolver nada
-  - [ ] **O que espera a confirmação é agendar e pagar — não entrar.** Mesmo padrão da decisão
+  - [x] **O que espera a confirmação é agendar e pagar — não entrar.** Mesmo padrão da decisão
         D5, que já deixa entrar sem verificar e só exige verificação para *agir para fora*.
         Bloquear a entrada puniria a pessoa por um passo que não é dela
-  - [ ] O link do responsável é token com hash, uso único e validade — como todo link deste
+  - [x] O link do responsável é token com hash, uso único e validade — como todo link deste
         sistema. Nada de identificador adivinhável no e-mail
-  - [ ] Teto por hora no reenvio, e a recusa **não pode dizer** se aquele endereço já confirmou
-- [ ] **Epic 5.7.3 — A base legal, que é onde a lacuna de verdade estava**
-  - [ ] Registrar em `students.md` §15 a pergunta com o **número certo**: a ficha de criança com
+  - [x] Teto por hora no reenvio, e a recusa **não pode dizer** se aquele endereço já confirmou
+- [x] **Epic 5.7.3 — A base legal, que é onde a lacuna de verdade estava**
+  - [x] Registrar em `students.md` §15 a pergunta com o **número certo**: a ficha de criança com
         **menos de 12 anos** é criada hoje sob *legítimo interesse*, e o art. 14 §1 pede
         **consentimento** nessa faixa. Não é o mecanismo que está em dúvida — é a base legal
-  - [ ] **Pergunta de advogado, não de programador.** O que esta fase entrega é o registro com o
+  - [x] **Pergunta de advogado, não de programador.** O que esta fase entrega é o registro com o
         corte de 12 anos escrito; o que fazer a respeito depende da resposta
 
 ### Decisões da fase
@@ -1744,16 +1744,26 @@ gatilhos do agente ao mesmo tempo
       contra a recomendação de manter 18. O argumento de manter era que nada se perdia: o menor
       já é atendido como ficha com o responsável na conta. O dono decidiu abrir a conta própria
       ao adolescente, e a assistência confirmada é o que sustenta a decisão juridicamente
-- [ ] O que exatamente fica bloqueado até a confirmação, quando a agenda existir — agendar é
-      claro; pagar é da Fase 9 e precisa ser reconferido lá
+- [x] **O portão existe e é *fail-closed*; o que ele fecha é da Fase 6.**
+      `GuardianAssistanceService.pendente()` responde *pendente* quando não há confirmação —
+      inclusive quando não há linha nenhuma, que era o achado #1 da revisão de segurança. Nada
+      o consulta hoje: marcar aula é da Fase 6 e pagar é da Fase 9, e o `TODO` da 9 já manda
+      reconferir. O contrato está no cabeçalho da Fase 6
 
 ### Critérios de conclusão
 
-- [ ] Conta de 16 anos criada e usável, com agendamento bloqueado até a confirmação
-- [ ] Conta de 15 anos recusada, com a frase dizendo o que fazer
-- [ ] Os dois números movidos juntos, com teste que falharia se só um tivesse mudado
-- [ ] Revisão de segurança registrada em `docs/security/`
-- [ ] `iam.md` §8.1 e `students.md` §8 atualizados; manual da fase em `docs/sistema/`
+- [x] Conta de 16 anos criada e usável. **O agendamento não existe para ser bloqueado** — o
+      portão foi construído e é *fail-closed*, e a Fase 6 o consulta no primeiro épico
+- [x] Conta de 15 anos recusada, com a frase dizendo o que fazer — e a tela mostra o caminho
+      que existe: o professor cadastra a ficha, e o acesso fica com o responsável
+- [x] Os dois números movidos juntos — e **melhor do que o critério pedia**:
+      `IDADE_DE_ACESSO_PROPRIO` **é** `MINIMUM_SIGNUP_AGE`, então separá-los exige desfazer a
+      derivação. O teste continua existindo para quem desfizer ler o motivo
+- [x] Revisão de segurança em `docs/security/revisao-fase-05-7.md` — **dois achados altos e
+      três médios, todos consertados**, mais dois aceitos como dívida (DT-019 e DT-020).
+      Nenhum permitia ler dado alheio sem ter o link
+- [x] `iam.md` §8.1, `students.md` §8 e §15.4, `staff.md` §5.4 e `glossary.md` atualizados;
+      manual em `docs/sistema/fase-05-7-idade-minima.md`
 
 ---
 

@@ -6,13 +6,13 @@ Vocabulário único do projeto. Produto e interface em **pt-BR**; código, tabel
 Regra: se um termo aparece aqui, é assim que ele se chama — na conversa, no documento, na
 tela e no código. Sinônimo novo para conceito existente é bug de vocabulário.
 
-Última atualização: 2026-08-28
+Última atualização: 2026-08-30
 
 ---
 
 ## Termos ambíguos — leia antes
 
-Cinco palavras do português significam mais de uma coisa neste domínio. Confundi-las gera
+Seis palavras do português significam mais de uma coisa neste domínio. Confundi-las gera
 modelagem errada.
 
 ### "Aula"
@@ -82,6 +82,28 @@ conta significaria aulas, não logins. Na interface: **"aparelhos conectados"**.
 
 ---
 
+### "Responsável" ✱
+
+**A sexta palavra, e a mais perigosa das seis**, porque os dois sentidos são a **mesma pessoa** em
+situações vizinhas — e um deles dá acesso a dados de terceiro e o outro não dá nada.
+
+| Sentido em pt-BR | O que é | Termo em código |
+| --- | --- | --- |
+| quem **acessa a ficha** de um aluno que não tem conta | o arranjo da Fase 5, para menores de 16 | `students.access_holder = 'GUARDIAN'` |
+| quem **assiste** o aceite dos Termos de alguém de 16 ou 17 | a assistência da Fase 5.7 | `GuardianAssistance` |
+
+**A frase que resolve:** *assistência é da conta; acesso do responsável é da ficha.*
+
+A mesma mãe pode ser as duas coisas para o mesmo jovem, e as duas terminam de jeitos diferentes —
+**a assistência acaba quando ela confirma**, e o acesso acaba quando o profissional transfere. E o
+segundo sentido é o **oposto** do primeiro em consequência: quem assiste não ganha conta, não vê
+agenda, não vê pagamento e não entra em conta nenhuma.
+
+Por isso o **ato** tem nome próprio, e não a pessoa: dizer "o responsável" continua ambíguo; dizer
+"a assistência" não. Foram recusados *autorização* (sugere permissão contínua), *consentimento*
+(é termo da LGPD, e a base legal aqui é outra), *tutor* e *guardião* (dizem coisa específica em
+direito de família, e a plataforma não sabe qual é o arranjo).
+
 ## Pessoas e acesso
 
 Detalhamento completo do modelo em [`iam.md`](iam.md).
@@ -95,6 +117,9 @@ Detalhamento completo do modelo em [`iam.md`](iam.md).
 | Papel | `Role` | Profissional, aluno ou administrador. **Derivado do dado**, nunca uma coluna de papel |
 | Convite | `StudentInvite` | Link de uso único que liga uma ficha existente a uma conta |
 | Link público | `SignupLink` | Link permanente do profissional ("treine comigo"). Quem se cadastra por ele vira aluno dele, sem ficha prévia |
+| Assistência ✱ | `GuardianAssistance` | A confirmação, por um responsável, de que alguém de 16 ou 17 anos pode ter conta e aceitar os Termos. **É da conta, e não dá acesso a nada** |
+| Responsável que assiste ✱ | `guardian_assistances.guardian_name` · `.guardian_email` | Quem confirma a assistência. Não vira conta, não vira participante, não ganha papel. As colunas não precisam de prefixo: **o nome da tabela é a desambiguação** |
+| Responsável da ficha | `students.access_holder = 'GUARDIAN'` | Quem **acessa a ficha** de um aluno sem conta, com a conta dele. Continua sendo participante — e continua sendo outra coisa |
 
 A mesma pessoa é aluna de dois profissionais tendo **duas fichas** que apontam para **uma
 conta**. Rodrigo nunca sabe que Ana existe.

@@ -27,14 +27,18 @@ export function DecidirAssistencia({
   const [estado, setEstado] = useState(pedido.status);
   const [carregando, setCarregando] = useState<'confirm' | 'decline' | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [confirmandoRecusa, setConfirmandoRecusa] = useState(false);
 
   async function decidir(acao: 'confirm' | 'decline') {
     setCarregando(acao);
     setAviso(null);
 
     try {
-      await apiFetch(`/auth/guardian-assistance/${encodeURIComponent(token)}/${acao}`, {
+      // O token vai no **corpo**, e não no caminho: URL entra em log de servidor, log de proxy
+      // e histórico de navegador. É o padrão dos outros três links deste sistema.
+      await apiFetch(`/auth/guardian-assistance/${acao}`, {
         method: 'POST',
+        body: JSON.stringify({ token }),
       });
       setEstado(
         acao === 'confirm' ? GuardianAssistanceStatus.Confirmed : GuardianAssistanceStatus.Declined,
@@ -136,16 +140,58 @@ export function DecidirAssistencia({
         </button>
         <button
           type="button"
-          onClick={() => void decidir('decline')}
+          onClick={() => setConfirmandoRecusa(true)}
           disabled={carregando !== null}
           className="rounded-lg border border-(--color-border) px-4 py-2.5 text-sm font-medium disabled:opacity-60"
         >
-          {carregando === 'decline' ? 'Registrando…' : 'Não autorizar'}
+          Não autorizar
         </button>
       </div>
 
+      {/* **Recusar pede um segundo passo, e não é excesso de zelo.** Esta página é pública: quem
+          tiver o link decide. Um clique acidental — ou um irmão mais velho numa caixa de e-mail
+          compartilhada — **cala aquele endereço para sempre**, e não existe rota que desfaça. O
+          segundo passo é o mais barato dos dois consertos que a revisão de segurança propôs, e é
+          o que não mexe na regra. */}
+      {confirmandoRecusa ? (
+        <div className="flex flex-col gap-3 rounded-lg border border-(--color-danger) p-4 text-sm">
+          <p>
+            Se você não autorizar, <strong>não vamos escrever de novo para este endereço</strong> —
+            nem se {pedido.studentName} pedir. Ele continua entrando na conta dele, mas não consegue
+            marcar aula.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => void decidir('decline')}
+              disabled={carregando !== null}
+              className="rounded-lg bg-(--color-danger) px-4 py-2 text-sm font-medium text-(--color-surface) disabled:opacity-60"
+            >
+              {carregando === 'decline' ? 'Registrando…' : 'Sim, não autorizo'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmandoRecusa(false)}
+              className="rounded-lg border border-(--color-border) px-4 py-2 text-sm font-medium"
+            >
+              Voltar
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <p className="text-sm text-(--color-ink-muted)">
         Se você não conhece {pedido.studentName}, feche esta página — nada acontece.
+      </p>
+
+      {/* **Algo já aconteceu, e o texto acima sozinho mentiria.** O nome e o endereço de e-mail
+          desta pessoa já foram gravados quando o jovem preencheu o formulário, e ficam: a recusa
+          precisa sobreviver para a plataforma saber que não deve escrever de novo. Dizer quem
+          guarda o quê e por quê é o mínimo, e é barato. Achado #8 da revisão de segurança. */}
+      <p className="text-xs text-(--color-ink-muted)">
+        Guardamos o seu nome e o seu e-mail porque {pedido.studentName} os informou ao criar a
+        conta, e porque precisamos saber a quem escrevemos — inclusive para não escrever de novo, se
+        você não autorizar. Não usamos para nada além disto.
       </p>
     </div>
   );

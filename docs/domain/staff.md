@@ -250,7 +250,7 @@ abriu o link controla aquela caixa e não descobre nada que já não saiba. O ri
 | A é membro de B, e B é membro de A | **sim.** Dois professores que trocam de chapéu conforme o negócio. Só o auto-vínculo é proibido |
 | A mesma pessoa em várias equipes | **sim.** É o professor que roda três clubes, e é o caso que E1 existe para servir |
 | Um aluno do dono aceitar o convite e virar membro | **sim** — vira profissional, e continua sendo aluno pela ficha. Com o invariante 4 impedindo o cruzamento ✱ |
-| Um menor de idade | **não é representável**: conta é 18+ (D9) |
+| Um menor de 18 anos ✱ | **representável desde a Fase 5.7, e ainda assim recusado.** A conta de aluno abre aos 16; a de **profissional** continua exigindo 18, e entrar numa equipe é virar profissional (E1). `aceitarComContaAtual` confere a idade, porque quem chega com a conta na mão não passa por cadastro nenhum — era a porta de trás. A frase antiga dizia *"não é representável: conta é 18+"*, e estava errada nas duas metades |
 
 ## 6. A regra de acesso
 

@@ -503,6 +503,53 @@ compartilham.
 "quando der" — é agora ou o próximo desenvolvedor perde a tarde que este documento existe para
 poupar. A conferência custa três comandos, e está em `docs/sistema/fase-05-7-idade-minima.md`.
 
+### DT-019 — Dado de um terceiro que não é usuário, guardado para sempre e sem canal
+
+**O que:** `guardian_assistances` guarda **nome e e-mail de alguém que não tem conta e nunca vai
+ter** — o responsável que assiste o cadastro de um jovem de 16 ou 17. As linhas **nunca são
+apagadas**, e isso é de propósito: a recusa precisa sobreviver para a plataforma saber que não
+deve escrever de novo para aquele endereço.
+
+**O que já foi feito**, em 2026-08-30, porque era barato: uma linha no rodapé do e-mail e uma na
+página do responsável dizendo quem guarda o quê e por quê. Sem elas, os dois textos diziam *"se
+você não conhece Fulano, ignore — nada acontece"*, e **algo já tinha acontecido**: o nome e o
+endereço foram gravados no momento em que o jovem preencheu o formulário.
+
+**O que continua aberto, e precisa de advogado:** por quanto tempo guardar, qual canal esse
+terceiro usa para pedir exclusão, e a Política de Privacidade — que não existe, e cujo aceite é
+`v0-desenvolvimento` desde a Fase 2. É a mesma pessoa que responde as perguntas da §15 do
+`students.md`.
+
+**A nota de futuro, e ela é a parte fácil de esquecer:** a decisão D8b diz que excluir conta
+**anonimiza** e mantém histórico. Quando isso for construído, `guardian_assistances` **precisa
+entrar na varredura** — anonimizar a conta do jovem deixando o nome e o e-mail do responsável
+pendurados nela não é anonimizar.
+
+**Gatilho para pagar:** o primeiro usuário real, junto com os Termos e a Política. E,
+obrigatoriamente, a fase que construir a exclusão de conta.
+
+### DT-020 — A recusa da assistência não tem volta
+
+**O que:** `POST /auth/guardian-assistance/decline` é público — o token é a credencial, e o
+responsável não tem conta. Recusar **cala aquele endereço para sempre**: o jovem não consegue
+reindicá-lo, e não existe rota, nem dele nem do administrador, que desfaça. Se o link for
+interceptado — caixa de e-mail compartilhada em família, irmão mais velho, ex-cônjuge —, o
+endereço **certo** fica queimado.
+
+**Medido ao vivo** pela revisão de segurança da Fase 5.7 (achado #6): um "terceiro" recusou, o
+jovem tentou reindicar o mesmo endereço e recebeu 422, e o reenvio, 409.
+
+**O que já foi feito:** a página pede **dois passos** antes de recusar, dizendo o que a recusa
+custa. Era o mais barato dos dois consertos propostos, e o único que não mexe em regra.
+
+**Aceito porque:** o estrago é contornável — o jovem indica outro responsável — e a alternativa
+enfraquece a promessa que sustenta o texto do e-mail: *"não vamos ficar mandando lembrete"*. Uma
+rota que reabre um endereço recusado é exatamente o que essa frase promete que não existe.
+
+**Gatilho para pagar:** o primeiro relato de endereço queimado por engano. O conserto que eu
+faria é permitir **uma** segunda indicação para um endereço recusado — é uma segunda mensagem, não
+um lembrete, e a promessa se mantém.
+
 ---
 
 ## Armadilhas já resolvidas (não repetir)

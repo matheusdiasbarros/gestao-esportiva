@@ -26,6 +26,8 @@ import dataSource from '../data-source';
  *   plenamente utilizável assim.
  * - **Carlos** — responsável, cuja conta acessa a ficha da filha.
  * - **Sofia** — ficha de menor, sem conta própria, acessada por Carlos (decisão D9).
+ * - **Theo** — irmão da Sofia, e a única ficha **abaixo de 12 anos**: é a faixa em que a LGPD
+ *   exige consentimento e o sistema usa legítimo interesse (`students.md` §15).
  * - **Beatriz** — conta de aluna **sem professor nenhum**, resultado do cadastro aberto (D10).
  * - **Sérgio** — terceiro profissional, e o único **descartável**: existe para os testes que
  *   precisam mexer no estado da própria conta do dono — suspender, reativar — sem derrubar os
@@ -54,6 +56,7 @@ const ID = {
   fichaMarinaAna: '01900000-0000-7000-8000-000000010002',
   fichaJoao: '01900000-0000-7000-8000-000000010003',
   fichaSofia: '01900000-0000-7000-8000-000000010004',
+  fichaTheo: '01900000-0000-7000-8000-000000010005',
 } as const;
 
 async function seed(ds: DataSource): Promise<void> {
@@ -169,6 +172,38 @@ async function seed(ds: DataSource): Promise<void> {
     userId: ID.carlos,
     fullName: 'Sofia Dias',
     birthDate: '2014-05-09',
+    accessHolder: AccessHolder.Guardian,
+    guardianName: 'Carlos Dias',
+  });
+
+  /**
+   * **Theo, irmão da Sofia, e a única ficha claramente abaixo de 12 anos.**
+   *
+   * Existe por causa de uma pergunta jurídica em aberto: a LGPD, art. 14 §1, exige
+   * **consentimento** de um dos pais para dados de **criança** — menor de 12 —, e a ficha é criada
+   * hoje sob *legítimo interesse*, como a de um adulto. A pergunta está registrada em
+   * `students.md` §15, e ela é de advogado, não de programador.
+   *
+   * **Sem uma ficha nessa faixa, o caso não aparece na tela de ninguém.** E ele desapareceu
+   * sozinho: a Sofia nasceu em 2014 e **fez 12 anos em maio de 2026**, saindo da faixa três meses
+   * antes de alguém precisar dela. Data fixa em seed envelhece, e envelhece em silêncio.
+   *
+   * **Quando o Theo fizer 12** — em 2031 —, o mesmo acontece com ele. Quem estiver aqui nessa
+   * época troca a data, ou o caso some de novo. Está escrito para não precisar ser redescoberto.
+   *
+   * **E a ficha dele nasce SEM conta ligada, o que não foi escolha: o banco recusou.** Carlos já
+   * é a conta da ficha da Sofia na carteira do Rodrigo, e `uq_students_professional_user` permite
+   * **uma ficha por conta em cada carteira**. Ou seja: **um pai com dois filhos no mesmo professor
+   * não consegue acompanhar os dois pela conta dele.** Descoberto ao escrever esta seed, e
+   * registrado em `students.md` §7.6 — a restrição existe por um bom motivo, e o caso dos irmãos
+   * é real e comum em escolinha.
+   */
+  await criarFicha({
+    id: ID.fichaTheo,
+    professionalId: ID.profRodrigo,
+    userId: null,
+    fullName: 'Theo Dias',
+    birthDate: '2019-02-18',
     accessHolder: AccessHolder.Guardian,
     guardianName: 'Carlos Dias',
   });
