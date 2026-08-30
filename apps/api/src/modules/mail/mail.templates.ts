@@ -124,6 +124,69 @@ export function montarMensagem(job: MailJob): MensagemPronta {
         `),
       };
 
+    case MailKind.GuardianAssistance:
+      // **O nome do jovem vai no assunto**, pelo mesmo motivo já escrito acima para o convite:
+      // "Confirmação da Gestão Esportiva" é mensagem de empresa desconhecida. Esta chega a
+      // alguém que talvez nem saiba do cadastro — o nome do filho é o que faz abrir.
+      //
+      // **Três blocos com título, e o do meio é o que evita a primeira reclamação.** O
+      // responsável só assina: não ganha conta, não vê agenda, não vê pagamento. Sem dizer isso
+      // com todas as letras, ele supõe que ganhou um painel de acompanhamento.
+      //
+      // **Sem idade e sem data de nascimento**, de propósito: o endereço pode estar errado, e a
+      // tela do link é o lugar de mostrar dado do jovem — lá quem chegou já provou ter o link.
+      return {
+        subject: `${job.studentName} criou uma conta e precisa da sua confirmação`,
+        text: [
+          `Olá, ${job.name}.`,
+          '',
+          `${job.studentName} criou uma conta na Gestão Esportiva — uma plataforma onde`,
+          'professores de esporte organizam as aulas e os alunos marcam os horários. Ele',
+          'indicou você como responsável.',
+          '',
+          'Quem tem 16 ou 17 anos só fecha esse cadastro com um responsável junto. É isso que',
+          'estamos pedindo aqui: a sua confirmação de que você sabe e concorda.',
+          '',
+          `Confirmar por aqui (o link vale ${job.diasDeValidade} dias):`,
+          job.link,
+          '',
+          'O QUE VOCÊ ESTÁ CONFIRMANDO',
+          `Que ${job.studentName} pode ter uma conta e aceitar os Termos de Uso da plataforma.`,
+          '',
+          'O QUE ISTO NÃO É',
+          'Não é uma conta para você. Você não vai ver a agenda, as aulas nem os pagamentos de',
+          `${job.studentName}, e não vai conseguir entrar na conta dele. Confirmar também não`,
+          'contrata aula com professor nenhum e não gera cobrança.',
+          '',
+          'SE VOCÊ NÃO FIZER NADA',
+          `${job.studentName} continua entrando na conta dele, mas não consegue marcar aula.`,
+          'Nada é cobrado e nada acontece sozinho. Não vamos ficar mandando lembrete.',
+          '',
+          `Se você não conhece ${job.studentName}, ignore esta mensagem — nada acontece.`,
+        ].join('\n'),
+        html: envelope(`
+          <p>Olá, ${escapar(job.name)}.</p>
+          <p><strong>${escapar(job.studentName)}</strong> criou uma conta na Gestão Esportiva —
+             uma plataforma onde professores de esporte organizam as aulas e os alunos marcam os
+             horários. Ele indicou você como responsável.</p>
+          <p>Quem tem 16 ou 17 anos só fecha esse cadastro com um responsável junto. É isso que
+             estamos pedindo aqui: a sua confirmação de que você sabe e concorda.</p>
+          ${botao(job.link, 'Confirmar')}
+          <p><strong>O que você está confirmando</strong><br />
+             Que ${escapar(job.studentName)} pode ter uma conta e aceitar os Termos de Uso da
+             plataforma.</p>
+          <p><strong>O que isto não é</strong><br />
+             Não é uma conta para você. Você não vai ver a agenda, as aulas nem os pagamentos de
+             ${escapar(job.studentName)}, e não vai conseguir entrar na conta dele. Confirmar
+             também não contrata aula com professor nenhum e não gera cobrança.</p>
+          <p><strong>Se você não fizer nada</strong><br />
+             ${escapar(job.studentName)} continua entrando na conta dele, mas não consegue marcar
+             aula. Nada é cobrado e nada acontece sozinho. Não vamos ficar mandando lembrete.</p>
+          <p style="color:#666">O link vale <strong>${job.diasDeValidade} dias</strong>. Se você
+             não conhece ${escapar(job.studentName)}, ignore esta mensagem — nada acontece.</p>
+        `),
+      };
+
     case MailKind.InviteAccepted:
       // Traz o e-mail de quem aceitou de propósito. É o único jeito de o profissional perceber
       // que o link avulso foi parar na mão errada, e a mensagem diz o que fazer nesse caso.

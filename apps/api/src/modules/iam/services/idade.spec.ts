@@ -1,4 +1,4 @@
-import { idadeEm } from './auth.service';
+import { idadeEm } from './dados-da-conta';
 
 /**
  * A idade mínima de 18 anos (decisão D9) é o que impede uma criança de ter conta. Errar por um

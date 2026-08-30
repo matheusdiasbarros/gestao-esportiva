@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { Professional } from '../entities/professional.entity';
 import { Student } from '../entities/student.entity';
 import { User } from '../entities/user.entity';
+import { GuardianAssistanceService } from './guardian-assistance.service';
 
 export interface SinaisDePapel {
   isPlatformAdmin: boolean;
@@ -50,16 +51,20 @@ export class RolesService {
     private readonly professionals: Repository<Professional>,
     @InjectRepository(Student)
     private readonly students: Repository<Student>,
+    private readonly assistencia: GuardianAssistanceService,
   ) {}
 
   /** Monta o que a API devolve sobre quem está autenticado, após login e após renovação. */
   async describe(user: User): Promise<AuthenticatedUser> {
-    const [professional, temFicha] = await Promise.all([
+    const [professional, temFicha, assistencia] = await Promise.all([
       this.professionals.findOne({
         where: { userId: user.id },
         select: { id: true, signupSlug: true, signupLinkEnabled: true },
       }),
       this.students.exists({ where: { userId: user.id } }),
+      // Some sozinha aos 18: `estadoDe` devolve `null` fora da faixa de 16 a 17, mesmo com linha
+      // no banco. A tela não precisa saber a idade para decidir o que mostrar.
+      this.assistencia.estadoDe(user),
     ]);
 
     return {
@@ -75,6 +80,7 @@ export class RolesService {
       hasProfessional: temFicha,
       ...(user.pendingEmail ? { pendingEmail: user.pendingEmail } : {}),
       ...(professional ? { professionalId: professional.id } : {}),
+      ...(assistencia ? { guardianAssistance: assistencia } : {}),
       // O slug só sai quando o link está ligado: entregá-lo desligado faria a tela oferecer
       // para copiar um endereço que não funciona.
       ...(professional?.signupLinkEnabled ? { signupSlug: professional.signupSlug } : {}),

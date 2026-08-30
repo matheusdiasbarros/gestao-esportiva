@@ -17,13 +17,8 @@ import { Professional } from '../entities/professional.entity';
 import { StudentInvite } from '../entities/student-invite.entity';
 import { Student } from '../entities/student.entity';
 import { User, UserStatus } from '../entities/user.entity';
-import {
-  AuthService,
-  DadosDeCadastro,
-  SessaoAberta,
-  normalizarEmail,
-  primeiroNome,
-} from './auth.service';
+import { AuthService, DadosDeCadastro, SessaoAberta } from './auth.service';
+import { normalizarEmail, primeiroNome } from './dados-da-conta';
 import { AccessService } from './access.service';
 import { ClientType, hashDe } from './token.service';
 

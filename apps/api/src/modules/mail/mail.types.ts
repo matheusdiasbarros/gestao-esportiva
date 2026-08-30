@@ -23,6 +23,8 @@ export const MailKind = {
   ChangeEmail: 'CHANGE_EMAIL',
   /** Aviso da troca pedida. Vai para o endereço **antigo**, e é o alarme contra sequestro. */
   EmailChangeRequested: 'EMAIL_CHANGE_REQUESTED',
+  /** Pedido de assistência ao responsável de quem tem 16 ou 17 anos. */
+  GuardianAssistance: 'GUARDIAN_ASSISTANCE',
 } as const;
 
 export type MailKind = (typeof MailKind)[keyof typeof MailKind];
@@ -82,6 +84,28 @@ export interface StaffInviteJob extends Base {
  * pode ser repassado para a pessoa errada. Não dá para impedir, mas dá para o dono da ficha
  * descobrir no mesmo dia. Ver `docs/domain/iam.md` §9.3.
  */
+/**
+ * O pedido de assistência ao responsável — Fase 5.7.
+ *
+ * **É a única mensagem que a plataforma manda a uma pessoa que não tem conta e talvez nem saiba
+ * do cadastro.** Por isso ela explica o que é a plataforma numa linha, e por isso o nome do
+ * jovem vai no assunto: é o que faz o adulto abrir.
+ *
+ * **Diz o que ele NÃO está autorizando, com título próprio.** Sem isso o pai supõe que ganhou um
+ * painel de acompanhamento, e a primeira reclamação é "cadê a agenda do meu filho?". A decisão do
+ * dono foi que o responsável **só assina** — ver `docs/domain/iam.md` §8.1.
+ *
+ * **Não leva a idade nem a data de nascimento.** O endereço pode estar errado; a tela do link é
+ * o lugar de mostrar dado do jovem, porque lá quem chegou já provou ter o link.
+ */
+export interface GuardianAssistanceJob extends Base {
+  kind: typeof MailKind.GuardianAssistance;
+  link: string;
+  /** O nome do jovem. Vai no assunto. */
+  studentName: string;
+  diasDeValidade: number;
+}
+
 export interface InviteAcceptedJob extends Base {
   kind: typeof MailKind.InviteAccepted;
   /** Como a ficha se chama na carteira dele. */
@@ -119,6 +143,7 @@ export type MailJob =
   | ResetPasswordJob
   | StudentInviteJob
   | StaffInviteJob
+  | GuardianAssistanceJob
   | InviteAcceptedJob
   | ChangeEmailJob
   | EmailChangeRequestedJob;

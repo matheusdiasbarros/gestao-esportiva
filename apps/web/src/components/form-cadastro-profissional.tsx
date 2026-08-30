@@ -1,6 +1,10 @@
 'use client';
 
-import { MINIMUM_PASSWORD_LENGTH, type AuthenticatedUser } from '@gestao/types';
+import {
+  MINIMUM_PASSWORD_LENGTH,
+  MINIMUM_PROFESSIONAL_AGE,
+  type AuthenticatedUser,
+} from '@gestao/types';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -100,7 +104,7 @@ export function FormCadastroProfissional({
           type="date"
           autoComplete="bday"
           erro={erros.birthDate}
-          dica="É preciso ter 18 anos ou mais."
+          dica={`É preciso ter ${MINIMUM_PROFESSIONAL_AGE} anos ou mais.`}
         />
         <Campo
           id="password"

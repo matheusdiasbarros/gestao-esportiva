@@ -18,7 +18,7 @@ import { StudentTeacher } from '../entities/student-teacher.entity';
 import { Student } from '../entities/student.entity';
 import { User, UserStatus } from '../entities/user.entity';
 import { AccessService, type EscopoDaCarteira } from './access.service';
-import { normalizarEmail } from './auth.service';
+import { normalizarEmail } from './dados-da-conta';
 import { fichaComoDono, type MarcadoresDaFicha } from './ficha-em-linha';
 import { menorPrecisaDeResponsavel } from './maioridade';
 import { mudancaDeVinculo } from './vinculo';

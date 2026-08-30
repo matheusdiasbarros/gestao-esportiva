@@ -1,5 +1,5 @@
 import { MINIMUM_PASSWORD_LENGTH } from '@gestao/types';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, IntersectionType } from '@nestjs/swagger';
 import { Equals, IsDateString, IsEmail, IsOptional, IsString, Length } from 'class-validator';
 import { BooleanEstrito } from '../../../common/validation/boolean-estrito';
 import { Trim } from '../../../common/validation/trim';
@@ -16,7 +16,10 @@ export class SignupProfessionalDto {
   @Length(2, 120, { message: 'O nome precisa ter entre 2 e 120 caracteres.' })
   fullName: string;
 
-  @ApiProperty({ example: '1994-03-12', description: 'AAAA-MM-DD. Mínimo de 18 anos.' })
+  @ApiProperty({
+    example: '1994-03-12',
+    description: 'AAAA-MM-DD. Mínimo de 16 anos para aluno, 18 para profissional.',
+  })
   @IsDateString({ strict: true }, { message: 'Use o formato AAAA-MM-DD.' })
   birthDate: string;
 
@@ -42,7 +45,48 @@ export class SignupProfessionalDto {
   acceptedTerms: boolean;
 }
 
-export class SignupStudentDto extends SignupProfessionalDto {
+/**
+ * Nome e e-mail de quem assiste o aceite dos Termos de quem tem 16 ou 17 anos.
+ *
+ * **Opcionais aqui e obrigatórios no serviço**, e a assimetria é de propósito: a obrigatoriedade
+ * depende da **idade**, que só é conhecida depois de a data de nascimento ser validada. Um
+ * `@ValidateIf` olhando `birthDate` cru repetiria em decorator a conta de idade que
+ * `validarCadastro` já faz — e duas contas de idade um dia discordam. Aqui só a forma; a regra
+ * está em `AuthService.validarResponsavel`.
+ */
+export class DadosDoResponsavelDto {
+  @ApiProperty({ required: false, example: 'Marta Souza', description: 'Só de 16 a 17 anos.' })
+  @IsOptional()
+  @Trim()
+  @IsString()
+  @Length(2, 120, { message: 'O nome do responsável precisa ter entre 2 e 120 caracteres.' })
+  guardianName?: string;
+
+  @ApiProperty({ required: false, example: 'marta@exemplo.com' })
+  @IsOptional()
+  @Trim()
+  @IsEmail({}, { message: 'Este e-mail não parece válido. Confira antes de continuar.' })
+  guardianEmail?: string;
+}
+
+/** Trocar o responsável, ou corrigir o endereço digitado errado. Aqui os dois são obrigatórios. */
+export class TrocarResponsavelDto {
+  @ApiProperty({ example: 'Marta Souza' })
+  @Trim()
+  @IsString()
+  @Length(2, 120, { message: 'Diga o nome do seu responsável.' })
+  guardianName: string;
+
+  @ApiProperty({ example: 'marta@exemplo.com' })
+  @Trim()
+  @IsEmail({}, { message: 'Este e-mail não parece válido. Confira antes de continuar.' })
+  guardianEmail: string;
+}
+
+export class SignupStudentDto extends IntersectionType(
+  SignupProfessionalDto,
+  DadosDoResponsavelDto,
+) {
   /**
    * A parte final do link "treine comigo" do profissional, quando o cadastro veio por ele.
    *

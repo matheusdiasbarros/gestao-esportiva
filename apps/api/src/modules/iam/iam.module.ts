@@ -28,6 +28,7 @@ import {
   semConta,
   TETOS_GLOBAIS,
 } from './auth/rate-limit';
+import { GuardianAssistance } from './entities/guardian-assistance.entity';
 import { Professional } from './entities/professional.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { StaffInvite } from './entities/staff-invite.entity';
@@ -46,6 +47,7 @@ import { StudentsService } from './services/students.service';
 import { AccessService } from './services/access.service';
 import { AdminService } from './services/admin.service';
 import { AuthService } from './services/auth.service';
+import { GuardianAssistanceService } from './services/guardian-assistance.service';
 import { InviteService } from './services/invite.service';
 import { carregarSenhasVazadas } from './services/password-policy';
 import { PasswordService } from './services/password.service';
@@ -121,6 +123,7 @@ import { UserTokenService } from './services/user-token.service';
       StudentTeacher,
       RefreshToken,
       UserToken,
+      GuardianAssistance,
     ]),
   ],
   controllers: [
@@ -138,6 +141,7 @@ import { UserTokenService } from './services/user-token.service';
     SessaoHttp,
     AccessService,
     AuthService,
+    GuardianAssistanceService,
     InviteService,
     StaffService,
     StudentsService,

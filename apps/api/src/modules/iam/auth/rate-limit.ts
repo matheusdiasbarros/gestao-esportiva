@@ -237,6 +237,24 @@ function chaveDeFicha(balde: string, tracker: string): string {
 }
 
 /**
+ * Assistência do responsável: **5 por hora por conta** — reenviar e trocar quem assiste.
+ *
+ * **Conta a defesa por conta, e não por IP, e agora dá para fazer isso.** O que se protege aqui é
+ * a caixa de um adulto que não pediu nada: sem teto, o jovem irritado com a demora reenvia dez
+ * vezes, e quem paga é o responsável. Contar por IP puniria dois irmãos no mesmo Wi-Fi, que é
+ * exatamente o erro que a Fase 5.5 acabou de consertar em `LimitarFicha`.
+ *
+ * Cinco é folgado para quem tem um motivo real — "caiu no spam, manda de novo" — e apertado para
+ * quem está martelando. E há uma segunda defesa que não é de taxa: um endereço que **recusou**
+ * não recebe pedido de novo, nunca, por quantas horas se espere.
+ */
+export const LimitarAssistencia = (): MethodDecorator & ClassDecorator =>
+  Throttle({
+    [LIMITE_IP]: { limit: 60, ttl: 60 * MINUTO },
+    [LIMITE_CONTA]: { limit: 5, ttl: 60 * MINUTO },
+  });
+
+/**
  * Envio de foto: **20 por hora por IP**.
  *
  * É a operação autenticada mais cara do sistema. Decodificar 5 MB de JPEG, endireitar,

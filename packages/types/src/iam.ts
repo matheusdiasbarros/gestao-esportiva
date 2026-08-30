@@ -108,10 +108,98 @@ export interface AuthenticatedUser {
    * vazio explicativo em vez de um painel em branco.
    */
   hasProfessional?: boolean;
+  /**
+   * A assistência do responsável, **presente só enquanto ela for exigida**.
+   *
+   * Some aos 18 mesmo que a linha continue no banco: a exigência é da faixa de 16 a 17, e quem
+   * completou a maioridade não é assistido por ninguém. A tela não precisa saber a idade para
+   * decidir o que mostrar — a ausência da chave já é a resposta, que é o mesmo desenho de
+   * `professionalId` e `signupSlug`.
+   */
+  guardianAssistance?: GuardianAssistanceView;
 }
 
-/** Idade mínima para ter conta na plataforma (decisão D9). */
-export const MINIMUM_SIGNUP_AGE = 18;
+/**
+ * Idade em que a pessoa passa a assinar contrato sozinha — **capacidade civil plena**.
+ *
+ * Não é número de produto: é o art. 5º do Código Civil. Abaixo dela o aceite dos Termos precisa
+ * de assistência para valer, e é isso que os outros dois números desta seção derivam ou cercam.
+ */
+export const IDADE_DE_CAPACIDADE_PLENA = 18;
+
+/**
+ * Idade mínima para ter conta de **aluno** (decisão D9, revisada em 2026-08-30).
+ *
+ * **Era 18, e o 18 estava certo como número e errado como justificativa** — o raciocínio inteiro
+ * está em `docs/domain/iam.md` §8.1. Em resumo: quem trava a idade é o **Código Civil**, não a
+ * LGPD. Aceitar os Termos é assinar contrato; menor de 16 é absolutamente incapaz e o aceite é
+ * nulo. De 16 a 18 o ato é **anulável, salvo se assistido** — e é por isso que a conta de 16 ou
+ * 17 anos exige nome e e-mail de um responsável que **confirma por um link**.
+ *
+ * A suposição natural, e errada, é que o número vem da LGPD. Ela exige consentimento parental
+ * só **abaixo de 12** (art. 14 §1), e nada expresso dos 12 aos 18.
+ */
+export const MINIMUM_SIGNUP_AGE = 16;
+
+/**
+ * Idade mínima para ter conta de **profissional**. Continua 18, e por outro motivo.
+ *
+ * **Não é capacidade civil** — um jovem de 17 assistido assinaria os Termos validamente. É
+ * decisão de produto, tomada pelo dono em 2026-08-30: quem tem conta de profissional **recebe
+ * dinheiro** (Fase 9) e **aparece na vitrine pública** para estranhos (Fase 12). Repassar
+ * pagamento a um menor arrasta conta bancária, imposto e nota fiscal; anunciar um adolescente
+ * para quem procura professor é outro problema inteiro. Nenhum dos dois foi resolvido, e abrir a
+ * porta antes de resolvê-los seria criar o caso e descobrir o custo depois.
+ *
+ * **O número coincidir com `IDADE_DE_CAPACIDADE_PLENA` é coincidência de valor, não de razão.**
+ * São duas constantes de propósito: se um dia a lei mudar, só uma delas muda.
+ */
+export const MINIMUM_PROFESSIONAL_AGE = 18;
+
+/**
+ * O estado da assistência do responsável — `docs/domain/iam.md` §8.1.
+ *
+ * Três desfechos, e o terceiro é o que quase ficou de fora. **Sem `DECLINED`, a única forma de o
+ * responsável dizer não seria o silêncio** — e silêncio é indistinguível de "caiu no spam": o
+ * jovem reenvia, reenvia, e a plataforma vira uma máquina de incomodar um adulto que nunca pediu
+ * nada.
+ *
+ * **A recusa é fraca de propósito, e isso é decisão.** Ela **não** tranca a conta: o jovem já
+ * não podia marcar aula, então trancar não protegeria ninguém e transformaria um clique errado
+ * num beco sem saída. O que ela faz é encerrar o pedido e **calar aquele endereço** — pedido novo
+ * para o mesmo e-mail é recusado, para outro é permitido, porque o caso real é "indiquei o pai,
+ * quem responde é a mãe".
+ */
+export const GuardianAssistanceStatus = {
+  Pending: 'PENDING',
+  Confirmed: 'CONFIRMED',
+  Declined: 'DECLINED',
+} as const;
+
+export type GuardianAssistanceStatus =
+  (typeof GuardianAssistanceStatus)[keyof typeof GuardianAssistanceStatus];
+
+/**
+ * A assistência, vista pela conta do jovem.
+ *
+ * **O endereço sai por inteiro, sem mascarar**, e é decisão: foi ele quem digitou, então não há
+ * nada a proteger dele — e é exatamente olhando o endereço que ele descobre que trocou uma letra.
+ * Mascarar aqui esconderia o defeito mais provável do fluxo.
+ */
+export interface GuardianAssistanceView {
+  status: GuardianAssistanceStatus;
+  guardianName: string;
+  guardianEmail: string;
+}
+
+/** Quem o responsável vê ao abrir o link, antes de decidir. */
+export interface GuardianAssistanceRequest {
+  /** O nome do jovem. É o que faz o adulto reconhecer do que se trata. */
+  studentName: string;
+  guardianName: string;
+  /** Já respondido? A tela do link precisa distinguir "decida" de "você já decidiu". */
+  status: GuardianAssistanceStatus;
+}
 
 /**
  * Como o convite chega até o aluno. O canal muda a garantia de identidade, e por isso muda o

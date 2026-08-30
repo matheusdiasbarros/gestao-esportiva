@@ -1,5 +1,5 @@
-import { AccessHolder, IDADE_DE_MAIORIDADE } from '@gestao/types';
-import { idadeEm } from './auth.service';
+import { AccessHolder, IDADE_DE_ACESSO_PROPRIO } from '@gestao/types';
+import { idadeEm } from './dados-da-conta';
 
 /**
  * As duas regras de idade da ficha — `students.md` §8.
@@ -24,11 +24,15 @@ import { idadeEm } from './auth.service';
  */
 
 /**
- * A ficha declara um menor de idade que acessaria com a **própria** conta?
+ * A ficha declara alguém jovem demais para ter conta, e ainda assim com acesso **próprio**?
  *
- * É a decisão D9 virando código: abaixo de 18 não existe conta na plataforma, então quem acessa
- * é o responsável. Sem esta trava o modelo se contradiz — a ficha diria "nasceu em 2014" e "o
- * próprio aluno acessa" ao mesmo tempo.
+ * É a decisão D9 virando código: abaixo de `IDADE_DE_ACESSO_PROPRIO` não existe conta na
+ * plataforma, então quem acessa é o responsável. Sem esta trava o modelo se contradiz — a ficha
+ * diria "nasceu em 2014" e "o próprio aluno acessa" ao mesmo tempo.
+ *
+ * **O número baixou de 18 para 16 em 2026-08-30**, junto com o do cadastro e pela mesma razão.
+ * O nome da função continua o que era por um motivo bobo e suficiente: renomear as duas exigiria
+ * tocar em cada chamada, e o que elas fazem não mudou. O que mudou foi o limiar.
  */
 export function menorPrecisaDeResponsavel(
   birthDate: string | null,
@@ -40,11 +44,11 @@ export function menorPrecisaDeResponsavel(
   const idade = birthDate ? idadeEm(birthDate, hoje) : null;
   // `null` é data inválida ou no futuro, e não é problema desta regra: o formato já foi recusado
   // pelo DTO. Tratar como "não sei" evita esta função opinar sobre validação alheia.
-  return idade !== null && idade < IDADE_DE_MAIORIDADE;
+  return idade !== null && idade < IDADE_DE_ACESSO_PROPRIO;
 }
 
 /**
- * O aluno já é maior, e o acesso continua sendo do responsável?
+ * O aluno já pode acessar sozinho, e o acesso continua sendo do responsável?
  *
  * **Derivado, nunca guardado** — mesma razão de "papel é derivado do dado". Uma coluna "já
  * avisei" discordaria da data no dia em que alguém corrigisse o nascimento, e ninguém
@@ -63,5 +67,5 @@ export function adultoSobResponsavel(
   if (accessHolder !== AccessHolder.Guardian || !birthDate) return false;
 
   const idade = idadeEm(birthDate, hoje);
-  return idade !== null && idade >= IDADE_DE_MAIORIDADE;
+  return idade !== null && idade >= IDADE_DE_ACESSO_PROPRIO;
 }

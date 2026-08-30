@@ -1,3 +1,4 @@
+import { MINIMUM_SIGNUP_AGE } from './iam';
 import type { AccessHolder, InviteKind, StudentStatus } from './iam';
 
 /**
@@ -172,9 +173,19 @@ export function tetoDeFichas(membrosAtivosDaEquipe: number): number {
 }
 
 /**
- * A idade a partir da qual a plataforma trata o aluno como maior.
+ * A idade a partir da qual o aluno pode ser o **titular do acesso à própria ficha**.
  *
- * É a mesma da conta (`MINIMUM_SIGNUP_AGE`), e não por acaso: abaixo dela o aluno **não pode ter
- * conta**, então quem acessa a ficha é o responsável.
+ * **Chamava-se `IDADE_DE_MAIORIDADE` até 2026-08-30, e o nome virou mentira quando o número
+ * baixou para 16.** Maioridade é 18, e continua sendo — o que acontece aos 16 não é a pessoa
+ * ficar maior, é ela passar a poder ter conta. Nome errado num número de regra é o tipo de coisa
+ * que a próxima pessoa lê e usa para justificar a decisão errada.
+ *
+ * **É `MINIMUM_SIGNUP_AGE`, e não uma cópia dele.** Os dois eram "o mesmo número pelo mesmo
+ * motivo" com um comentário pedindo que ninguém os separasse — e comentário não impede nada. A
+ * derivação impede: mover um sem o outro criaria uma ficha que o banco aceita e que **nenhuma
+ * conta consegue acessar**, e agora isso exige desfazer esta linha conscientemente.
+ *
+ * O motivo de serem o mesmo número: se um jovem de 16 pode ter conta própria, a ficha dele pode
+ * ser `SELF`; se não pode, quem acessa é o responsável. Uma pergunta, uma resposta.
  */
-export const IDADE_DE_MAIORIDADE = 18;
+export const IDADE_DE_ACESSO_PROPRIO = MINIMUM_SIGNUP_AGE;

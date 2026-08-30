@@ -1,4 +1,4 @@
-import { AuthenticatedUser } from '@gestao/types';
+import { AuthenticatedUser, GuardianAssistanceRequest } from '@gestao/types';
 import {
   Body,
   Controller,
@@ -6,8 +6,10 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  NotFoundException,
   Param,
   Post,
+  Put,
   Req,
   Res,
 } from '@nestjs/common';
@@ -16,6 +18,7 @@ import { Request, Response } from 'express';
 import { CurrentUser } from './auth/current-user.decorator';
 import { Public } from './auth/public.decorator';
 import {
+  LimitarAssistencia,
   LimitarCadastro,
   LimitarLogin,
   LimitarRecuperacao,
@@ -39,8 +42,10 @@ import {
   SignupProfessionalDto,
   SignupStudentDto,
   TokenDto,
+  TrocarResponsavelDto,
 } from './dto/auth.dto';
 import { AuthService } from './services/auth.service';
+import { GuardianAssistanceService } from './services/guardian-assistance.service';
 
 @ApiTags('Autenticação')
 @Controller('auth')
@@ -48,6 +53,7 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly sessoes: SessaoHttp,
+    private readonly assistencia: GuardianAssistanceService,
   ) {}
 
   @Public()
@@ -213,6 +219,63 @@ export class AuthController {
   @ApiOperation({ summary: 'Confirma a troca a partir do link recebido no endereço novo' })
   async confirmarTrocaDeEmail(@Body() dto: TokenDto): Promise<void> {
     await this.auth.confirmarTrocaDeEmail(dto.token);
+  }
+
+  // ------------------------------------------------- assistência do responsável (16 e 17 anos)
+  //
+  // **Cinco rotas, e três delas públicas.** O responsável não tem conta e não vai criar uma — a
+  // decisão do dono foi que ele **só assina**. O token é a credencial dele, e é a única que
+  // existe: sem conta, não há sessão para autenticar.
+  //
+  // As duas autenticadas são do jovem, e as duas mexem no mesmo pedido. `PUT` troca quem assiste
+  // — é por onde se conserta o endereço digitado errado e por onde se sai de uma recusa.
+
+  @Post('guardian-assistance/resend')
+  @LimitarAssistencia()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Manda de novo o pedido ao responsável, com um link novo' })
+  async reenviarAssistencia(@CurrentUser() user: AuthenticatedUser): Promise<void> {
+    await this.assistencia.reenviar(user.id);
+  }
+
+  @Put('guardian-assistance')
+  @LimitarAssistencia()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Troca o responsável. O link antigo morre na hora' })
+  async trocarResponsavel(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: TrocarResponsavelDto,
+  ): Promise<void> {
+    await this.assistencia.trocarResponsavel(user.id, dto.guardianName, dto.guardianEmail);
+  }
+
+  @Public()
+  @Get('guardian-assistance/:token')
+  @ApiOperation({ summary: 'Quem pediu e para quê, para a tela do responsável' })
+  async verAssistencia(@Param('token') token: string): Promise<GuardianAssistanceRequest> {
+    const pedido = await this.assistencia.descrever(token);
+    // 404 e não 200 com nulo, como o convite de equipe: link que não vale é recurso que não
+    // existe, e a tela já sabe tratar "não encontrado" sem inspecionar o corpo.
+    if (!pedido) {
+      throw new NotFoundException('Este link expirou ou já foi usado. Peça um novo.');
+    }
+    return pedido;
+  }
+
+  @Public()
+  @Post('guardian-assistance/:token/confirm')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'O responsável confirma. É o que destrava a conta do jovem' })
+  async confirmarAssistencia(@Param('token') token: string): Promise<void> {
+    await this.assistencia.confirmar(token);
+  }
+
+  @Public()
+  @Post('guardian-assistance/:token/decline')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'O responsável diz não. **Não** tranca a conta do jovem' })
+  async recusarAssistencia(@Param('token') token: string): Promise<void> {
+    await this.assistencia.recusar(token);
   }
 
   @Get('me')

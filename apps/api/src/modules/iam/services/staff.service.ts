@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import {
   MAX_STAFF_MEMBERS,
+  MINIMUM_PROFESSIONAL_AGE,
   StaffInviteDetails,
   StaffInviteIssued,
   StaffMembershipRow,
@@ -27,14 +28,8 @@ import { StaffMember } from '../entities/staff-member.entity';
 import { StudentTeacher } from '../entities/student-teacher.entity';
 import { User, UserStatus } from '../entities/user.entity';
 import { AccessService } from './access.service';
-import {
-  AuthService,
-  DadosDeCadastro,
-  SessaoAberta,
-  gerarSlug,
-  normalizarEmail,
-  primeiroNome,
-} from './auth.service';
+import { AuthService, DadosDeCadastro, SessaoAberta } from './auth.service';
+import { gerarSlug, idadeEm, normalizarEmail, primeiroNome } from './dados-da-conta';
 import { mudancaDeParticipacao, type SaidaDaEquipe } from './participacao';
 import { ClientType, hashDe } from './token.service';
 
@@ -208,6 +203,23 @@ export class StaffService {
 
     const user = await this.users.findOneBy({ id: userId });
     if (!user || user.status !== UserStatus.Active) throw this.conviteMorto();
+
+    // **Aceitar um convite de equipe é virar profissional** (E1), e conta de profissional exige
+    // 18 — não por capacidade civil, mas pela decisão de produto que fechou dinheiro e vitrine
+    // para maiores. Sem esta recusa, a porta dos 16 abriria a de profissional **por dentro**:
+    // bastava um convite de equipe, e a validação do cadastro nunca seria consultada, porque
+    // aqui não há cadastro nenhum — a conta já existe.
+    //
+    // É por isso que a recusa mora neste método e não em `entrar`: quem chega por
+    // `aceitarCriandoConta` passa por `cadastrarProfissional`, que já confere. Quem chega com a
+    // conta na mão não passava por lugar nenhum.
+    const idade = idadeEm(user.birthDate);
+    if (idade !== null && idade < MINIMUM_PROFESSIONAL_AGE) {
+      throw new ForbiddenException(
+        `Para dar aula pela plataforma é preciso ter ${MINIMUM_PROFESSIONAL_AGE} anos. ` +
+          'Sua conta de aluno continua funcionando normalmente.',
+      );
+    }
 
     await this.dataSource.transaction(async (manager) => {
       // Quem entra numa equipe **é** profissional (E1). Conta que ainda não era ganha a âncora

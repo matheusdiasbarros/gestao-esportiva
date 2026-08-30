@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import {
   expect,
+  request,
   test,
   type APIRequestContext,
   type BrowserContext,
@@ -228,6 +229,61 @@ test.describe('Aceite', () => {
     // é aquele endereço, que é o oráculo que o épico inteiro existe para não abrir.
     const { token } = (await (await convidar(DONO.email)).json()) as { token: string };
     expect((await comoDono.post(`${API}/staff/invites/${token}/join`)).status()).toBe(409);
+  });
+});
+
+test.describe('A porta dos 18 anos, por dentro', () => {
+  /**
+   * **Entrar numa equipe é virar profissional** (decisão E1), e conta de profissional exige 18 —
+   * não por capacidade civil, mas pela decisão de produto da Fase 5.7 que fechou dinheiro e
+   * vitrine para maiores.
+   *
+   * Este é o caminho que a Fase 5.7 quase deixou aberto: quem chega por `accept` passa pelo
+   * cadastro de profissional, que confere a idade. Quem chega por `join` **já tem conta** — não há
+   * cadastro nenhum acontecendo, e a validação nunca seria consultada. A porta dos 16 abriria a
+   * de profissional por dentro, bastando um convite de equipe.
+   */
+  test('um jovem de 16 não vira profissional aceitando convite de equipe', async () => {
+    const email = `jovem-${randomUUID().slice(0, 8)}@exemplo.local`;
+    const senha = 'a-frase-que-so-eu-lembro';
+    const nascimento = new Date();
+    nascimento.setUTCFullYear(nascimento.getUTCFullYear() - 16);
+    nascimento.setUTCDate(nascimento.getUTCDate() - 1);
+
+    // **Contexto anônimo, e não o do dono.** Cadastrar devolve cookies de sessão, e usá-los no
+    // contexto do Rodrigo o derruba: a requisição seguinte sai como o jovem, e o convite responde
+    // "só quem tem perfil de profissional pode montar uma equipe". Custou um teste aqui.
+    const anonimo = await request.newContext();
+    const criada = await anonimo.post(`${API}/auth/signup/student`, {
+      data: {
+        email,
+        fullName: 'Jovem de Dezesseis',
+        birthDate: nascimento.toISOString().slice(0, 10),
+        password: senha,
+        acceptedTerms: true,
+        guardianName: 'Marta Souza',
+        guardianEmail: `mae-${randomUUID().slice(0, 8)}@exemplo.local`,
+      },
+    });
+    expect(criada.status()).toBe(201);
+
+    await anonimo.dispose();
+
+    const convite = await convidar(email);
+    expect(convite.status(), await convite.text()).toBe(201);
+    const { token } = (await convite.json()) as { token: string };
+
+    const comoJovem = await request.newContext();
+    await comoJovem.post(`${API}/auth/login`, { data: { email, password: senha } });
+
+    const entrou = await comoJovem.post(`${API}/staff/invites/${token}/join`);
+    expect(entrou.status(), 'um menor de 18 virou profissional pelo convite').toBe(403);
+    expect(await entrou.text()).toContain('18 anos');
+
+    // E a conta de aluno dele continua inteira: a recusa é da porta, não da pessoa.
+    expect((await comoJovem.get(`${API}/auth/me`)).status()).toBe(200);
+
+    await comoJovem.dispose();
   });
 });
 

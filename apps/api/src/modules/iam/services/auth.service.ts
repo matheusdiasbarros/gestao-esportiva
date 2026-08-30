@@ -1,7 +1,7 @@
-import { randomBytes } from 'node:crypto';
 import {
   AccessHolder,
   AuthenticatedUser,
+  MINIMUM_PROFESSIONAL_AGE,
   MINIMUM_SIGNUP_AGE,
   StaffStatus,
   StudentStatus,
@@ -26,6 +26,9 @@ import { Student } from '../entities/student.entity';
 import { TokenPurpose } from '../entities/user-token.entity';
 import { IdentityProvider, UserIdentity } from '../entities/user-identity.entity';
 import { User, UserStatus } from '../entities/user.entity';
+import { gerarSlug, idadeEm, normalizarEmail, primeiroNome } from './dados-da-conta';
+import { GuardianAssistanceService, PedidoDeAssistencia } from './guardian-assistance.service';
+import { precisaDeAssistencia, recusaPorIdade } from './idade-de-cadastro';
 import { avaliarSenha } from './password-policy';
 import { PasswordService } from './password.service';
 import { RolesService } from './roles.service';
@@ -41,6 +44,15 @@ export interface DadosDeCadastro {
   birthDate: string;
   password: string;
   acceptedTerms: boolean;
+  /**
+   * Nome e e-mail de quem vai assistir o aceite dos Termos.
+   *
+   * **Obrigatórios quando a data de nascimento indica 16 ou 17 anos, e recusados fora dessa
+   * faixa.** Opcionais no tipo porque a maioria dos cadastros não os traz; a obrigatoriedade é
+   * calculada a partir da idade, e não de uma caixa que a pessoa marca — é o Epic 5.7.2.
+   */
+  guardianName?: string;
+  guardianEmail?: string;
 }
 
 export interface DadosDeCadastroDeAluno extends DadosDeCadastro {
@@ -93,6 +105,7 @@ export class AuthService {
     // Só para o teto de fichas: o link público precisa saber o tamanho da equipe do dono para
     // saber quantas fichas a carteira dele aceita.
     @InjectRepository(StaffMember) private readonly staff: Repository<StaffMember>,
+    private readonly assistencia: GuardianAssistanceService,
   ) {}
 
   /**
@@ -121,7 +134,10 @@ export class AuthService {
     ) => Promise<void>,
   ): Promise<SessaoAberta> {
     const email = normalizarEmail(dados.email);
-    this.validarCadastro(dados, email);
+    // **Profissional continua exigindo 18, e aluno passou a aceitar 16.** Não é a mesma regra com
+    // números diferentes: são dois motivos diferentes, e cada constante carrega o seu. Ver
+    // `MINIMUM_PROFESSIONAL_AGE` em `@gestao/types`.
+    this.validarCadastro(dados, email, MINIMUM_PROFESSIONAL_AGE);
 
     const senhaHash = await this.passwords.hash(dados.password);
     const userId = uuidv7();
@@ -194,7 +210,7 @@ export class AuthService {
     opcoes: OpcoesDeCadastroDeAluno = {},
   ): Promise<SessaoAberta> {
     const email = normalizarEmail(dados.email);
-    this.validarCadastro(dados, email);
+    this.validarCadastro(dados, email, MINIMUM_SIGNUP_AGE);
 
     // O link é resolvido **antes** de criar qualquer coisa. Criar a conta e só então descobrir
     // que o link morreu deixaria a pessoa com uma conta órfã e a impressão de que o cadastro
@@ -223,6 +239,7 @@ export class AuthService {
     const userId = uuidv7();
     const agora = new Date();
     const nome = dados.fullName.trim();
+    let pedido: PedidoDeAssistencia | null = null;
 
     try {
       await this.dataSource.transaction(async (manager) => {
@@ -264,6 +281,19 @@ export class AuthService {
           });
         }
 
+        // **Dentro da transação, de propósito.** Criar a conta de um jovem de 16 e só então
+        // falhar ao gravar a assistência deixaria uma conta sem o pedido que a destrava — e o
+        // portão da Fase 6 é *fail-closed*, então essa pessoa ficaria travada sem nem saber a
+        // quem pedir. O envio do e-mail acontece depois do commit: fila não desfaz.
+        if (dados.guardianName && dados.guardianEmail) {
+          pedido = await this.assistencia.gravarPedido(manager, {
+            userId,
+            studentName: nome,
+            guardianName: dados.guardianName,
+            guardianEmail: dados.guardianEmail,
+          });
+        }
+
         await opcoes.naMesmaTransacao?.(manager, userId);
       });
     } catch (erro) {
@@ -274,6 +304,8 @@ export class AuthService {
       }
       throw erro;
     }
+
+    if (pedido) await this.assistencia.enviar(pedido);
 
     const user = await this.users.findOneByOrFail({ id: userId });
     return this.abrirSessao(user, client, deviceLabel);
@@ -757,7 +789,7 @@ export class AuthService {
     return { user: descricao, tokens };
   }
 
-  private validarCadastro(dados: DadosDeCadastro, email: string): void {
+  private validarCadastro(dados: DadosDeCadastro, email: string, idadeMinima: number): void {
     const erros: { field: string; message: string }[] = [];
 
     if (!dados.acceptedTerms) {
@@ -770,12 +802,13 @@ export class AuthService {
     const idade = idadeEm(dados.birthDate);
     if (idade === null) {
       erros.push({ field: 'birthDate', message: 'Data de nascimento inválida.' });
-    } else if (idade < MINIMUM_SIGNUP_AGE) {
-      // Decisão D9: menor de idade não tem conta; quem acessa é o responsável.
-      erros.push({
-        field: 'birthDate',
-        message: `É preciso ter ${MINIMUM_SIGNUP_AGE} anos ou mais para criar uma conta.`,
-      });
+    } else if (idade < idadeMinima) {
+      erros.push({ field: 'birthDate', message: recusaPorIdade(idade, idadeMinima) });
+    } else if (precisaDeAssistencia(idade)) {
+      // **Cobrado a partir da data digitada, e não de uma caixa que a pessoa marca.** Uma caixa
+      // "sou menor de idade" seria desmarcada por quem quisesse pular o passo, e o formulário
+      // ficaria pedindo a alguém que declare contra o próprio interesse.
+      erros.push(...this.validarResponsavel(dados, email));
     }
 
     const senha = avaliarSenha(dados.password, email);
@@ -787,6 +820,39 @@ export class AuthService {
       // formulário não tem o que destacar.
       throw new UnprocessableEntityException({ validationErrors: erros });
     }
+  }
+
+  /**
+   * Os dois campos do responsável, exigidos só na faixa de 16 a 17.
+   *
+   * O e-mail do responsável **não pode ser o da própria conta**: seria a pessoa assistindo a si
+   * mesma, que é exatamente o que a assistência existe para impedir. É a única regra daqui que
+   * não é "campo vazio".
+   */
+  private validarResponsavel(
+    dados: DadosDeCadastro,
+    email: string,
+  ): { field: string; message: string }[] {
+    const erros: { field: string; message: string }[] = [];
+    const nome = dados.guardianName?.trim();
+    const doResponsavel = dados.guardianEmail ? normalizarEmail(dados.guardianEmail) : '';
+
+    if (!nome) {
+      erros.push({ field: 'guardianName', message: 'Diga o nome do seu responsável.' });
+    }
+
+    if (!doResponsavel) {
+      erros.push({ field: 'guardianEmail', message: 'Diga o e-mail do seu responsável.' });
+    } else if (doResponsavel === email) {
+      erros.push({
+        field: 'guardianEmail',
+        message:
+          'Este é o seu próprio e-mail. O responsável precisa ser outra pessoa, com o e-mail ' +
+          'dela.',
+      });
+    }
+
+    return erros;
   }
 
   /**
@@ -816,38 +882,4 @@ function montarPayload(user: AuthenticatedUser): AccessTokenPayload {
     roles: user.roles,
     ...(user.professionalId ? { pid: user.professionalId } : {}),
   };
-}
-
-export function normalizarEmail(email: string): string {
-  return email.trim().toLowerCase();
-}
-
-/** "Rodrigo Almeida" → "Rodrigo". E-mail que chama pelo nome completo soa como cobrança. */
-export function primeiroNome(nomeCompleto: string): string {
-  return nomeCompleto.trim().split(/\s+/)[0] ?? nomeCompleto;
-}
-
-/** Slug aleatório, não derivado do nome: previsível permitiria varrer a plataforma. */
-export function gerarSlug(): string {
-  return randomBytes(9).toString('base64url');
-}
-
-/** Idade completa hoje. Devolve `null` para data inválida ou no futuro. */
-export function idadeEm(birthDate: string, hoje = new Date()): number | null {
-  const nascimento = new Date(`${birthDate}T00:00:00Z`);
-  if (Number.isNaN(nascimento.getTime())) return null;
-
-  const referencia = new Date(
-    Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth(), hoje.getUTCDate()),
-  );
-  if (nascimento.getTime() > referencia.getTime()) return null;
-
-  let idade = referencia.getUTCFullYear() - nascimento.getUTCFullYear();
-  const fezAniversario =
-    referencia.getUTCMonth() > nascimento.getUTCMonth() ||
-    (referencia.getUTCMonth() === nascimento.getUTCMonth() &&
-      referencia.getUTCDate() >= nascimento.getUTCDate());
-
-  if (!fezAniversario) idade -= 1;
-  return idade;
 }

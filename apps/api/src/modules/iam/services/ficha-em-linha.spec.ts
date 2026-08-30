@@ -85,15 +85,23 @@ describe('fichaComoDono', () => {
     expect(semConta.hasAccount).toBe(false);
   });
 
-  describe('o aviso dos 18 anos', () => {
+  describe('o aviso do aniversário', () => {
+    /**
+     * Nasceu em 12 de março de 2010, e faz **16** em 12 de março de 2026.
+     *
+     * **O limiar era 18 e virou 16 na Fase 5.7**, e a data desta ficha mudou junto. Se só o
+     * número tivesse mudado, o teste continuaria verde testando outra coisa: uma pessoa de 17
+     * anos, para quem o aviso já responde o mesmo antes e depois. O dia do aniversário só é o
+     * caso interessante quando é **o** aniversário certo.
+     */
     const menor = {
       ...completa,
-      birthDate: '2008-03-12',
+      birthDate: '2010-03-12',
       accessHolder: AccessHolder.Guardian,
       guardianName: 'Carlos Souza',
     };
 
-    it('acende quando o aluno já é maior e o acesso continua do responsável', () => {
+    it('acende quando o aluno já pode acessar sozinho e o acesso continua do responsável', () => {
       expect(fichaComoDono(menor, undefined, new Date('2026-03-12T00:00:00Z'))).toMatchObject({
         adultUnderGuardian: true,
       });

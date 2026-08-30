@@ -11,8 +11,15 @@ import { adultoSobResponsavel, menorPrecisaDeResponsavel } from './maioridade';
  */
 const { Self, Guardian } = AccessHolder;
 
-/** Nasceu em 12 de março de 2008. Faz 18 em 12 de março de 2026. */
-const NASCIMENTO = '2008-03-12';
+/**
+ * Nasceu em 12 de março de 2010, e faz **16** em 12 de março de 2026.
+ *
+ * **O número era 18 e virou 16 na Fase 5.7**, junto com o do cadastro — e a data de nascimento
+ * deste teste mudou junto, de propósito. Se só o limiar tivesse mudado, o teste continuaria verde
+ * testando outra coisa: uma pessoa de 17 anos, para quem as duas funções já respondem o mesmo
+ * antes e depois. O dia do aniversário só é o caso interessante quando é **o** aniversário certo.
+ */
+const NASCIMENTO = '2010-03-12';
 const VESPERA = new Date('2026-03-11T23:00:00Z');
 const ANIVERSARIO = new Date('2026-03-12T00:00:00Z');
 const DEPOIS = new Date('2026-03-13T12:00:00Z');
@@ -22,7 +29,7 @@ describe('menorPrecisaDeResponsavel', () => {
     expect(menorPrecisaDeResponsavel(NASCIMENTO, Self, VESPERA)).toBe(true);
   });
 
-  it('aceita no dia do aniversário: 18 já é maior', () => {
+  it('aceita no dia do aniversário: aos 16 o acesso já pode ser dele', () => {
     // A régua é "completou", não "vai completar". No dia, a conta é dele.
     expect(menorPrecisaDeResponsavel(NASCIMENTO, Self, ANIVERSARIO)).toBe(false);
     expect(menorPrecisaDeResponsavel(NASCIMENTO, Self, DEPOIS)).toBe(false);
@@ -47,7 +54,7 @@ describe('menorPrecisaDeResponsavel', () => {
 });
 
 describe('adultoSobResponsavel', () => {
-  it('acende no dia em que ele completa 18, e não antes', () => {
+  it('acende no dia em que ele completa 16, e não antes', () => {
     expect(adultoSobResponsavel(NASCIMENTO, Guardian, VESPERA)).toBe(false);
     expect(adultoSobResponsavel(NASCIMENTO, Guardian, ANIVERSARIO)).toBe(true);
     expect(adultoSobResponsavel(NASCIMENTO, Guardian, DEPOIS)).toBe(true);
