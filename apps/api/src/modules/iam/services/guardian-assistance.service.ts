@@ -200,10 +200,14 @@ export class GuardianAssistanceService {
     await this.recusarQuemJaDisseNao(userId, email);
 
     const pedido = await this.pedidos.manager.transaction(async (manager) => {
+      // **O token do pedido antigo é queimado junto.** Sem isso, o link que já estava na caixa
+      // do endereço anterior continuaria resolvendo e mostraria "você recusou" a alguém que não
+      // recusou nada — o pedido foi encerrado pelo jovem, não pelo responsável. Trocar o hash por
+      // um valor que ninguém tem mata o link sem apagar o registro de para quem escrevemos.
       await manager.update(
         GuardianAssistance,
         { userId, confirmedAt: IsNull(), declinedAt: IsNull() },
-        { declinedAt: new Date() },
+        { declinedAt: new Date(), tokenHash: hashDe(randomBytes(32).toString('base64url')) },
       );
 
       return this.gravarPedido(manager, {
@@ -230,7 +234,15 @@ export class GuardianAssistanceService {
     const user = await this.users.findOneBy({ id: pedido.userId });
     if (!user) return null;
 
-    return { studentName: user.fullName, guardianName: pedido.guardianName, status: desfecho };
+    return {
+      studentName: user.fullName,
+      // A data de nascimento sai **aqui**, e não no e-mail. O e-mail vai para um endereço que
+      // pode estar errado; nesta tela quem chegou já provou ter o link, e é o dado que permite
+      // ao adulto reconhecer de quem se trata antes de confirmar.
+      studentBirthDate: user.birthDate,
+      guardianName: pedido.guardianName,
+      status: desfecho,
+    };
   }
 
   /** O responsável confirma. É o que destrava a conta. */

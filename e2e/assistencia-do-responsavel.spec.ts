@@ -20,6 +20,12 @@ import { expect, request, test, type APIRequestContext } from '@playwright/test'
  * ele não podia ficar sem: a confirmação **é** a fase. Então o teste escolhe um token, grava o
  * hash dele na linha e usa a rota de verdade. O que não é exercitado é o envio; o resto é o
  * caminho real, com o mesmo `WHERE` de uso único.
+ *
+ * **Cada cadastro aqui custa um do orçamento da suíte** — `LimitarCadastro` são 100 por hora por
+ * IP, e a execução inteira sai de `127.0.0.1` (DT-010). Por isso este arquivo cobre o **caminho**
+ * e deixa a matriz de ramos para `idade-de-cadastro.spec.ts`, que roda sem servidor: o e-mail do
+ * responsável igual ao da conta, as três recusas por número, e a faixa fechada embaixo e aberta
+ * em cima estão testadas lá, de graça.
  */
 const API = 'http://localhost:3333/api/v1';
 const executar = promisify(execFile);
@@ -104,19 +110,6 @@ test.describe('A porta dos 16 anos', () => {
     expect(corpo, 'a recusa ainda fala em 18 anos').not.toContain('18 anos');
   });
 
-  test('quem tem 16 entra, indicando um responsável', async () => {
-    const email = novoEmail('dezesseis');
-    const { status } = await cadastrarAluno(anonimo, {
-      email,
-      fullName: 'Dezesseis Anos',
-      birthDate: nascidoHa(16),
-      guardianName: 'Marta Souza',
-      guardianEmail: novoEmail('responsavel'),
-    });
-
-    expect(status).toBe(201);
-  });
-
   test('quem tem 16 e não indica responsável é recusado nos dois campos', async () => {
     const { status, corpo } = await cadastrarAluno(anonimo, {
       email: novoEmail('sem-responsavel'),
@@ -127,30 +120,6 @@ test.describe('A porta dos 16 anos', () => {
     expect(status).toBe(422);
     expect(corpo).toContain('nome do seu responsável');
     expect(corpo).toContain('e-mail do seu responsável');
-  });
-
-  test('o responsável não pode ser a própria pessoa', async () => {
-    const email = novoEmail('eu-mesmo');
-    const { status, corpo } = await cadastrarAluno(anonimo, {
-      email,
-      fullName: 'Eu Mesmo',
-      birthDate: nascidoHa(16),
-      guardianName: 'Eu Mesmo',
-      guardianEmail: email,
-    });
-
-    expect(status, 'a pessoa assistiu a si mesma').toBe(422);
-    expect(corpo).toContain('seu próprio e-mail');
-  });
-
-  test('quem tem 18 entra sem indicar ninguém, e nada é pedido', async () => {
-    const { status } = await cadastrarAluno(anonimo, {
-      email: novoEmail('adulto'),
-      fullName: 'Maior de Idade',
-      birthDate: nascidoHa(18),
-    });
-
-    expect(status).toBe(201);
   });
 });
 
@@ -172,20 +141,6 @@ test.describe('A porta dos 18 continua fechada para profissional', () => {
     // A recusa não pode ser um beco: a porta do lado está aberta e a frase precisa dizer isso.
     expect(corpo).toContain('conta de aluno');
   });
-
-  test('conta de profissional aceita quem tem 18', async () => {
-    const resposta = await anonimo.post(`${API}/auth/signup/professional`, {
-      data: {
-        email: novoEmail('professor'),
-        fullName: 'Professor Adulto',
-        birthDate: nascidoHa(18),
-        password: SENHA,
-        acceptedTerms: true,
-      },
-    });
-
-    expect(resposta.status()).toBe(201);
-  });
 });
 
 test.describe('A assistência, do pedido à confirmação', () => {
@@ -202,7 +157,7 @@ test.describe('A assistência, do pedido à confirmação', () => {
         await cadastrarAluno(anonimo, {
           email,
           fullName: 'Jovem Assistido',
-          birthDate: nascidoHa(17),
+          birthDate: nascidoHa(16),
           guardianName: 'Marta Souza',
           guardianEmail: emailDoResponsavel,
         })

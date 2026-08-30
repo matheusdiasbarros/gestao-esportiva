@@ -1,6 +1,7 @@
 import { Role } from '@gestao/types';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { AssistenciaPendente } from '@/components/assistencia-pendente';
 import { LinkPublico } from '@/components/link-publico';
 import { ReenviarVerificacao } from '@/components/reenviar-verificacao';
 import { Sair } from '@/components/sair';
@@ -36,6 +37,12 @@ export default async function Painel() {
         </div>
         <Sair />
       </header>
+
+      {/* No topo, e antes de tudo: é o único aviso da conta que depende de outra pessoa agir. A
+          chave só existe na faixa de 16 a 17 — aos 18 ela some sozinha, sem ninguém clicar. */}
+      {sessao.guardianAssistance ? (
+        <AssistenciaPendente assistencia={sessao.guardianAssistance} />
+      ) : null}
 
       <section className="rounded-xl border border-(--color-border) bg-(--color-surface-muted) p-6">
         <h2 className="text-sm font-medium">Sua conta</h2>

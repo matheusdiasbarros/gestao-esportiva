@@ -65,6 +65,12 @@ describe('precisaDeAssistencia', () => {
   });
 });
 
+/**
+ * **Estes ramos vieram do e2e, e a troca foi deliberada.** Cada cadastro na suíte de tela custa
+ * um dos 100 por hora que `LimitarCadastro` permite por IP (DT-010), e a execução inteira sai de
+ * `127.0.0.1`. Testar matriz de validação lá é pagar orçamento escasso por algo que roda de graça
+ * aqui — o e2e fica com o **caminho**, que é o que só ele prova.
+ */
 describe('recusaPorIdade', () => {
   it('quem é novo demais para qualquer conta ouve o número novo', () => {
     const frase = recusaPorIdade(15, MINIMUM_SIGNUP_AGE);

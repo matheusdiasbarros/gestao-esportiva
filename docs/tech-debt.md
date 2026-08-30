@@ -3,7 +3,7 @@
 Registro de compromissos assumidos conscientemente. Cada item diz o que é, por que foi
 aceito e o que dispara a correção.
 
-Última atualização: 2026-08-29
+Última atualização: 2026-08-30
 
 ---
 
@@ -466,6 +466,42 @@ que a pessoa não recebeu o link de qualquer forma.
 
 **Gatilho para pagar:** a Fase 18, quando o Redis sair da máquina de desenvolvimento. Ou antes,
 se alguém estiver mexendo na fila por outro motivo.
+
+## Fase 5.7
+
+### DT-018 — A suíte de tela gasta 100 dos 100 cadastros por hora, e a margem é zero
+
+**O que:** uma execução limpa da suíte faz **exatamente 100** requisições ao cadastro de
+profissional, e `LimitarCadastro` permite 100 por hora por IP. **Medido em 2026-08-30**, contando
+os contadores no Redis depois de uma execução com o `globalSetup` tendo zerado tudo. O próximo
+teste que criar uma conta quebra a suíte — e não quebra dizendo "limite": quebra com um punhado
+de testes de arquivos diferentes parados em `toHaveURL('/painel')`, que é o sintoma que o
+**DT-010** já documentou e que já custou horas duas vezes.
+
+**Como cheguei aqui:** a Fase 5.7 acrescentou testes de cadastro e a conta passou a 101. Um teste
+de `perfil.spec.ts` — que não tem nada a ver com esta fase — começou a falhar de forma
+intermitente. Enxuguei os testes novos até caber, movendo a matriz de validação para
+`idade-de-cadastro.spec.ts`, que roda sem servidor. Isso resolveu **este** estouro e não o
+próximo.
+
+**Por que não é só aumentar o teto:** o DT-010 já recusou as três saídas óbvias, e as razões
+continuam válidas. Subir de 100 enfraquece um controle de produção — criação de contas em massa,
+e o oráculo de existência de e-mail que a revisão da Fase 5.5 mediu — para conveniência de teste.
+Isentar o IP de teste é uma porta dos fundos que um dia vai para produção. Compartilhar conta
+entre testes desfaz o isolamento que `apoio.ts` documenta.
+
+**Onde está o gasto**, medido por arquivo: `perfil.spec.ts` sozinho cria **28** contas, e
+`alunos.spec.ts`, 14. Nenhum dos dois é desta fase, e é neles que a redução rende.
+
+**O que eu faria, e não fiz porque é fase alheia:** `perfil.spec.ts` cria uma conta por teste
+onde a maioria só precisa de *um* profissional com perfil vazio. Um `beforeAll` por bloco, no
+lugar de um `cadastrar()` por teste, devolveria a maior parte da margem sem tocar em produção nem
+em isolamento — cada bloco continua com a sua conta, e só os testes de dentro do bloco a
+compartilham.
+
+**Gatilho para pagar:** **a próxima fase que precisar de um teste de tela que crie conta.** Não é
+"quando der" — é agora ou o próximo desenvolvedor perde a tarde que este documento existe para
+poupar. A conferência custa três comandos, e está em `docs/sistema/fase-05-7-idade-minima.md`.
 
 ---
 

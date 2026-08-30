@@ -23,6 +23,14 @@ interface CampoProps {
    * ele existe.
    */
   readOnly?: boolean;
+  /**
+   * Avisa quem usa o campo a cada tecla.
+   *
+   * Existe para um caso só, e ele é da Fase 5.7: a data de nascimento decide se o formulário
+   * pede os dados de um responsável, e essa decisão precisa acontecer **enquanto a pessoa
+   * digita** — não depois de ela enviar e receber um erro.
+   */
+  onChange?: (evento: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export function Campo({
@@ -35,6 +43,7 @@ export function Campo({
   defaultValue,
   required = true,
   readOnly = false,
+  onChange,
 }: CampoProps) {
   const idErro = `${id}-erro`;
   const idDica = `${id}-dica`;
@@ -53,6 +62,7 @@ export function Campo({
         defaultValue={defaultValue}
         required={required}
         readOnly={readOnly}
+        onChange={onChange}
         aria-invalid={erro ? true : undefined}
         // Liga o campo à mensagem de erro: sem isto o leitor de tela lê o rótulo e ignora
         // o motivo da recusa, e a pessoa fica presa no formulário sem saber por quê.

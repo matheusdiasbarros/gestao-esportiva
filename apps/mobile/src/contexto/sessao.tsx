@@ -24,6 +24,14 @@ export interface DadosDeCadastro {
   birthDate: string;
   password: string;
   acceptedTerms: boolean;
+  /**
+   * Nome e e-mail de quem assiste o aceite dos Termos — só na faixa de 16 a 17 anos.
+   *
+   * Opcionais aqui porque a maioria dos cadastros não os traz. Quem decide se são obrigatórios é
+   * o servidor, a partir da data de nascimento: a tela só escolhe se mostra os campos.
+   */
+  guardianName?: string;
+  guardianEmail?: string;
 }
 
 const Contexto = createContext<Sessao | null>(null);

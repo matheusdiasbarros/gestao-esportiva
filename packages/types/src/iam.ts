@@ -196,6 +196,8 @@ export interface GuardianAssistanceView {
 export interface GuardianAssistanceRequest {
   /** O nome do jovem. É o que faz o adulto reconhecer do que se trata. */
   studentName: string;
+  /** `AAAA-MM-DD`. Só nesta tela — nunca no e-mail, que pode ter ido para o endereço errado. */
+  studentBirthDate: string;
   guardianName: string;
   /** Já respondido? A tela do link precisa distinguir "decida" de "você já decidiu". */
   status: GuardianAssistanceStatus;

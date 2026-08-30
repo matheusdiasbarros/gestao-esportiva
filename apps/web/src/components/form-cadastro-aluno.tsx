@@ -1,11 +1,45 @@
 'use client';
 
-import { MINIMUM_PASSWORD_LENGTH, MINIMUM_SIGNUP_AGE, type AuthenticatedUser } from '@gestao/types';
+import {
+  IDADE_DE_CAPACIDADE_PLENA,
+  MINIMUM_PASSWORD_LENGTH,
+  MINIMUM_SIGNUP_AGE,
+  type AuthenticatedUser,
+} from '@gestao/types';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Aviso, Botao, Campo } from '@/components/campos';
 import { ApiError, apiFetch, errosPorCampo } from '@/lib/api';
+
+/**
+ * Idade completa a partir de `AAAA-MM-DD`, ou `null` se a data não serve.
+ *
+ * **É uma segunda conta de idade, e o servidor continua sendo quem decide.** Aqui ela só escolhe
+ * quais campos aparecer; o `AuthService` recalcula e recusa. Se as duas divergirem por um dia, o
+ * pior caso é o formulário pedir um responsável que o servidor não exigia — e não o contrário.
+ */
+function idadeEm(nascimento: string): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(nascimento)) return null;
+
+  const data = new Date(`${nascimento}T00:00:00Z`);
+  if (Number.isNaN(data.getTime())) return null;
+
+  const hoje = new Date();
+  const referencia = new Date(
+    Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth(), hoje.getUTCDate()),
+  );
+  if (data.getTime() > referencia.getTime()) return null;
+
+  let idade = referencia.getUTCFullYear() - data.getUTCFullYear();
+  const fezAniversario =
+    referencia.getUTCMonth() > data.getUTCMonth() ||
+    (referencia.getUTCMonth() === data.getUTCMonth() &&
+      referencia.getUTCDate() >= data.getUTCDate());
+  if (!fezAniversario) idade -= 1;
+
+  return idade;
+}
 
 /**
  * O formulário de cadastro de aluno, usado em duas telas.
@@ -32,6 +66,12 @@ export function FormCadastroAluno({
   const [carregando, setCarregando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [erros, setErros] = useState<Record<string, string>>({});
+  const [nascimento, setNascimento] = useState('');
+
+  const idade = idadeEm(nascimento);
+  const precisaDeResponsavel =
+    idade !== null && idade >= MINIMUM_SIGNUP_AGE && idade < IDADE_DE_CAPACIDADE_PLENA;
+  const jovemDemais = idade !== null && idade < MINIMUM_SIGNUP_AGE;
 
   async function enviar(evento: React.FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -54,6 +94,14 @@ export function FormCadastroAluno({
           birthDate: String(dados.get('birthDate')),
           password: String(dados.get('password')),
           acceptedTerms: dados.get('acceptedTerms') === 'on',
+          // Só quando a faixa pede. Mandar campos vazios faria o servidor recusar por "nome do
+          // responsável em branco" alguém que não precisa de responsável nenhum.
+          ...(precisaDeResponsavel
+            ? {
+                guardianName: String(dados.get('guardianName') ?? ''),
+                guardianEmail: String(dados.get('guardianEmail') ?? ''),
+              }
+            : {}),
           ...(signupSlug ? { signupSlug } : {}),
         }),
       });
@@ -102,7 +150,67 @@ export function FormCadastroAluno({
           autoComplete="bday"
           erro={erros.birthDate}
           dica={`É preciso ter ${MINIMUM_SIGNUP_AGE} anos ou mais.`}
+          onChange={(evento) => setNascimento(evento.currentTarget.value)}
         />
+
+        {/* **Aparece a partir da data digitada, e não de uma caixa que a pessoa marca.** Uma caixa
+            "sou menor de idade" seria desmarcada por quem quisesse pular o passo, e o formulário
+            estaria pedindo a alguém que declare contra o próprio interesse. */}
+        {precisaDeResponsavel ? (
+          <div className="flex flex-col gap-4 rounded-lg border border-(--color-border) bg-(--color-surface-muted) p-4">
+            <div className="flex flex-col gap-2 text-sm">
+              <strong>Quem tem 16 ou 17 anos precisa de um responsável junto</strong>
+              <p>
+                Criar a conta é aceitar os Termos de Uso, e aceitar Termos é assinar um contrato.
+                Pela lei brasileira, até os {IDADE_DE_CAPACIDADE_PLENA} anos isso só vale com um
+                responsável confirmando.
+              </p>
+              <p>
+                Vamos mandar um e-mail para ele dizendo que você criou a conta e pedindo essa
+                confirmação. <strong>É tudo o que ele faz.</strong> Ele não ganha uma conta, não vê
+                a sua agenda, não vê os seus pagamentos e não entra na sua conta.
+              </p>
+              <p>
+                Você entra e usa a plataforma agora, sem esperar. O que fica esperando a confirmação
+                é <strong>marcar aula</strong>.
+              </p>
+            </div>
+
+            <Campo
+              id="guardianName"
+              label="Nome do responsável"
+              autoComplete="off"
+              erro={erros.guardianName}
+              dica="Pai, mãe, ou quem responde por você. É este nome que vai aparecer no e-mail."
+            />
+            <Campo
+              id="guardianEmail"
+              label="E-mail do responsável"
+              type="email"
+              autoComplete="off"
+              erro={erros.guardianEmail}
+              dica="É para cá que mandamos o pedido de confirmação. Precisa ser o e-mail dele, não o seu."
+            />
+          </div>
+        ) : null}
+
+        {/* O caminho que existe para quem é novo demais. Sem ele a recusa vira um beco: a pessoa
+            treina do mesmo jeito, o que muda é de quem é o login. */}
+        {jovemDemais ? (
+          <div className="flex flex-col gap-2 rounded-lg border border-(--color-border) bg-(--color-surface-muted) p-4 text-sm">
+            <strong>Menos de {MINIMUM_SIGNUP_AGE} anos? Dá para treinar do mesmo jeito</strong>
+            <p>
+              Criar conta é aceitar os Termos de Uso, e isso é um contrato — a lei brasileira só
+              reconhece esse aceite a partir dos {MINIMUM_SIGNUP_AGE} anos.
+            </p>
+            <p>
+              Peça ao seu pai, à sua mãe ou a quem responde por você para{' '}
+              <strong>falar com o seu professor</strong>. Ele cadastra você como aluno dele, e quem
+              acompanha as aulas pela plataforma é o seu responsável, com a conta dele. Você treina
+              igual — o que muda é de quem é o login.
+            </p>
+          </div>
+        ) : null}
         <Campo
           id="password"
           label="Senha"
