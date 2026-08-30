@@ -83,16 +83,43 @@ export class AccessService {
       return { professionalId: minha, professorId: null };
     }
 
-    const participa = await this.staff.exists({
-      where: {
-        ownerProfessionalId: negocioId,
-        memberProfessionalId: minha,
-        status: StaffStatus.Active,
-      },
-    });
+    const participa = await this.participacaoValida(negocioId, minha);
     if (!participa) throw this.inexistente();
 
     return { professionalId: negocioId, professorId: minha };
+  }
+
+  /**
+   * Existe participação ativa minha na equipe deste dono, **e o dono continua valendo**?
+   *
+   * **A segunda metade foi acrescentada em 2026-08-30**, pela revisão de segurança da Fase 5.5
+   * (achado #3). A regra conferia `staff_members.status` e nunca o estado da **conta do dono** —
+   * então suspender um dono de clube tirava a página pública dele do ar e o impedia de entrar,
+   * enquanto os professores da equipe continuavam lendo contato, objetivos e observações privadas
+   * dos alunos daquele clube, sem prazo. Não havia botão nenhum que cortasse isso.
+   *
+   * É incoerência dentro do próprio módulo: os outros dois lugares que perguntam "este
+   * profissional ainda vale" — `profissionalDoLinkPublico` e a resolução do convite — já
+   * conferiam. Este não.
+   *
+   * **Cortar em vez de encerrar a participação, e a diferença importa.** Suspensão costuma ser
+   * temporária: reativar o dono devolve a equipe inteira sozinha, sem ninguém precisar convidar
+   * cada professor de novo. Encerrar seria uma escrita só e mais simples, e tornaria definitivo
+   * o que a operação não diz que é.
+   */
+  private async participacaoValida(donoId: string, membroId: string): Promise<boolean> {
+    const quantas = await this.staff
+      .createQueryBuilder('participacao')
+      .innerJoin(Professional, 'dono', 'dono.id = participacao.owner_professional_id')
+      .innerJoin('users', 'conta', 'conta.id = dono.user_id AND conta.status = :ativa', {
+        ativa: UserStatus.Active,
+      })
+      .where('participacao.owner_professional_id = :donoId', { donoId })
+      .andWhere('participacao.member_professional_id = :membroId', { membroId })
+      .andWhere('participacao.status = :ativo', { ativo: StaffStatus.Active })
+      .getCount();
+
+    return quantas > 0;
   }
 
   /** A carteira desta conta, ou `null` se ela não é profissional. */
@@ -166,6 +193,10 @@ export class AccessService {
    * **A participação é conferida no banco a cada requisição**, e não lida do token. Se viajasse
    * no token de acesso, o ex-membro continuaria entrando por até 15 minutos depois de sair — e a
    * promessa de que o acesso termina no mesmo instante seria falsa.
+   *
+   * **E o dono precisa continuar valendo** — a junção com `users` foi acrescentada em 2026-08-30,
+   * pelo achado #3 da revisão de segurança da fase. Ver `participacaoValida`, onde o motivo está
+   * escrito por inteiro.
    */
   async fichaComoDonoOuProfessor(userId: string, studentId: string): Promise<Student> {
     const professionalId = await this.carteiraDe(userId);
@@ -183,6 +214,11 @@ export class AccessService {
                     ON sm.owner_professional_id = ficha.professional_id
                    AND sm.member_professional_id = :eu
                    AND sm.status = 'ACTIVE'
+                  JOIN professionals dono
+                    ON dono.id = ficha.professional_id
+                  JOIN users conta
+                    ON conta.id = dono.user_id
+                   AND conta.status = 'ACTIVE'
                  WHERE st.student_id = ficha.id
                    AND st.professional_id = :eu
               ))`,

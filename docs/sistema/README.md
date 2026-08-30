@@ -2,7 +2,7 @@
 
 Documentação de manutenção, escrita **para quem chega sem contexto** — pessoa ou IA.
 
-Última atualização: 2026-08-28
+Última atualização: 2026-08-29
 
 ---
 
@@ -66,3 +66,4 @@ mesmo commit. Documento por fase envelhece se ninguém fizer isso — e document
 | 3 | Perfil profissional | [fase-03-perfil-profissional.md](fase-03-perfil-profissional.md) |
 | 4 | *(saiu do escopo — roda junto da 12)* | — |
 | 5 | Alunos | [fase-05-alunos.md](fase-05-alunos.md) |
+| 5.5 | Equipe | [fase-05-5-equipe.md](fase-05-5-equipe.md) |

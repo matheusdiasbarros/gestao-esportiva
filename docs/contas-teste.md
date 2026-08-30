@@ -29,6 +29,7 @@ Vem de `SEED_DEFAULT_PASSWORD` no `.env`; se essa variável for alterada, a senh
 | `marina@exemplo.local` | `desenvolvimento1` | aluna (Marina Souza) | ficha em **dois** profissionais (Rodrigo e Ana) ao mesmo tempo |
 | `carlos@exemplo.local` | `desenvolvimento1` | responsável (Carlos Dias) | acessa a ficha da filha menor (Sofia), via conta própria |
 | `beatriz@exemplo.local` | `desenvolvimento1` | aluna (Beatriz Lima) | conta **sem nenhum professor** vinculado — estado vazio |
+| `sergio@exemplo.local` | `desenvolvimento1` | profissional (Sérgio Barreto), link `sergio-arena` | **o descartável.** Nasce sem ficha nenhuma, e é o único dono que um teste pode suspender, reativar ou encher de alunos sem quebrar outro arquivo — Rodrigo e Ana são usados por vários ao mesmo tempo. É também a persona de dono de clube |
 
 ## Fichas sem login próprio
 

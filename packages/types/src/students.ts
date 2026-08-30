@@ -141,8 +141,35 @@ export const MAX_PRIVATE_NOTES_LENGTH = 4000;
  *
  * Estava 1000 até 2026-08-28, por descuido meu no Epic 5.1: o `students.md` §9.1 já dizia 500, e
  * dizia **por quê**. Dobrar o teto enfraqueceu pela metade a mitigação sem que ninguém pedisse.
+ *
+ * **Desde 2026-08-30 ele é o piso, e não o total** — ver `tetoDeFichas`.
  */
 export const MAX_STUDENTS_POR_PROFISSIONAL = 500;
+
+/** Quanto cada professor da equipe acrescenta ao teto. Ver `tetoDeFichas`. */
+export const FICHAS_POR_MEMBRO_DA_EQUIPE = 300;
+
+/**
+ * O teto de fichas de uma carteira, dado o tamanho da equipe.
+ *
+ * **Quinhentos era o número de um autônomo, e um clube inteiro passou a caber dentro de uma
+ * conta.** A persona tem 25 a 40 alunos: oito professores dão 320, treze estouram — e o teto
+ * conta também as fichas encerradas, então um clube de três anos chega lá sem nunca ter tido 500
+ * alunos ao mesmo tempo. Achado da revisão de segurança da Fase 5.5.
+ *
+ * **Por que uma fórmula, e não simplesmente 5.000.** O teto é mitigação: ele limita quantos
+ * endereços uma conta comprometida testa pelo oráculo do marcador "já tem conta" (§9.1 do
+ * domínio). Um teto plano multiplicaria por dez o estrago de uma conta de autônomo **que nunca
+ * teve equipe** — a esmagadora maioria. Com a fórmula, quem nunca convidou ninguém continua
+ * exatamente em 500, e o orçamento só cresce para quem tem professores de verdade dentro.
+ *
+ * **Continua contando as encerradas, de propósito.** Ignorá-las tornaria o teto contornável por
+ * quem encerrasse o que acabou de criar — e o que ele contém é crescimento de linhas, não de
+ * alunos ativos.
+ */
+export function tetoDeFichas(membrosAtivosDaEquipe: number): number {
+  return MAX_STUDENTS_POR_PROFISSIONAL + FICHAS_POR_MEMBRO_DA_EQUIPE * membrosAtivosDaEquipe;
+}
 
 /**
  * A idade a partir da qual a plataforma trata o aluno como maior.

@@ -1,5 +1,12 @@
 import { randomBytes } from 'node:crypto';
-import { AccessHolder, AuthenticatedUser, MINIMUM_SIGNUP_AGE, StudentStatus } from '@gestao/types';
+import {
+  AccessHolder,
+  AuthenticatedUser,
+  MINIMUM_SIGNUP_AGE,
+  StaffStatus,
+  StudentStatus,
+  tetoDeFichas,
+} from '@gestao/types';
 import {
   ConflictException,
   Injectable,
@@ -14,6 +21,7 @@ import { ehViolacaoDeUnicidade } from '../../../common/database/violacao-de-unic
 import { MailService } from '../../mail/mail.service';
 import { MailKind } from '../../mail/mail.types';
 import { Professional } from '../entities/professional.entity';
+import { StaffMember } from '../entities/staff-member.entity';
 import { Student } from '../entities/student.entity';
 import { TokenPurpose } from '../entities/user-token.entity';
 import { IdentityProvider, UserIdentity } from '../entities/user-identity.entity';
@@ -82,6 +90,9 @@ export class AuthService {
     @InjectRepository(UserIdentity) private readonly identities: Repository<UserIdentity>,
     @InjectRepository(Professional) private readonly professionals: Repository<Professional>,
     @InjectRepository(Student) private readonly students: Repository<Student>,
+    // Só para o teto de fichas: o link público precisa saber o tamanho da equipe do dono para
+    // saber quantas fichas a carteira dele aceita.
+    @InjectRepository(StaffMember) private readonly staff: Repository<StaffMember>,
   ) {}
 
   /**
@@ -318,6 +329,24 @@ export class AuthService {
     }
 
     if (ficha) return;
+
+    // **O teto vale aqui também, e este era o caminho que não perguntava.** Achado da revisão de
+    // segurança da Fase 5: enquanto o link público inserisse sem consultar, qualquer número
+    // escolhido lá em cima era decorativo — bastava mandar o link para encher a carteira alheia.
+    //
+    // A recusa é deliberadamente sem detalhe: quem clica no link é o aluno, e o problema não é
+    // dele. Dizer "esta carteira está cheia" transformaria a rota pública num medidor do tamanho
+    // do negócio de outra pessoa.
+    const teto = tetoDeFichas(
+      await this.staff.count({
+        where: { ownerProfessionalId: professional.id, status: StaffStatus.Active },
+      }),
+    );
+    if ((await this.students.countBy({ professionalId: professional.id })) >= teto) {
+      throw new ConflictException(
+        'Não foi possível concluir seu cadastro com este profissional. Fale com ele.',
+      );
+    }
 
     const user = await this.users.findOneByOrFail({ id: userId });
 

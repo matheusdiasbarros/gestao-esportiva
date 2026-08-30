@@ -201,6 +201,79 @@ test.describe('A carteira que o membro enxerga', () => {
     }
   });
 
+  /**
+   * **Achado #1 da revisão de segurança da fase, e a célula da matriz que ele violava.**
+   *
+   * `PATCH /students/:id` aceita o membro porque a decisão E10 quis que ele escrevesse as
+   * observações privadas — e `accessHolder` e `guardianName` vieram de carona no `PartialType`.
+   * A guarda que já existia só dispara quando há conta ligada, e a ficha do clube normalmente
+   * não tem nenhuma.
+   *
+   * O que ele conseguia escrever era o nome de um **terceiro** — o responsável — que nunca teve
+   * relação com ele, e a decisão de quem enxerga dado de terceiro é do controlador (§10.1).
+   */
+  test('o membro não marca responsável, e o dono marca', async () => {
+    const comoMenor = {
+      birthDate: '2014-01-01',
+      accessHolder: 'GUARDIAN',
+      guardianName: 'Responsável de Teste',
+    };
+
+    const doMembro = await comoMembro.patch(`${API}/students/${associada}`, { data: comoMenor });
+    expect(doMembro.status(), 'o membro marcou responsável na ficha do clube').toBe(422);
+    expect(await doMembro.text()).toContain('Só o dono da carteira marca responsável');
+
+    // O nome do responsável sozinho é recusado igual: os dois campos são a mesma célula.
+    expect(
+      (
+        await comoMembro.patch(`${API}/students/${associada}`, {
+          data: { guardianName: 'Outro Responsável' },
+        })
+      ).status(),
+    ).toBe(422);
+
+    // E o par que prova que a recusa é do papel, e não do campo: o dono passa.
+    expect(
+      (await comoDono.patch(`${API}/students/${associada}`, { data: comoMenor })).status(),
+    ).toBe(200);
+  });
+
+  /**
+   * **O alvo nº 3 da revisão de segurança, que estava certo no código e sem teste.**
+   *
+   * O marcador compara a carteira **inteira** do dono. Para o membro, isso denunciaria a
+   * existência de uma ficha que ele não pode ver — bastaria o telefone bater. A defesa é a
+   * consulta não acontecer quando o escopo tem professor, e o cenário só prova alguma coisa com o
+   * marcador **de fato aceso**: com uma ficha só ele é `false` para os dois.
+   */
+  test('a duplicata acende para o dono e não denuncia ficha de colega ao membro', async () => {
+    const telefone = '27988887777';
+    const email = `dupla-${randomUUID().slice(0, 8)}@exemplo.local`;
+
+    const dele = await comoDono.post(`${API}/students`, {
+      data: { fullName: `Dupla A ${randomUUID().slice(0, 6)}`, email, phone: telefone },
+    });
+    const gemea = await comoDono.post(`${API}/students`, {
+      data: { fullName: `Dupla B ${randomUUID().slice(0, 6)}`, email, phone: telefone },
+    });
+    const idDele = ((await dele.json()) as { id: string }).id;
+    const idGemea = ((await gemea.json()) as { id: string }).id;
+    descartaveis.push(idDele, idGemea);
+
+    // Só uma das duas é dele. A outra é a que ele não pode nem saber que existe.
+    await associar(idDele, [carteiraDoMembro]);
+
+    const paraODono = (await (await comoDono.get(`${API}/students/${idDele}`)).json()) as {
+      possibleDuplicate: boolean;
+    };
+    expect(paraODono.possibleDuplicate, 'o dono deixou de ver a duplicata que é dele').toBe(true);
+
+    const paraOMembro = (await (await comoMembro.get(`${API}/students/${idDele}`)).json()) as {
+      possibleDuplicate: boolean;
+    };
+    expect(paraOMembro.possibleDuplicate, 'o marcador denunciou a ficha do colega').toBe(false);
+  });
+
   test('cadastra aluno do clube, e a ficha nasce associada a ele', async () => {
     const criada = await comoMembro.post(`${API}/students?negocio=${carteiraDoDono}`, {
       data: { fullName: `Trazido ${randomUUID().slice(0, 8)}` },
@@ -234,6 +307,28 @@ test.describe('A carteira que o membro enxerga', () => {
     expect((await comoMembro.get(`${API}/students?negocio=${CARTEIRA_INEXISTENTE}`)).status()).toBe(
       404,
     );
+  });
+
+  /**
+   * **Achado #4 da revisão de segurança da fase.** O parâmetro `negocio` tem quatro pontos de
+   * entrada; dois o recebiam cru, sem validação, e um valor que não fosse UUID chegava ao TypeORM
+   * e virava **500** — com o valor bruto escrito no log de erro junto da URL.
+   *
+   * O teste confere os quatro juntos de propósito. É a forma exata do aviso que o código já
+   * carregava sobre a propriedade: *pergunta respondida em cada serviço um dia responde
+   * diferente*. Aqui foram quatro respostas e duas divergiram.
+   */
+  test('os quatro pontos de entrada de `negocio` recusam lixo do mesmo jeito', async () => {
+    const lixo = 'nao-e-uuid';
+
+    for (const resposta of [
+      await comoMembro.get(`${API}/students?negocio=${lixo}`),
+      await comoMembro.get(`${API}/staff?negocio=${lixo}`),
+      await comoMembro.get(`${API}/invites?negocio=${lixo}`),
+      await comoMembro.post(`${API}/students?negocio=${lixo}`, { data: { fullName: 'Zé' } }),
+    ]) {
+      expect(resposta.status(), await resposta.text()).toBe(422);
+    }
   });
 });
 

@@ -287,7 +287,7 @@ Composição do MVP definida na Fase 0 — ver [`docs/product/mvp.md`](docs/prod
 | 3 | Perfil profissional | ⬜ | reduzida | 2 |
 | 4 | Localização e área de atendimento | ⬜ | **não** | 3 |
 | 5 | Gestão de alunos | ⬜ | sim | 2, 3 |
-| 5.5 | Equipe | ⬜ | sim | 2, 3, 5 |
+| 5.5 | Equipe | ✅ 2026-08-30 | sim | 2, 3, 5 |
 | 5.7 | Idade mínima e assistência | ⬜ | sim | 2, 5 |
 | 6 | Agenda | ⬜ | sim | 3, 5, 5.5, 5.7 |
 | 7 | Pacotes e créditos | ⬜ | sim | 6 |
@@ -1256,7 +1256,7 @@ o administrador, ou o profissional errado.
 
 ---
 
-## Fase 5.5 — Equipe ⬜
+## Fase 5.5 — Equipe ✅
 
 > **Fase acrescentada em 2026-08-28**, e o meio número é de propósito: a numeração é mantida
 > para não quebrar a referência "iniciar Fase X", e renumerar catorze fases para caber uma seria
@@ -1559,16 +1559,23 @@ cada uma, estão na spec §2. As que mais amarram a implementação:
       Declarando "estou disponível para o Clube Arena às terças das 18h às 22h", A só enxerga e
       só marca dentro do que foi declarado para A. **Cresce a Fase 6**
 
-**Ainda em aberto, e não bloqueiam a abertura. Todas são da revisão de segurança:**
+**Eram da revisão de segurança, e foram fechadas por ela em 2026-08-30:**
 
-- [ ] **Teto de membros por equipe** — proposta: 50, pelo mesmo motivo que o de fichas é 500, que
-      é mitigação e não capacidade
-- [ ] **O teto de 500 fichas é contado por `professional_id`** (`students.service.ts:113`). Um
-      clube com cinco professores divide as mesmas 500 — o número deixa de ser mitigação e vira
-      capacidade
-- [ ] **Os tetos de cadastro e de convite são 60/hora por IP.** Cinco professores no Wi-Fi da
-      mesma arena dividem a cota. A saída óbvia — chavear por conta — esbarra numa decisão que
-      existe: o limitador roda **antes** da autenticação, de propósito
+- [x] **Teto de membros por equipe: fica em 50.** É mitigação, não capacidade, e o que ele
+      protege já é contido melhor por `LimitarConvite`. O que estava errado era o **lugar** da
+      conferência — na emissão, e a linha nasce no aceite: com 49 membros o dono emitia quantos
+      convites quisesse e todos podiam ser aceitos. Agora ela está dentro de `entrar`, na
+      transação que insere
+- [x] **O teto de 500 fichas virou `500 + 300 por membro `ACTIVE``** (`tetoDeFichas`). Escolhido
+      contra o teto plano de 5.000 porque o autônomo que nunca convidou ninguém **continua em
+      500** — um teto plano multiplicaria por dez o estrago de uma conta comprometida sem equipe.
+      **E o link público passou a consultar o teto**, que era o caminho que não perguntava
+- [x] **Os tetos de ficha e de convite passaram a contar por conta.** Nasceu o limite nomeado
+      `conta` e um segundo guard rodando **depois** do `JwtAuthGuard`. A decisão de o limitador
+      rodar antes da autenticação **continua valendo onde tem motivo** — login, cadastro e
+      recuperação precisam de teto antes de o argon2 rodar —, e as três rotas que mudaram são 401
+      sem token. Contra quem varre endereços ficou **mais** apertado: antes bastava trocar de
+      rede, agora é preciso trocar de conta
 - [x] ~~Nomes das duas personas novas~~ → **Sérgio** (dono de clube ou gestor) e **Bianca**
       (professora da equipe), em `docs/product/personas.md`
 
@@ -1647,25 +1654,31 @@ vazamento tem destinatário conhecido: o colega de equipe, o ex-membro, o clube 
 
 ### Critérios de conclusão
 
-- [ ] O dono convida, o professor aceita, e ele passa a ver **só** os alunos associados a ele
-- [ ] O professor cadastra aluno do clube, e a ficha nasce na carteira do dono associada a ele
-- [ ] **Um membro de dois clubes sabe sempre em qual carteira está**, e não consegue cadastrar
+- [x] O dono convida, o professor aceita, e ele passa a ver **só** os alunos associados a ele
+- [x] O professor cadastra aluno do clube, e a ficha nasce na carteira do dono associada a ele
+- [x] **Um membro de dois clubes sabe sempre em qual carteira está**, e não consegue cadastrar
       na errada sem escolher
-- [ ] Os vinte e quatro casos da matriz têm teste, e as três de API foram **verificadas
-      quebrando**
-- [ ] O convite de equipe responde igual para e-mail com e sem conta — provado, não afirmado
-- [ ] Sair da equipe fecha a carteira na hora, tira o professor das aulas **futuras** sem tocar
+- [x] Os vinte e quatro casos da matriz têm teste, e as três de API foram **verificadas
+      quebrando**. *A revisão de segurança exercitou a matriz célula a célula e achou **duas**
+      erradas: o membro marcando responsável (consertado) e o membro sem enxergar os locais do
+      negócio, que é falha fechada e virou DT-016*
+- [x] O convite de equipe responde igual para e-mail com e sem conta — provado, não afirmado, e
+      **remedido pela revisão** byte a byte contra o sistema no ar
+- [x] Sair da equipe fecha a carteira na hora, tira o professor das aulas **futuras** sem tocar
       nas passadas, deixa as fichas sem professor com aviso ao dono, e preserva o histórico do
-      ex-membro com o nome do aluno
-- [ ] **Nenhuma tela escreve "funcionário", "demitir" ou "demissão"** — teste que afirma a
-      ausência, como os quatro textos obrigatórios da Fase 5
-- [ ] O dono vê, **antes de confirmar o encerramento**, o que fica visível e o que some
-- [ ] Os alunos particulares do professor nunca aparecem para o dono
-- [ ] ADR-006 registrada; `docs/domain/staff.md` escrito; `iam.md` §6 e §7.5, `students.md`,
+      ex-membro com o nome do aluno. *A parte das aulas futuras está escrita e não tem tabela
+      para tocar — é a única da fase que não é exercitável*
+- [x] **Nenhuma tela escreve "funcionário", "demitir" ou "demissão"** — `e2e/vocabulario.spec.ts`
+      varre o código-fonte, ignora comentários e afirma que varreu mais de 100 arquivos
+- [x] O dono vê, **antes de confirmar o encerramento**, o que fica visível e o que some
+- [x] Os alunos particulares do professor nunca aparecem para o dono
+- [x] ADR-006 registrada; `docs/domain/staff.md` escrito; `iam.md` §6 e §7.5, `students.md`,
       `professional-profile.md`, `glossary.md`, `vision.md`, `personas.md` e `mvp.md` atualizados
       **no mesmo commit** que os muda
-- [ ] Revisão de segurança obrigatória registrada em `docs/security/revisao-fase-05-5.md`
-- [ ] Manual de manutenção em `docs/sistema/fase-05-5-equipe.md`
+- [x] Revisão de segurança obrigatória registrada em `docs/security/revisao-fase-05-5.md` —
+      **sete achados consertados** antes do fecho, dois tetos recalibrados, e quatro aceitos como
+      débito (DT-014 a DT-017). Nenhum achado era vazamento de leitura
+- [x] Manual de manutenção em `docs/sistema/fase-05-5-equipe.md`
 
 ---
 
@@ -1780,6 +1793,13 @@ gatilhos do agente ao mesmo tempo
 >
 > **4. A disponibilidade é declarada por negócio** (decisão E19), e não uma só para a pessoa.
 > Quem dá aula em dois clubes tem duas grades, e a trava de conflito é que as concilia.
+>
+> **5. O membro precisa enxergar os locais e os espaços do negócio, e hoje não enxerga** — DT-016,
+> achado da revisão de segurança da Fase 5.5. A matriz da `staff.md` §7 já diz *sim*, e
+> `GET /professionals/me/locations` devolve os locais **dele**: o módulo de perfil resolve tudo
+> por `carteiraDe` e não conhece o parâmetro `negocio`. É **falha fechada**, então não é risco —
+> é uma célula sem implementação, e ela vira bloqueio aqui: um professor que não sabe em qual
+> quadra vai dar aula não tem agenda. Sai junto de E12, que depende da mesma consulta.
 
 > **Requisitos trazidos pelo dono em 2026-08-29**, antes de a fase abrir. Não são sugestões: são
 > o comportamento pedido, e a abertura da fase os transforma em decisões numeradas.
@@ -2821,7 +2841,7 @@ ADRs previstas (não escritas ainda):
 | ADR-003 | Identificadores e convenções de dados | 1 | ✅ |
 | ADR-004 | Estratégia de autenticação | 2 | ✅ |
 | ADR-005 | Fronteira do perfil profissional | 3 | ✅ |
-| ADR-006 | **Equipe e delegação de acesso** | 5.5 | ⬜ |
+| ADR-006 | **Equipe e delegação de acesso** | 5.5 | ✅ |
 | ADR-007 | Provedor de pagamento | 9 | ⬜ |
 | ADR-008 | Hospedagem e deploy | 18 | ⬜ |
 | ADR-009 | PostGIS e provedor de geocoding | 12 | ⬜ |
@@ -2899,7 +2919,7 @@ Estrutura-alvo. **Criar cada diretório apenas quando ele tiver conteúdo real.*
 | ~~O aceite do convite pelo responsável basta como consentimento parental?~~ ✅ **sim**, decidido pelo dono em 2026-08-28 | 5 | nota ao fim da Fase 5 |
 | **Maior de idade sob responsável é caso normal** — o aviso da carteira vira oferta | 5 | nota ao fim da Fase 5 |
 | **Desvinculação do acesso pedida pelo próprio aluno maior de idade** | 11 | nota ao fim da Fase 5 |
-| **Teto de membros por equipe** — proposta 50, e quem decide é a revisão de segurança | 5.5 | `docs/domain/staff.md` |
+| ~~**Teto de membros por equipe**~~ ✅ **fica em 50**, decidido pela revisão de segurança em 2026-08-30; o que mudou foi o lugar da conferência | 5.5 | `docs/domain/staff.md` §13 |
 | **Nível do aluno: onde mora, e por modalidade?** — turma só aceita aluno do mesmo nível (requisito do dono, 2026-08-29). O conceito não existe em lugar nenhum hoje, e o mesmo aluno é avançado no tênis e iniciante no padel | 6 / 8 | cabeçalho da Fase 6 |
 | **O preço da modalidade pode mudar de local para local?** — o clube fica com uma parte, então ele cobra diferente lá. Caso real, e pendurar dinheiro agora numa tabela que ainda não cobra seria prematuro | 9 | `docs/domain/professional-profile.md` §7.1b |
 | **A base legal da ficha de criança com menos de 12 anos** — hoje é legítimo interesse; o art. 14 §1 pede consentimento nessa faixa. Não é o mecanismo que está em dúvida, é a base legal | 5.7 | **advogado.** `iam.md` §8.1 |

@@ -1,9 +1,9 @@
 import {
   AccessHolder,
-  MAX_STUDENTS_POR_PROFISSIONAL,
   StaffStatus,
   StudentFilter,
   StudentStatus,
+  tetoDeFichas,
   type StudentRow,
 } from '@gestao/types';
 import { Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
@@ -141,11 +141,12 @@ export class StudentsService {
     const escopo = await this.access.escopoDaCarteira(userId, negocio);
     const { professionalId, professorId } = escopo;
 
+    const teto = await this.tetoDaCarteira(professionalId);
     const existentes = await this.students.countBy({ professionalId });
-    if (existentes >= MAX_STUDENTS_POR_PROFISSIONAL) {
+    if (existentes >= teto) {
       throw this.recusar(
         'fullName',
-        `Você já tem ${MAX_STUDENTS_POR_PROFISSIONAL} alunos cadastrados. Fale com o suporte.`,
+        `Esta carteira já tem ${teto} alunos cadastrados. Fale com o suporte.`,
       );
     }
 
@@ -201,6 +202,29 @@ export class StudentsService {
         'fullName',
         'Este vínculo está encerrado. Reative o aluno antes de editar a ficha.',
       );
+    }
+
+    // **Marcar responsável é célula do dono, e o `PATCH` era a porta por onde o membro entrava.**
+    //
+    // Achado #1 da revisão de segurança da Fase 5.5. `UpdateStudentDto` estende
+    // `PartialType(CreateStudentDto)`, então `accessHolder` e `guardianName` vieram de carona
+    // quando esta rota passou a aceitar o membro — o que a decisão E10 pediu para as **observações
+    // privadas**, e só para elas. A guarda logo abaixo não pegava o caso: ela exige conta ligada,
+    // e a ficha do clube normalmente não tem nenhuma.
+    //
+    // Por que importa, e não é preciosismo de matriz: quem decide **quem enxerga o dado de um
+    // terceiro** é o controlador, e o membro não é controlador (`staff.md` §10.1). O que ele
+    // conseguia escrever era o nome de uma pessoa — o responsável — que nunca teve relação
+    // nenhuma com ele, na carteira de um controlador que não autorizou aquilo.
+    if (dto.accessHolder !== undefined || dto.guardianName !== undefined) {
+      const minhaCarteira = await this.access.carteiraDe(userId);
+      if (atual.professionalId !== minhaCarteira) {
+        throw this.recusar(
+          dto.accessHolder !== undefined ? 'accessHolder' : 'guardianName',
+          'Só o dono da carteira marca responsável por um aluno. Avise o professor responsável ' +
+            'pelo negócio.',
+        );
+      }
     }
 
     // **Trocar quem acessa é ação, não campo, quando existe conta ligada.**
@@ -621,6 +645,22 @@ export class StudentsService {
         'Menor de idade não tem conta na plataforma. Marque que quem acessa é um responsável.',
       );
     }
+  }
+
+  /**
+   * O teto de fichas desta carteira: 500, mais 300 por professor ativo na equipe.
+   *
+   * **Uma consulta a mais em cada criação de ficha, e ela vale a pena.** Guardar o teto numa
+   * coluna seria mais barato e mentiria: ninguém recalcularia a linha no dia em que um professor
+   * entra ou sai, e é a mesma razão pela qual nenhum marcador desta carteira é guardado.
+   *
+   * O porquê da fórmula está em `tetoDeFichas`.
+   */
+  private async tetoDaCarteira(professionalId: string): Promise<number> {
+    const membros = await this.staff.count({
+      where: { ownerProfessionalId: professionalId, status: StaffStatus.Active },
+    });
+    return tetoDeFichas(membros);
   }
 
   private recusar(field: string, message: string): UnprocessableEntityException {

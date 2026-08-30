@@ -18,6 +18,23 @@ import { Throttle } from '@nestjs/throttler';
 export const LIMITE_IP = 'ip';
 export const LIMITE_ALVO = 'alvo';
 
+/**
+ * **Por conta** — a terceira contagem, criada em 2026-08-30 pela revisão da Fase 5.5.
+ *
+ * O motivo é a equipe. `LimitarFicha` e `LimitarConvite` foram calibrados quando um profissional
+ * era sempre sozinho, e contavam **por IP**: oito professores no Wi-Fi da mesma arena dividiam a
+ * cota de um. O dia da adoção de um clube é exatamente o dia em que todos cadastram ao mesmo
+ * tempo — e o 429 não menciona limite nenhum.
+ *
+ * **Isto não contradiz a decisão de o limite rodar antes da autenticação; ela continua valendo
+ * onde tem motivo.** Login, cadastro e recuperação precisam de teto **antes** de o argon2 rodar,
+ * senão o próprio mecanismo de defesa vira o alvo. Mas escrever ficha e emitir convite respondem
+ * **401 sem token** — o guard de autenticação já as fecha, e nada caro acontece antes dele. Para
+ * essas, um segundo guard roda **depois** e conta por conta, que é a chave que descreve o ator de
+ * verdade. Ver `LimitePorContaGuard`.
+ */
+export const LIMITE_CONTA = 'conta';
+
 const MINUTO = 60_000;
 
 /**
@@ -31,6 +48,9 @@ const MINUTO = 60_000;
 export const TETOS_GLOBAIS = {
   ip: { limit: 120, ttl: MINUTO },
   alvo: { limit: 20, ttl: 15 * MINUTO },
+  // Folgado de propósito: este é o teto de uma **conta autenticada**, e quem precisa de aperto
+  // declara o seu. Existe para que uma sessão em laço não passe despercebida, e nada mais.
+  conta: { limit: 1200, ttl: MINUTO },
 };
 
 /**
@@ -120,10 +140,15 @@ export const LimitarTrocaDeEmail = (): MethodDecorator & ClassDecorator =>
  * explorável porque não havia como criar ficha pela interface, e sem ficha não há convite. O
  * Epic 5.1 cria fichas — e o prazo venceu junto.
  *
- * **Por que o teto por IP é alto, e não baixo como o da troca de e-mail.** Convidar em lote é o
- * caso de uso normal: o professor que chega à plataforma com quarenta alunos convida os quarenta
- * na mesma tarde. Um teto de 10 transformaria o dia da adoção em erro. Sessenta cobre a carteira
- * inteira com folga e ainda limita o estrago a sessenta mensagens por hora.
+ * **Por que o teto é alto, e não baixo como o da troca de e-mail.** Convidar em lote é o caso de
+ * uso normal: o professor que chega à plataforma com quarenta alunos convida os quarenta na mesma
+ * tarde. Um teto de 10 transformaria o dia da adoção em erro. Sessenta cobre a carteira inteira
+ * com folga e ainda limita o estrago a sessenta mensagens por hora **por conta**.
+ *
+ * **Os sessenta mudaram de chave em 2026-08-30, e é o conserto que a Fase 5.5 obrigou.** Eles
+ * eram por IP, e um clube inteiro sai por um IP: oito professores dividiam a cota de um. Agora os
+ * sessenta são **por conta** — que é quem de fato manda a mensagem — e o IP fica com um teto
+ * folgado, só para conter volume vindo de um lugar só. Oito professores × 60 = 480, que cabe.
  *
  * **O teto por alvo tem um buraco conhecido, e ele está escrito de propósito.** A contagem por
  * destino lê `body.email`, e o convite endereçado **pode vir sem esse campo** — aí o destino é o
@@ -132,9 +157,12 @@ export const LimitarTrocaDeEmail = (): MethodDecorator & ClassDecorator =>
  * Quem cobre esse caminho é o teto por IP. O de alvo cobre o caminho explícito, que é o que
  * permite martelar um endereço sem ter ficha para ele.
  */
+export const TETO_CONVITE_POR_CONTA = 60;
+
 export const LimitarConvite = (): MethodDecorator & ClassDecorator =>
   Throttle({
-    [LIMITE_IP]: { limit: 60, ttl: 60 * MINUTO },
+    [LIMITE_IP]: { limit: 600, ttl: 60 * MINUTO },
+    [LIMITE_CONTA]: { limit: TETO_CONVITE_POR_CONTA, ttl: 60 * MINUTO },
     [LIMITE_ALVO]: { limit: 3, ttl: 60 * MINUTO },
   });
 
@@ -164,22 +192,34 @@ export const LimitarConvite = (): MethodDecorator & ClassDecorator =>
  * Para quem varre, o custo sai de ~7.200 endereços por hora para 60 — enumerar mil passa de oito
  * minutos para dezessete horas.
  *
- * **Dois limites, ditos por inteiro.** Ele limita a **taxa**, não o total: quem esperar testa
- * quantos endereços quiser. E conta **por IP**, não por conta, porque o limite roda antes da
- * autenticação de propósito (ver `iam.module.ts`) — a mesma restrição que o
- * `LimitarReenvioDeVerificacao` já documenta.
+ * **A precisão saiu do IP e foi para a conta em 2026-08-30**, pela revisão da Fase 5.5. Os
+ * sessenta contavam por IP, e um clube inteiro sai por um IP — oito professores dividiam a cota
+ * de um, justamente no dia em que todos cadastram ao mesmo tempo. Agora os sessenta são **por
+ * conta**, que é a chave que descreve o atacante de verdade; o IP fica com um teto folgado, só
+ * para conter volume vindo de um lugar só. Contra quem varre, ficou **melhor**: antes bastava
+ * trocar de rede, agora é preciso trocar de conta, e conta custa cadastro.
+ *
+ * **Um limite que continua valendo, dito por inteiro:** ele limita a **taxa**, não o total. Quem
+ * esperar testa quantos endereços quiser.
  */
 export const TETO_FICHA_COM_EMAIL = 60;
 export const TETO_FICHA_SEM_EMAIL = 600;
 
 export const LimitarFicha = (): MethodDecorator & ClassDecorator =>
   Throttle({
+    // O IP vira rede grossa: o suficiente para o clube inteiro numa tarde, e não mais.
     [LIMITE_IP]: {
+      ttl: 60 * MINUTO,
+      limit: TETO_FICHA_SEM_EMAIL,
+      generateKey: (_context, tracker) => chaveDeFicha('ficha-ip', tracker),
+    },
+    [LIMITE_CONTA]: {
       ttl: 60 * MINUTO,
       limit: (context) => (semAlvo(context) ? TETO_FICHA_SEM_EMAIL : TETO_FICHA_COM_EMAIL),
       // `limit` e `generateKey` **precisam** concordar sobre `semAlvo`: se divergissem, uma
       // requisição contaria numa chave com o teto da outra.
-      generateKey: (context, tracker) => chaveDeFicha(semAlvo(context), tracker),
+      generateKey: (context, tracker) =>
+        chaveDeFicha(semAlvo(context) ? 'ficha-sem-email' : 'ficha-com-email', tracker),
     },
   });
 
@@ -192,8 +232,7 @@ export const LimitarFicha = (): MethodDecorator & ClassDecorator =>
  * O resultado é um resumo, e não o IP em claro: endereço de IP é dado pessoal, e a chave do
  * Redis não é lugar de guardá-lo legível. É o que a implementação padrão também faz.
  */
-function chaveDeFicha(semEmail: boolean, tracker: string): string {
-  const balde = semEmail ? 'ficha-sem-email' : 'ficha-com-email';
+function chaveDeFicha(balde: string, tracker: string): string {
   return createHash('sha256').update(`${balde}-${tracker}`).digest('hex');
 }
 
@@ -264,4 +303,20 @@ export function alvoDaRequisicao(req: Record<string, unknown>): string {
  */
 export function semAlvo(context: ExecutionContext): boolean {
   return alvoDaRequisicao(context.switchToHttp().getRequest<Record<string, unknown>>()) === '';
+}
+
+/**
+ * Qual conta fez esta requisição, para o limite por conta.
+ *
+ * Só existe depois do `JwtAuthGuard`, e é por isso que o limite por conta roda num **segundo**
+ * guard. Vazio quando não há sessão — e aí a contagem se pula, porque a rota já vai responder 401.
+ */
+export function contaDaRequisicao(req: Record<string, unknown>): string {
+  const user = req.user as { id?: unknown } | undefined;
+  return typeof user?.id === 'string' ? user.id : '';
+}
+
+/** Sem sessão, sem contagem por conta. Ver `contaDaRequisicao`. */
+export function semConta(context: ExecutionContext): boolean {
+  return contaDaRequisicao(context.switchToHttp().getRequest<Record<string, unknown>>()) === '';
 }

@@ -17,6 +17,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from './auth/current-user.decorator';
 import { Papeis } from './auth/papeis.decorator';
 import { LimitarFicha } from './auth/rate-limit';
+import { CarteiraQuery } from './dto/carteira.dto';
 import {
   ChangeStudentStatusDto,
   CreateStudentDto,
@@ -66,9 +67,12 @@ export class StudentsController {
     @Body() dto: CreateStudentDto,
     // Em qual carteira a ficha nasce. Ausente é a própria; com o negócio, ela nasce na carteira
     // dele **e associada a quem cadastrou** (decisão E9).
-    @Query('negocio') negocio?: string,
+    //
+    // Um DTO, e não `@Query('negocio')` cru: o cru não valida, e um valor que não fosse UUID
+    // chegava ao TypeORM e virava 500 com o valor bruto no log. Achado #4 da revisão da fase.
+    @Query() carteira: CarteiraQuery,
   ): Promise<StudentRow> {
-    return this.alunos.criar(user.id, dto, negocio);
+    return this.alunos.criar(user.id, dto, carteira.negocio);
   }
 
   @Put(':id/teachers')

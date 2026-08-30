@@ -498,6 +498,13 @@ nesta fase:
 | Limite de tentativas na escrita de ficha: **60/hora por IP** | ✅ implementado em 2026-08-28 — `LimitarFicha()`. Vale no `POST` **e no `PATCH`**, que dividem a mesma cota: só a criação não resolveria, porque o caminho barato é editar o e-mail da mesma ficha. **Conta só as requisições que trazem e-mail no corpo**, numa chave separada — editar objetivo ou telefone não gasta a cota. O atacante sai de ~7.200 endereços/hora para 60: enumerar mil passa de oito minutos para dezessete horas. É o mesmo número do `LimitarConvite`, pela mesma persona |
 | A plataforma já revela existência em dois pontos por decisão consciente | o 409 do cadastro de profissional (ADR-004 §9) e a troca de e-mail (`iam.md` §9.5). Isto não abre uma porta nova, mas **é a mais barata das três** — e por isso é a que precisa de teto |
 
+> **São quatro pontos desde 2026-08-29**, e não três. A revisão de segurança da Fase 5.5 (achado
+> #5) mostrou que `GET /staff/invites/:token` também responde, porque a emissão do convite de
+> equipe devolve o token em claro a quem convidou. **É o mais caro dos quatro** — duas
+> requisições, sessão com e-mail verificado, 60/h, e um e-mail que chega ao alvo com o nome de
+> quem sondou —, e por isso continua aberto: apertá-lo não compra defesa nenhuma enquanto o 409
+> do cadastro responder a mesma pergunta de graça. Detalhe em `staff.md` §5.2.
+
 ### 9.2 Fichas duplicadas — decisão D6: **reposicionada**
 
 O `iam.md` §11 põe "mesclar fichas duplicadas" no backlog da Fase 5. **Recomendo mover a mescla

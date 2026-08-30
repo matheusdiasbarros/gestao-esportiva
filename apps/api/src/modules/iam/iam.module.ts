@@ -16,13 +16,16 @@ import { AuditoriaDeLeitura } from './auth/auditoria';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { JwtStrategy } from './auth/jwt.strategy';
 import { PapeisGuard } from './auth/papeis.guard';
-import { LimiteDeTentativasGuard } from './auth/rate-limit.guard';
+import { LimiteDeTentativasGuard, LimitePorContaGuard } from './auth/rate-limit.guard';
 import { SessaoHttp } from './auth/sessao-http';
 import {
   alvoDaRequisicao,
+  contaDaRequisicao,
   LIMITE_ALVO,
+  LIMITE_CONTA,
   LIMITE_IP,
   semAlvo,
+  semConta,
   TETOS_GLOBAIS,
 } from './auth/rate-limit';
 import { Professional } from './entities/professional.entity';
@@ -93,6 +96,14 @@ import { UserTokenService } from './services/user-token.service';
             getTracker: alvoDaRequisicao,
             skipIf: semAlvo,
           },
+          {
+            name: LIMITE_CONTA,
+            ...TETOS_GLOBAIS.conta,
+            getTracker: contaDaRequisicao,
+            // Sem sessão, sem contagem: a rota já responde 401, e contar aqui só serviria para
+            // um anônimo gastar a cota de outra pessoa.
+            skipIf: semConta,
+          },
         ],
       }),
     }),
@@ -138,6 +149,11 @@ import { UserTokenService } from './services/user-token.service';
     // depois do guard de token transformaria o próprio mecanismo de defesa em alvo.
     { provide: APP_GUARD, useClass: LimiteDeTentativasGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    // O limite **por conta**, e ele precisa vir depois do `JwtAuthGuard` pelo mesmo motivo que o
+    // `PapeisGuard`: ele lê `request.user`, que só existe depois da autenticação. É o conserto do
+    // teto que era por IP e punia o clube inteiro pelo Wi-Fi compartilhado — ver
+    // `LimitePorContaGuard`. O guard de cima continua onde está, e o motivo dele continua válido.
+    { provide: APP_GUARD, useClass: LimitePorContaGuard },
     // Depois do JwtAuthGuard, e a ordem é a regra inteira: o guard de papéis lê
     // `request.user`, que só existe depois de a autenticação ter acontecido. Invertido, ele
     // recusaria toda rota marcada — inclusive para quem tem o papel.

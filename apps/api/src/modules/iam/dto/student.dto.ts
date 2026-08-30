@@ -23,6 +23,7 @@ import {
   MaxLength,
 } from 'class-validator';
 import { Trim } from '../../../common/validation/trim';
+import { CarteiraQuery } from './carteira.dto';
 
 /**
  * Criar uma ficha.
@@ -141,7 +142,7 @@ export class ChangeStudentStatusDto {
 }
 
 /** O filtro da lista. Sem ele, `CURRENT` — o que o profissional quer ver ao abrir a tela. */
-export class ListStudentsQuery {
+export class ListStudentsQuery extends CarteiraQuery {
   @ApiProperty({ required: false, enum: StudentFilter, default: StudentFilter.Current })
   @IsOptional()
   @IsIn(Object.values(StudentFilter), { message: 'Filtro inválido.' })
@@ -153,18 +154,6 @@ export class ListStudentsQuery {
   @IsString()
   @MaxLength(MAX_STUDENT_NAME_LENGTH)
   busca?: string;
-
-  /**
-   * Em qual negócio esta requisição opera.
-   *
-   * Ausente é a carteira da própria conta. Quem faz parte de equipes tem **mais de uma** carteira
-   * — a própria e a de cada negócio —, e sem dizer qual, "listar meus alunos" deixa de ter uma
-   * resposta só. É o parâmetro que o seletor de negócio da tela preenche (decisão E18).
-   */
-  @ApiProperty({ required: false, description: 'A carteira do negócio. Ausente = a sua.' })
-  @IsOptional()
-  @IsUUID('7', { message: 'Negócio inválido.' })
-  negocio?: string;
 }
 
 export class SetStudentTeachersDto {

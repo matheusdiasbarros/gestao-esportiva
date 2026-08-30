@@ -151,9 +151,23 @@ export class StaffService {
     return {
       ownerName: resolvido.dono.fullName,
       email: resolvido.invite.email,
-      // Aqui responder é seguro, e é o oposto da emissão: quem chegou a esta tela abriu o link,
-      // e o link só existe na caixa daquele endereço ou na mão de quem convidou. Nenhum dos dois
-      // descobre nada que já não soubesse.
+      // **Isto revela existência de conta, e a justificativa que estava escrita aqui era falsa.**
+      //
+      // Ela dizia que quem chega a esta tela abriu o link, e que o link só existe na caixa
+      // daquele endereço. Vale para o convite **de aluno**; não vale aqui, porque a emissão
+      // devolve o token em claro a quem convidou (`StaffInviteIssued.token`, que existe para o
+      // link avulso). Então o dono emite, chama esta rota com o próprio token e descobre se
+      // aquele endereço tem conta. Achado #5 da revisão de segurança da fase.
+      //
+      // **Fica como está, e a razão é a comparação, não a inocência.** O cadastro aberto responde
+      // a mesma pergunta com **uma** requisição, sem sessão, sem mandar e-mail a ninguém e a
+      // 100/h por IP; este caminho custa duas requisições, exige sessão com e-mail verificado, é
+      // limitado a 60/h e **manda um e-mail ao alvo com o nome de quem sondou**. Fechá-lo não
+      // compra defesa enquanto o 409 do cadastro estiver aberto — e quebra a tela de aceite, que
+      // precisa escolher entre "entrar com sua conta" e "criar conta".
+      //
+      // É o **quarto** ponto em que a plataforma revela existência de e-mail. Os três primeiros
+      // estão em `students.md` §9.1.
       hasAccount: await this.users.exists({ where: { email: resolvido.invite.email } }),
     };
   }
@@ -432,6 +446,24 @@ export class StaffService {
   ): Promise<void> {
     if (owner.id === memberProfessionalId) {
       throw new ConflictException('Este convite é da sua própria equipe.');
+    }
+
+    // **O teto também é conferido aqui, e não só na emissão** — achado #7 da revisão de segurança
+    // da fase. Conferir ao convidar é intenção: a linha nasce no aceite, então com 49 membros o
+    // dono emitia quantos convites quisesse — cada um passando pela conferência — e todos podiam
+    // ser aceitos. Aqui, dentro da transação que insere, ele passa a ser um teto de verdade.
+    //
+    // **Continua não sendo atômico**, como o de 500 fichas: dois aceites simultâneos na vaga 50
+    // passam os dois. É rede contra crescimento acidental, não capacidade — e travar de verdade
+    // custaria um bloqueio de linha para conter um caso que ninguém observou.
+    const ativos = await manager.count(StaffMember, {
+      where: { ownerProfessionalId: owner.id, status: StaffStatus.Active },
+    });
+    if (ativos >= MAX_STAFF_MEMBERS) {
+      throw new ConflictException(
+        `Esta equipe chegou ao limite de ${MAX_STAFF_MEMBERS} pessoas. ` +
+          'Peça a quem convidou para abrir uma vaga.',
+      );
     }
 
     const gasto = await manager.update(

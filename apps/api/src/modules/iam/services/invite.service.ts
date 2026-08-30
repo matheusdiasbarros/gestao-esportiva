@@ -150,12 +150,17 @@ export class InviteService {
    * transação, duas emissões simultâneas passariam pela revogação e colidiriam na inserção.
    */
   async emitir(userId: string, dados: DadosDeConvite): Promise<InviteIssued> {
-    const { student, dono } = await this.fichaConvidavel(userId, dados.studentId);
+    const { student, quemConvida, dono } = await this.fichaConvidavel(userId, dados.studentId);
 
     // Decisão D5: a verificação de e-mail não bloqueia entrar, mas bloqueia **agir para fora**.
     // Enviar convite é a plataforma escrevendo em nome daquele endereço, e endereço não provado
     // é o que transforma o produto em ferramenta de spam.
-    if (dono.emailVerifiedAt === null) {
+    //
+    // **A verificação é de quem clica, e o nome no e-mail é o do dono da ficha.** Não é
+    // contradição: quem age precisa ter provado o próprio endereço, e quem responde pelo dado do
+    // aluno é o controlador. O `staff.md` §11 (0) dizia que as duas coisas olhavam o dono, e as
+    // duas metades estavam erradas — a revisão da Fase 5.5 mediu as duas.
+    if (quemConvida.emailVerifiedAt === null) {
       throw new ForbiddenException(
         'Confirme seu e-mail antes de convidar alunos. O link de confirmação está no painel.',
       );
@@ -380,7 +385,7 @@ export class InviteService {
   private async fichaConvidavel(
     userId: string,
     studentId: string,
-  ): Promise<{ student: Student; dono: User }> {
+  ): Promise<{ student: Student; quemConvida: User; dono: User }> {
     // O membro convida os alunos que atende — é a célula "convidar o aluno a criar conta: só as
     // dele" da matriz. Quem não é dono nem professor da ficha recebe 404, como sempre.
     const student = await this.access.fichaComoDonoOuProfessor(userId, studentId);
@@ -398,8 +403,23 @@ export class InviteService {
       );
     }
 
-    const dono = await this.users.findOneByOrFail({ id: userId });
-    return { student, dono };
+    const quemConvida = await this.users.findOneByOrFail({ id: userId });
+
+    // **O dono da ficha, e não quem clicou** — achado #2 da revisão de segurança da Fase 5.5.
+    //
+    // Isto era resolvido por `userId`, e a variável se chamava `dono` sem ser o dono. Quando um
+    // membro da equipe convidava um aluno **do clube**, o e-mail saía com o nome dele. E esse
+    // e-mail é a única mensagem que a plataforma manda a uma pessoa que nunca se cadastrou: ela
+    // apresentava como responsável alguém que **não é o controlador** do dado daquele aluno
+    // (`staff.md` §10.1). O documento afirmava o comportamento certo; o código fazia o outro.
+    //
+    // Na carteira própria os dois são a mesma pessoa, e nada muda.
+    const carteira = await this.professionals.findOneOrFail({
+      where: { id: student.professionalId },
+      relations: { user: true },
+    });
+
+    return { student, quemConvida, dono: carteira.user };
   }
 
   private destinoDoEnderecado(dados: DadosDeConvite, student: Student): string {

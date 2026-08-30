@@ -386,6 +386,87 @@ busca da Fase 12 herdaria todas as grafias que a normalização existe para junt
 **Gatilho para pagar:** o primeiro dia com usuários reais. Duas contas cadastrando modalidade ao
 mesmo tempo e ninguém curando é o catálogo virando lixeira em uma semana.
 
+### DT-014 — O teto por endereço do convite é consumível sem sessão
+
+**O que:** `POST /staff/invites` e `POST /invites` contam **3 por endereço de destino por hora**,
+e o limite roda **antes** do `JwtAuthGuard` — então um `401` conta. Três requisições anônimas com
+o endereço de alguém no corpo trancam por uma hora o convite legítimo para aquela pessoa.
+
+**Medido ao vivo** pela revisão de segurança da Fase 5.5 (achado #6): cinco requisições anônimas
+deram `401 401 401 429 429`, e o dono autenticado convidando aquele endereço em seguida recebeu
+**429**. Outro endereço no mesmo instante: **201** — a prova de que é o teto por alvo.
+
+**Por quê:** é o irmão do **DT-007**, e a mesma escolha se repete. A ordem dos guards está em
+`iam.module.ts` com motivo escrito, e o motivo é sólido para as rotas anônimas.
+
+**Aceito porque:** é negação de serviço estreita — tranca um endereço por uma hora, não derruba
+nada —, e quem a executa precisa saber de antemão o e-mail exato da pessoa que vai ser convidada.
+
+**O conserto, quando alguém pagar:** o guard de limite pular a contagem por alvo quando a
+requisição não tem sessão **nas rotas que exigem sessão**. Nenhuma defesa se perde: a rota já
+responde 401. O mecanismo para distinguir as duas metades **já existe** desde 2026-08-30 — é o
+`LimitePorContaGuard`, que roda depois da autenticação.
+
+**Gatilho para pagar:** o primeiro relato de "não consigo convidar fulano". Ou a próxima fase que
+mexer na ordem dos guards, que aí sai junto.
+
+### DT-015 — A terceira forma de saída da ficha não existe
+
+**O que:** a ADR-006 §10 e a `staff.md` §14 dizem que as formas de saída da ficha passam a ser
+**três** — dono, membro e participante —, e que a do membro nasce **sem nenhum campo de dinheiro**.
+Existem duas: o membro recebe `fichaComoDono`, a forma completa.
+
+**Por quê:** a ficha não carrega valor nenhum hoje. A terceira forma seria um tipo idêntico ao
+primeiro, e um tipo idêntico é um tipo que ninguém mantém — ele diverge no dia em que alguém
+acrescenta um campo em só um dos dois.
+
+**Aceito porque:** **nada vaza**, e há uma rede. `equipe-telas.spec.ts` afirma que a resposta ao
+membro não contém campo de dinheiro, então a Fase 9 quebra o teste no instante em que puser um.
+**É uma troca consciente da promessa da ADR por um teste**, e o que não seria defensável é ela
+ficar em silêncio — foi o achado #9 da revisão da Fase 5.5.
+
+**Gatilho para pagar:** a Fase 9, quando a ficha ganhar o primeiro campo de dinheiro. Aí a
+terceira forma deixa de ser cópia e passa a ter conteúdo próprio.
+
+### DT-016 — O membro não enxerga os locais e os espaços do negócio
+
+**O que:** a matriz da `staff.md` §7 diz "ver os locais e espaços do negócio · Membro: **sim**".
+`GET /professionals/me/locations` como membro devolve **os locais dele**, não os do clube —
+medido ao vivo pela revisão da Fase 5.5 (achado #10). O módulo de perfil resolve tudo por
+`carteiraDe`, e não conhece o parâmetro `negocio`.
+
+**Por quê:** o Epic 5.5.6 construiu espaço para a Fase 6 marcar aula nele, e a Fase 6 é quem
+precisa da leitura. Abrir a rota agora seria autorização sem nada para autorizar.
+
+**Aceito porque:** é **falha fechada** — o membro vê de menos, nunca de mais. Não é risco de
+segurança, é célula de matriz sem implementação.
+
+**Gatilho para pagar:** a Fase 6, obrigatoriamente e junto com E12 (ver a ocupação dos espaços
+com o nome do colega), que depende da mesma consulta. Um professor que não sabe em qual quadra
+vai dar aula não tem agenda.
+
+### DT-017 — O token do convite fica em claro na fila do Redis por 7 dias
+
+**O que:** quando o envio de e-mail falha, o job fica guardado com `removeOnFail: { age: 604800 }`
+— sete dias, **exatamente a validade do convite**. E o `payload` do job carrega o link inteiro,
+com o token em claro. A revisão da Fase 5.5 leu um ao vivo (`HGET bull:mail:758 data`) e contou
+**810 jobs** guardados no Redis local.
+
+**Por quê:** não é desta fase. O que a fase acrescenta é um token que **cria conta** — o de equipe
+—, e não só um que liga uma ficha.
+
+**O invariante continua verdadeiro, e vale dizer qual:** *o banco guarda hash, nunca o valor*. A
+fila não é o banco. Quem alcançar o Redis já alcançou muito, mas a janela não precisa ser de sete
+dias.
+
+**Aceito porque:** o Redis não é exposto, e o job só sobrevive quando o envio **falhou** — caso em
+que a pessoa não recebeu o link de qualquer forma.
+
+**O conserto:** `removeOnFail` para 24 h. Não perde diagnóstico e corta a janela em sete.
+
+**Gatilho para pagar:** a Fase 18, quando o Redis sair da máquina de desenvolvimento. Ou antes,
+se alguém estiver mexendo na fila por outro motivo.
+
 ---
 
 ## Armadilhas já resolvidas (não repetir)

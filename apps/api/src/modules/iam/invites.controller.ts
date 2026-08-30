@@ -18,6 +18,7 @@ import { CurrentUser } from './auth/current-user.decorator';
 import { Public } from './auth/public.decorator';
 import { LimitarCadastro, LimitarConvite } from './auth/rate-limit';
 import { RespostaDeSessao, SessaoHttp, clienteDe, etiquetaDeAparelho } from './auth/sessao-http';
+import { CarteiraQuery } from './dto/carteira.dto';
 import { AcceptInviteDto, CreateInviteDto } from './dto/invite.dto';
 import { InviteService } from './services/invite.service';
 
@@ -40,9 +41,11 @@ export class InvitesController {
   @ApiOperation({ summary: 'As fichas da carteira que ainda não têm conta' })
   async listar(
     @CurrentUser() user: AuthenticatedUser,
-    @Query('negocio') negocio?: string,
+    // Um DTO, e não `@Query('negocio')` cru — achado #4 da revisão de segurança da Fase 5.5. Ver
+    // o porquê inteiro em `dto/carteira.dto.ts`.
+    @Query() carteira: CarteiraQuery,
   ): Promise<InviteRow[]> {
-    return this.invites.listar(user.id, negocio);
+    return this.invites.listar(user.id, carteira.negocio);
   }
 
   @Post()

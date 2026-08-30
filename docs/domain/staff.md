@@ -15,7 +15,7 @@ em [`iam.md`](iam.md). A ficha do aluno, a base legal do cadastro e o fim do ví
 [`students.md`](students.md) — **este documento não reabre nada de lá**, só acrescenta um
 segundo leitor. Locais em [`professional-profile.md`](professional-profile.md) §7.
 
-Última atualização: 2026-08-28
+Última atualização: 2026-08-29
 
 **Como ler as marcas deste documento:**
 
@@ -151,17 +151,26 @@ consultar módulo alheio. `spaces` fica junto de `locations`, que já é dona do
 
 ### 4.3 Os estados da participação
 
-Dois, e só dois: `ACTIVE` e `ENDED`. Ex-membro convidado de novo **reativa a mesma linha**, como
-a ficha encerrada do aluno faz (`students.md` §7.3).
+Dois, e só dois: `ACTIVE` e `ENDED`.
 
 `PAUSED` foi considerado — o professor afastado — e recusado: quem afasta encerra, quem volta é
 reativado. Um terceiro estado exige uma tabela de transições própria para resolver um caso que
 ainda não apareceu.
 
-**Consequência assumida, do mesmo tipo que `students.md` §5.2 já aceitou ✱:** reativar apaga
-`ended_at`, então o sistema não sabe dizer "ele esteve na equipe de março a maio e voltou em
-agosto". Isso importa mais aqui do que lá, porque *quem teve acesso a dado pessoal, e quando* é
-pergunta que um titular pode fazer (§10.4). Fica como resíduo, com gatilho na §12.
+> **Corrigido em 2026-08-29, ao implementar o Epic 5.5.1.** Esta seção dizia que o ex-membro
+> convidado de novo *"reativa a mesma linha"*, como a ficha encerrada do aluno faz — e listava
+> como resíduo assumido o fato de reativar apagar `ended_at`, deixando o sistema sem saber dizer
+> "ele esteve na equipe de março a maio e voltou em agosto".
+>
+> **A analogia com a ficha estava errada, e o resíduo foi eliminado em vez de aceito.** A ficha do
+> aluno é um **registro sobre uma pessoa**, e há um por par, para sempre. A participação é um
+> **período de trabalho**, e há um por passagem. Aceitar o convite **insere uma linha nova**, e
+> `ENDED` não tem transição de saída nenhuma.
+>
+> Com isso, *quem teve acesso a dado pessoal, e quando* — art. 18, VII — passa a ter resposta sem
+> coluna de histórico nenhuma, e a garantia de uma única passagem viva por par fica com o índice
+> parcial `uq_staff_members_ativa`, como já acontece com o convite do aluno. A tabela de
+> transições está em `participacao.ts`, com o mesmo raciocínio escrito ao lado do código.
 
 ### 4.4 Invariantes
 
@@ -204,6 +213,25 @@ não um subordinado. É isso que permite a ele dar aula em outro lugar com a mes
 
 O convite de aluno já responde `hasAccount`, mas na tela de **aceite**, e ali é defensável: quem
 abriu o link controla aquela caixa e não descobre nada que já não saiba. O risco é na **emissão**.
+
+> **Corrigido em 2026-08-29, pela revisão de segurança da fase (achado #5).** A emissão saiu
+> limpa — `StaffService.emitir` não consulta `users` em lugar nenhum, e as duas respostas foram
+> medidas byte a byte no sistema no ar. **O parágrafo acima é que estava errado**, e o mesmo
+> argumento estava copiado no comentário do código.
+>
+> *"Quem abriu o link controla aquela caixa"* vale para o convite **de aluno**. **Não vale para o
+> de equipe**, porque aqui a emissão devolve o token em claro a quem convidou — é o link avulso.
+> O dono emite, chama `GET /staff/invites/:token` com o próprio token, e descobre se aquele
+> endereço tem conta. Duas requisições.
+>
+> **Fica como está, e a razão é a comparação.** O cadastro aberto responde a mesma pergunta com
+> **uma** requisição, sem sessão, sem mandar e-mail a ninguém, a 100/h por IP. Este caminho exige
+> sessão com e-mail verificado, é limitado a 60/h e **manda um e-mail ao alvo com o nome de quem
+> sondou**. Fechá-lo não compra defesa enquanto o 409 do cadastro estiver aberto, e quebra a tela
+> de aceite, que precisa escolher entre "entrar com sua conta" e "criar conta".
+>
+> O convite de equipe é, portanto, o **quarto** ponto em que a plataforma revela existência de
+> e-mail. Os três primeiros estão em `students.md` §9.1, e agora são quatro.
 
 ### 5.3 Regras do convite
 
@@ -289,6 +317,17 @@ está associado a mim".
 | | editar o **próprio** perfil ✱ | próprio | próprio | — | não |
 | **Local / espaço** ✱ | ver os locais e espaços do negócio | sim | **sim** | part. | sim |
 | | criar, editar ou apagar local e espaço | sim | **não** | não | não |
+
+> **A matriz foi exercitada célula a célula pela revisão de segurança, em 2026-08-30, e duas
+> estavam erradas no código.** Uma era risco e foi consertada: *marcar responsável / transferir o
+> acesso* dizia **não** para o membro e o `PATCH` deixava passar — `accessHolder` e `guardianName`
+> vieram de carona no `PartialType` quando a rota passou a aceitar o membro para as observações
+> privadas (E10). Ele não via nada a mais; ele **escrevia** o nome de um terceiro, o responsável,
+> na carteira de um controlador que não autorizou aquilo.
+>
+> A outra é **falha fechada** e virou pendência da Fase 6: *ver os locais e espaços do negócio*
+> diz **sim** e a rota devolve os locais do próprio membro. Registrada em `tech-debt.md` como
+> DT-016, junto de E12, que depende da mesma consulta.
 
 **Contando só as colunas *Dono* e *Membro*: catorze recusas absolutas e dez restrições** ("só as
 dele"). O `iam.md` §7.6 exige teste para cada uma, e a restrição precisa de **dois** testes — o
@@ -549,7 +588,7 @@ acrescentou à matriz.
 
 | O quê | Quem responde |
 | --- | --- |
-| Se o aluno pedir *"quem teve acesso aos meus dados, e quando"* (art. 18, VII), o sistema hoje **não sabe responder**: a associação é apagada no encerramento e a participação reativada perde as datas (§4.3) | **precisa do dono** — a resposta barata é não apagar a linha de `student_teachers`, e sim encerrá-la com data, como a ficha faz. Custa uma coluna e resolve a pergunta |
+| Se o aluno pedir *"quem teve acesso aos meus dados, e quando"* (art. 18, VII), o sistema hoje **responde pela metade**: a linha por passagem em `staff_members` diz quando cada professor esteve na equipe (§4.3), mas a associação em `student_teachers` é **apagada** no encerramento, então não há registro de *qual ficha* ele atendia | **precisa do dono** — a resposta barata é não apagar a linha de `student_teachers`, e sim encerrá-la com data, como a ficha faz. Custa uma coluna e fecha a metade que falta |
 | Se os Termos precisam de um aceite **específico** de quem entra numa equipe | advogado. §10.1, item 2 |
 | As duas perguntas de advogado de `students.md` §15 | **não são afetadas** por esta fase |
 
@@ -559,7 +598,7 @@ acrescentou à matriz.
 | --- | --- |
 | O dono convida, e a pessoa nunca aceita | nada quebra. O convite expira em 7 dias e a equipe continua como estava |
 | A pessoa aceita sem ter conta | nasce profissional completo: carteira, perfil e link "treine comigo" próprios (E1) |
-| O membro sai e é convidado de novo | a mesma linha reativa. As associações **não** voltam: reassociar é ação explícita do dono ✱ |
+| O membro sai e é convidado de novo | **uma linha nova** de participação (§4.3). As associações **não** voltam: reassociar é ação explícita do dono ✱ |
 | O aluno do clube treina duas modalidades com dois professores | **uma** ficha, dois professores. Não é escolha de modelagem: `uq_students_professional_user` já impede duas fichas da mesma conta na mesma carteira |
 | ...e os dois professores leem a mesma observação privada | **sim**, é E10. O campo é do negócio. A tela precisa deixar claro que não é diário pessoal ✱ |
 | O membro cadastra um aluno do clube e depois sai | **a ficha fica com o clube.** Ele perde o aluno que trouxe. Ver o alerta (e) abaixo ✱ |
@@ -590,6 +629,26 @@ depois: **um membro com e-mail não verificado consegue disparar convite**, porq
 checada é a do dono. É delegação legítima — o dono o convidou para a equipe —, mas é o dono quem
 empresta a reputação de envio. Se algum dia isso for abusado, a correção é exigir **as duas**
 verificações, não trocar o nome que aparece no e-mail.
+
+> ⚠️ **As duas metades deste parágrafo estavam erradas, e a revisão de segurança da Fase 5.5 mediu
+> as duas no sistema no ar** (achado #2). Corrigido em 2026-08-30.
+>
+> **O nome no e-mail era o de quem clicou, não o do dono.** `InviteService` resolvia o "dono" a
+> partir do `userId` da requisição — a variável se chamava `dono` sem ser o dono. Quando um membro
+> convidava um aluno **do clube**, o e-mail saía com o nome dele. Isso importa porque é a única
+> mensagem que a plataforma manda a alguém que nunca se cadastrou, e ela apresentava como
+> responsável quem **não é o controlador** do dado daquele aluno (§10.1). **A regra escrita aqui
+> era a certa; o código é que fazia outra coisa** — e agora o dono é resolvido a partir de
+> `student.professional_id`.
+>
+> **E o membro com e-mail não verificado nunca conseguiu disparar convite.** A verificação
+> checada sempre foi a de **quem chama**: medido, `POST /invites` respondeu **403**. Também está
+> certo assim, e as duas coisas juntas não são contradição — **quem age para fora prova o próprio
+> endereço; quem aparece no e-mail é quem responde pelo dado.** É a decisão D5 e a §10.1 dizendo
+> cada uma a sua parte.
+>
+> A lição é a que o relatório resumiu: *a fase não deveria fechar com um documento afirmando algo
+> que o código não faz*. Aqui o documento estava certo duas vezes e ninguém tinha conferido.
 
 **(a) O dono exclui a conta tendo equipe. (precisa do dono)** — `iam.md` §9.3 bloqueia a exclusão
 com cobrança em aberto e exige confirmação com alunos ativos; `students.md` §15.1 já deixou em
@@ -655,6 +714,20 @@ ordem de grandeza. **Recomendo (proposta):** o teto continua existindo e passa a
 como *500 + 300 por membro `ACTIVE`*, ou simplesmente elevado para 5.000 quando houver equipe —
 **quem decide é a revisão de segurança da fase**, como aconteceu com os outros tetos.
 
+> ✅ **Decidido e feito em 2026-08-30: a fórmula, e não o teto plano.** `tetoDeFichas` em
+> `packages/types/src/students.ts`. O argumento que desempatou é que **o autônomo que nunca
+> convidou ninguém continua em 500** — um teto plano de 5.000 multiplicaria por dez o estrago de
+> uma conta comprometida que nunca teve equipe, que é a esmagadora maioria.
+>
+> **E `entrarPeloLinkPublico` passou a consultar o teto**, que era o caminho que não perguntava:
+> enquanto o link público inserisse sem olhar, qualquer número era decorativo. A recusa dele é
+> deliberadamente sem detalhe — quem clica é o aluno, e dizer "esta carteira está cheia"
+> transformaria a rota pública num medidor do tamanho do negócio alheio.
+>
+> **Continua contando as fichas encerradas**, e isso é escolha: ignorá-las tornaria o teto
+> contornável por quem encerrasse o que acabou de criar. O que ele contém é crescimento de
+> **linhas**, não de alunos ativos.
+
 **(x) Os tetos por hora são por IP, e um clube tem um IP.** Conferido no código, não suposto:
 `LimitarFicha` é **60 escritas de ficha com e-mail por hora, por IP** (`TETO_FICHA_COM_EMAIL`) e
 `LimitarConvite` é **60 convites por hora, por IP**. Os dois foram calibrados para um professor
@@ -676,6 +749,24 @@ de contar. Então as opções são outras:
 **Não recomendo nenhuma sozinho: é decisão da revisão de segurança da fase**, que é quem tem o
 contexto dos dois lados. O que este documento faz é garantir que ela **saiba que o caso existe**,
 em vez de descobri-lo com o Sérgio no telefone.
+
+> ✅ **Decidido e feito em 2026-08-30: a opção (ii)**, contar por conta depois da autenticação.
+>
+> A revisão mediu os dois lados e concluiu que a decisão que a (ii) "esbarra" é menor do que
+> parece. O motivo de o limitador rodar antes do `JwtAuthGuard` é sólido **para as rotas
+> anônimas**: login, cadastro e recuperação precisam de teto antes de o argon2 rodar, senão o
+> mecanismo de defesa vira o alvo. Mas `POST /students`, `PATCH /students/:id` e `POST /invites`
+> são **401 sem token** — nada caro acontece antes do guard de autenticação.
+>
+> Nasceu o limite nomeado `conta` e um **segundo guard**, `LimitePorContaGuard`, rodando depois do
+> `JwtAuthGuard`. Cada guard cuida só das suas contagens, e a divisão é pelo nome do limite. O IP
+> virou rede grossa (600/h): oito professores × 60 = 480, que cabe.
+>
+> **E contra quem varre endereços ficou mais apertado, não menos.** Antes bastava trocar de rede;
+> agora é preciso trocar de conta, e conta custa um cadastro. A revisão também corrigiu um
+> argumento da Fase 5 no caminho: apertar este teto abaixo de 100 não compra defesa nenhuma
+> enquanto o **cadastro aberto** responder a mesma pergunta a 100/h por IP, sem sessão e sem
+> mandar e-mail a ninguém.
 
 ## 12. O que não entra, e o gatilho de cada um
 
@@ -702,8 +793,19 @@ em vez de descobri-lo com o Sérgio no telefone.
    Fase 6, e sem ela o oráculo de ocupação fica como resíduo aceito.
 3. **Se o membro precisa aceitar um termo específico ao entrar numa equipe** — §10.1, item 2. É
    pergunta de advogado, mas contratá-lo é decisão de dono.
-4. **Teto de membros por equipe** — a proposta do desenho é 50. Continua com a revisão de
-   segurança da fase, junto de (w) e (x) da §11.
+4. ~~**Teto de membros por equipe**~~ ✅ **Fechado em 2026-08-30 pela revisão de segurança: fica
+   em 50.** É mitigação, não capacidade — cinquenta professores é mais do que qualquer academia
+   das personas, e o que o teto protege (uma conta comprometida virando máquina de convite) já é
+   contido melhor por `LimitarConvite`. O que estava errado era **onde** ele era conferido: na
+   emissão, e a linha nasce no aceite, então com 49 membros o dono emitia quantos convites
+   quisesse e todos podiam ser aceitos. Agora a conferência está dentro de `entrar`, na transação
+   que insere. **Continua não sendo atômico** — dois aceites simultâneos na vaga 50 passam os
+   dois —, e isso está escrito no código.
+
+   **Um acoplamento que ninguém pediu, e que precisa estar registrado:** `SetStudentTeachersDto`
+   usa `ArrayMaxSize(MAX_STAFF_MEMBERS)`, então subir o teto de equipe sobe junto o número de
+   professores que uma ficha aceita. Hoje os dois querem dizer a mesma coisa; no dia em que 50
+   virar 200, um deles vai estar errado.
 
 ## 14. O que isto obriga no banco, na API e nas telas
 
