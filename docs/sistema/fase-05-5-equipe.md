@@ -158,6 +158,14 @@ afirma. Acrescentar alguém à força daria ao dono a agenda de uma pessoa que n
 | Nome de espaço único dentro do local, ignorando caixa | `uq_spaces_nome`, sobre `lower(name)` |
 | Casa do aluno não tem quadra | `ck_spaces_sem_casa_do_aluno`, sobre a coluna denormalizada |
 | Uma quadra não muda de local por engano | `fk_spaces_location`, chave estrangeira **composta** em `(id, kind)` |
+| A aula da Fase 6 aponta para a quadra **e** para o local dela, sem poder divergir | `uq_spaces_location_id` — ver a correção abaixo |
+
+> **Uma garantia desta fase nasceu só em 2026-08-30**, na abertura da Fase 6. O `UNIQUE
+> (location_id, id)` de `spaces` estava declarado no ADR-006 §6 e marcado como feito no
+> `TODO.md`, e a migration do Epic 5.5.6 não o criou — criou o par análogo em `locations` e
+> parou ali. Ninguém sentiu, porque quem o usa é a `sessions` da Fase 6. **A lição não é o
+> índice esquecido, é a caixa marcada:** a conferência que o pegou foi pedir a chave ao banco
+> dentro de uma transação desfeita, e ela custou trinta segundos.
 
 **A chave composta merece o parágrafo.** Um `CHECK` só enxerga a própria linha, e o tipo do local
 mora em `locations`. As alternativas eram criar a primeira *trigger* deste projeto — um mecanismo

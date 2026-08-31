@@ -1507,7 +1507,10 @@ revelando ficha de colega; e os três tetos que foram calibrados para autônomo 
         tradução para deixá-lo sair derruba um teste
   - [x] `spaces` como filha de `locations`: nome da quadra, sala ou campo, **sem endereço
         próprio**. `UNIQUE (location_id, id)` — sem ele a chave composta da Fase 6 não é sequer
-        criável — e exclusão lógica, pelo mesmo motivo de `locations`
+        criável — e exclusão lógica, pelo mesmo motivo de `locations`. ⚠️ **O `UNIQUE` desta
+        linha não foi construído aqui.** A migration do épico criou o par análogo em `locations`
+        e esqueceu este; a falta só apareceu na abertura da Fase 6, ao pedir a chave ao banco.
+        Corrigido em 2026-08-30 por `1788288000000-CorrigeParUnicoDeSpaces.ts`
   - [x] **`STUDENT_HOME` não aceita espaço, e o banco recusa.** Não deu para ser um `CHECK`
         simples: ele só enxerga a própria linha, e o tipo mora em `locations`. A saída foi trazer
         o tipo junto por **chave estrangeira composta** em `(id, kind)`, com um `CHECK` local —
@@ -1785,8 +1788,10 @@ gatilhos do agente ao mesmo tempo
 > **1. `sessions` nasce com três colunas que parecem opcionais e não são.**
 > `teacher_id` **anulável** — é o que permite a aula futura perder o professor quando alguém sai
 > da equipe, sem ser cancelada (E16). `location_id` e `space_id`, com **chave estrangeira
-> composta** `(location_id, space_id)` apontando para `spaces(location_id, id)`: o par único já
-> existe no banco desde o Epic 5.5.6, e sem ele a chave composta **não é sequer criável**. O que
+> composta** `(location_id, space_id)` apontando para `spaces(location_id, id)`: sem o par único
+> do lado de lá, a chave composta **não é sequer criável**. Este cabeçalho afirmava que ele
+> existia desde o Epic 5.5.6; ele **não existia**, e a abertura desta fase o descobriu pedindo a
+> chave ao banco. Criado em 2026-08-30 por `1788288000000-CorrigeParUnicoDeSpaces.ts`. O que
 > ela impede é "aula na Quadra 1 do local errado" — um estado que, sem a chave, é representável e
 > só aparece quando alguém abre a agenda do dia.
 >

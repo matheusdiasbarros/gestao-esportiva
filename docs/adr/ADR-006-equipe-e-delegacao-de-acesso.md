@@ -182,6 +182,13 @@ Quatro consequências de modelagem que não são detalhe:
 1. **`UNIQUE (location_id, id)`** em `spaces`, para que a chave estrangeira composta de
    `sessions (location_id, space_id)` da Fase 6 possa existir. Sem ela a FK composta não é
    criável, e "aula na Quadra 1 da sede errada" volta a ser representável.
+
+   > **Correção de 2026-08-30, na abertura da Fase 6.** Esta ADR e o `TODO.md` deram este item
+   > como construído no Epic 5.5.6, e ele **não foi**: a migration daquele épico criou o par
+   > análogo em `locations` (`uq_locations_id_kind`) e esqueceu este. A falta apareceu ao pedir a
+   > chave ao banco — `there is no unique constraint matching given keys for referenced table
+   > "spaces"` — e foi corrigida em `1788288000000-CorrigeParUnicoDeSpaces.ts`, com o nome
+   > `uq_spaces_location_id`. Nada dependia dela até aqui, porque `sessions` é da Fase 6.
 2. **Exclusão lógica, como `locations`**, e pelo mesmo motivo: a partir da Fase 6 uma sessão
    passada aponta para o espaço. Apagar de verdade ou deixaria o histórico sem lugar ou faria o
    `DELETE` falhar por FK meses depois.
