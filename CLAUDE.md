@@ -17,9 +17,9 @@ Escopo do MVP em [`docs/product/mvp.md`](docs/product/mvp.md).
 
 ## Estado atual
 
-**Fases 0, 1, 2, 3, 5, 5.5 e 5.7 concluídas.** A próxima é a **Fase 6 (agenda)** — a de maior
-risco técnico do projeto. A Fase 4 saiu do escopo e roda junto da 12. O **Epic 2.6 (staging)**
-venceu e depende de conta em provedor.
+**Fases 0, 1, 2, 3, 5, 5.5 e 5.7 concluídas. A Fase 6 (agenda) está aberta e em andamento** —
+é a de maior risco técnico do projeto. A Fase 4 saiu do escopo e roda junto da 12. O
+**Epic 2.6 (staging)** venceu e depende de conta em provedor.
 
 Funciona hoje: criar conta de profissional ou de aluno, entrar, sair, recuperar senha,
 confirmar e trocar e-mail, o link público "treine comigo" do professor, a autorização por papel
@@ -41,9 +41,18 @@ A idade mínima para conta de **aluno** é **16 anos**, com um responsável conf
 de **profissional** continua em 18, por decisão de produto. O responsável **só assina**: não ganha
 conta nem enxerga nada.
 
-Não existe ainda nada de agenda, aula, pagamento, nem tela do aluno — ele não vê a própria ficha
-em lugar nenhum, e isso é da Fase 11. **Nenhuma tela de perfil, carteira ou equipe existe no
-aplicativo** — é a DT-012, e a regra dos dois canais vale da Fase 5.7 em diante.
+Da **Fase 6** já existe a **disponibilidade**: em `/painel/agenda`, o profissional monta a grade
+semanal — e cada faixa diz **formato, modalidade, local e espaço**, nunca só "estou livre às 19h".
+Liga ou desliga *"o aluno marca sozinho"* (nasce **desligada**) e ajusta os três prazos:
+antecedência de 12 h, janela de 14 dias, cancelamento em 24 h. Cada local tem **fuso**, e cada
+modalidade tem **duração padrão por formato**.
+
+**Não existe ainda aula marcada** — `sessions`, as duas travas contra choque de horário e o teste
+de concorrência são o Epic 6.2, o próximo. Também não existe pagamento, nem tela do aluno: ele não
+vê a própria ficha em lugar nenhum, e isso é da Fase 11. **No aplicativo não existe tela nenhuma
+de perfil, carteira, equipe ou agenda, nem o seletor de negócio** — é a DT-012, a regra dos dois
+canais vale da Fase 5.7 em diante, e o `mobile` é agente **obrigatório** desta fase por isso.
+**Bloqueios (férias, feriado) têm API e nenhuma tela.**
 
 O roadmap de 20 fases está em [`TODO.md`](TODO.md) — é o documento que manda.
 

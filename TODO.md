@@ -1915,27 +1915,50 @@ vira a fase seguinte, e nenhum dos dois derruba a promessa da fase.
       leitura** aceita o parâmetro, e escrever continua sendo do dono. Quatro testes, **dois
       provados quebrando**, e **zero** cadastros gastos — entraram no arquivo que já monta dono e
       membro. E12 (ver a ocupação com o nome do colega) continua de pé: depende de `sessions`
-- [ ] **Epic 6.1 — Disponibilidade**
-  - [ ] Grade semanal recorrente **por professor e por negócio** (decisão E19 da Fase 5.5)
-  - [ ] **Cada faixa reserva formato, local, espaço e modalidade** — requisito (B). "Terça 19h às
+- [ ] **Epic 6.1 — Disponibilidade** — *o servidor e a web estão de pé; falta a superfície do
+      aplicativo e a tela de bloqueios. **Começar por aí.*** Ver "onde parei", ao fim do épico
+  - [x] Grade semanal recorrente **por professor e por negócio** (decisão E19 da Fase 5.5) ✅ 2026-08-30
+  - [x] **Cada faixa reserva formato, local, espaço e modalidade** — requisito (B). "Terça 19h às
         20h" não basta; é "terça 19h às 20h, individual de tênis, Quadra 2 do Clube X". Sem isso o
         aluno marca individual em horário de turma, ou marca num clube onde o professor não está
-  - [ ] **Faixas podem se sobrepor, e isso é decisão**: faixa é **oferta**, não compromisso.
+  - [x] **Faixas podem se sobrepor, e isso é decisão**: faixa é **oferta**, não compromisso.
         "Às 19h eu dou tênis ou beach tennis" precisa caber, e quem impede duas aulas é a trava da
         sessão, não a grade
-  - [ ] **`CLASS_GROUP` é recusado como formato de faixa** até a Fase 8. Faixa de turma numa fase
+  - [x] **`CLASS_GROUP` é recusado como formato de faixa** até a Fase 8. Faixa de turma numa fase
         sem turma é um horário em que ninguém pode marcar nada; quem já dá turma cobre o caso com
         **bloqueio**, que é a ferramenta certa
   - [ ] Exceções e bloqueios pontuais (férias, feriados). **Bloqueio esconde, não impede** — mesmo
-        argumento do `PAUSED` em `students.md` §7.2
-  - [ ] Antecedência mínima (**12 h**), janela máxima (**14 dias**) e prazo de cancelamento
+        argumento do `PAUSED` em `students.md` §7.2. **A API está pronta**
+        (`POST`/`GET`/`DELETE /scheduling/blocks`); **a tela não existe em canal nenhum**, e por
+        isso a caixa segue vazia — capacidade sem superfície não está entregue
+  - [x] Antecedência mínima (**12 h**), janela máxima (**14 dias**) e prazo de cancelamento
         (**24 h**), em `booking_policies`. **Ausência de linha é o padrão** — ninguém precisa
         configurar para a agenda funcionar
-  - [ ] **A chave "o aluno marca sozinho", por professor** — requisito (A). Desligada é o padrão
+  - [x] **A chave "o aluno marca sozinho", por professor** — requisito (A). Desligada é o padrão
         seguro: o professor que não sabe que existe não é surpreendido por uma aula que ele não
         marcou
   - [ ] **Mudar a grade nunca mexe em aula já marcada**, e a lista "aulas fora da
-        disponibilidade" fica ao lado da lista "aulas sem professor" que a Fase 5.5 encomendou
+        disponibilidade" fica ao lado da lista "aulas sem professor" que a Fase 5.5 encomendou —
+        **depende de `sessions`, que é do Epic 6.2**: sem aula marcada não há o que preservar nem o
+        que listar. Fica para o fecho do 6.2, e não bloqueia o resto do 6.1
+
+  > ### Onde parei, em 2026-08-31
+  >
+  > **Feito e empurrado** (`59d2413`, `7c951f4`, `8627814`, `e56f977`): a extensão `btree_gist`,
+  > o fuso de cada local, a duração por modalidade e formato, as tabelas `booking_policies`,
+  > `availability_slots` e `time_blocks`, o módulo `scheduling` inteiro na API, e na web a grade
+  > semanal (`/painel/agenda`) mais as regras de quem marca. 32 testes de tela em `e2e/agenda.spec.ts`,
+  > na conta sementada **Helena**.
+  >
+  > **Falta, e é por onde a próxima sessão começa:**
+  >
+  > 1. **As telas do aplicativo** — grade, chave "o aluno marca sozinho", bloqueios, e **o seletor
+  >    de negócio, que hoje não existe em canal nenhum do `mobile`**. O `mobile` foi elevado a
+  >    agente obrigatório desta fase exatamente para isto: adiar é a **DT-012 pela quarta vez**.
+  > 2. **A tela de bloqueios na web** — a API já responde; ninguém consegue tirar férias pela tela.
+  >
+  > **Dívidas pagas no caminho:** DT-016 (`6d11927`) e DT-018 (`17a9e5f`). O par único de `spaces`,
+  > que a Fase 5.5 deu como feito e não existia, foi criado em `1f41217`.
 - [ ] **Epic 6.2 — A sessão, e as duas travas** *(o antigo 6.4 entra aqui)*
   - [ ] **`btree_gist`** — a primeira `CREATE EXTENSION` do projeto, com `DROP` simétrico
   - [ ] `sessions` com `starts_at`, `ends_at` e `period tstzrange` **gerado e materializado**;
