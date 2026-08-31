@@ -1,10 +1,13 @@
 'use client';
 
 import {
+  FUSOS_DO_BRASIL,
   LocationKind,
   MAX_LOCATIONS_POR_PROFISSIONAL,
   UFS_DO_BRASIL,
   MAX_SPACE_NAME_LENGTH,
+  fusoDaUf,
+  nomeDoFuso,
   type LocationRow,
 } from '@gestao/types';
 import { useId, useState } from 'react';
@@ -195,8 +198,19 @@ function Formulario({
   const [cidade, setCidade] = useState(local?.city ?? '');
   const [uf, setUf] = useState(local?.state ?? '');
   const [comoChegar, setComoChegar] = useState(local?.accessNotes ?? '');
+  /**
+   * **Nulo enquanto ninguém corrigir**, e é o que faz a UF preencher sozinha: mandar `undefined`
+   * deixa o servidor derivar, e trocar a UF re-sugere. Guardar aqui o fuso derivado congelaria a
+   * primeira UF escolhida, e um local corrigido de SP para AM continuaria no horário de Brasília.
+   */
+  const [fusoEscolhido, setFusoEscolhido] = useState<string | null>(local?.timeZone ?? null);
+  const [corrigindoFuso, setCorrigindoFuso] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  // O que está gravado, ou o que a UF sugere. É o mesmo cálculo que o servidor faz, e vem do
+  // pacote compartilhado justamente para não haver duas respostas.
+  const fusoAplicado = corrigindoFuso && fusoEscolhido ? fusoEscolhido : fusoDaUf(uf);
 
   // Casa do aluno não tem endereço, e o banco recusa se tiver. O campo some da tela em vez de
   // aparecer desabilitado: um campo cinza convida a perguntar por que não dá para preencher.
@@ -217,6 +231,9 @@ function Formulario({
       city: cidade,
       state: uf,
       accessNotes: comoChegar,
+      // Só vai quando alguém abriu o seletor. Sem isso, salvar qualquer edição regravaria o
+      // fuso derivado por cima de uma correção feita antes.
+      ...(corrigindoFuso && fusoEscolhido ? { timeZone: fusoEscolhido } : {}),
     };
 
     try {
@@ -318,6 +335,47 @@ function Formulario({
           </select>
         </div>
       </div>
+
+      {/* **O fuso, e por que ele não é um seletor por padrão.**
+
+          A aula acontece no relógio da quadra, e a UF acerta o fuso em 26 das 27 unidades. Pôr
+          um seletor de fuso ao lado da UF seria pedir duas vezes a mesma informação, e a segunda
+          é a que ninguém sabe responder. Então a tela **mostra o que gravou** e oferece a
+          correção só para quem sabe que precisa dela — o professor de Eirunepé, que fica no
+          Amazonas e está uma hora atrás de Manaus. */}
+      {uf ? (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-(--color-ink-muted)">
+          <span>
+            Horário do local: <strong>{nomeDoFuso(fusoAplicado)}</strong>. As aulas aqui aparecem
+            nesse relógio.
+          </span>
+          {corrigindoFuso ? (
+            <select
+              aria-label="Fuso horário do local"
+              value={fusoAplicado}
+              onChange={(evento) => setFusoEscolhido(evento.target.value)}
+              className="rounded-lg border border-(--color-border) bg-(--color-surface-muted) px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-(--color-ink)/20"
+            >
+              {FUSOS_DO_BRASIL.map((fuso) => (
+                <option key={fuso} value={fuso}>
+                  {nomeDoFuso(fuso)}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setCorrigindoFuso(true);
+                setFusoEscolhido(fusoAplicado);
+              }}
+              className="underline underline-offset-2"
+            >
+              não é esse
+            </button>
+          )}
+        </div>
+      ) : null}
 
       {/* O aviso que o documento de domínio exige. Sem ele, quem cadastra a própria casa como
           local não tem como saber o que fica visível — e é a informação que mais preocupa. */}

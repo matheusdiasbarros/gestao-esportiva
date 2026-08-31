@@ -1,5 +1,5 @@
 import { UFS_DO_BRASIL } from '@gestao/types';
-import { FUSO_POR_UF, fusoConhecido, fusoDaUf } from './fuso-do-local';
+import { FUSO_POR_UF, fusoConhecido, fusoDaUf, nomeDoFuso } from './fuso-do-local';
 
 /**
  * O mapa de UF para fuso.
@@ -64,6 +64,14 @@ describe('fusoDaUf', () => {
 
   it('não inventa fuso para o que não é UF', () => {
     expect(fusoDaUf('XX')).toBe('America/Sao_Paulo');
+  });
+});
+
+describe('nomeDoFuso', () => {
+  it('diz a cidade, e não o identificador da máquina', () => {
+    // Numa tela de perfil, "America/Manaus" é implementação vazando. A pessoa reconhece Manaus.
+    expect(nomeDoFuso('America/Manaus')).toBe('horário de Manaus');
+    expect(nomeDoFuso('America/Sao_Paulo')).toBe('horário de Sao Paulo');
   });
 });
 

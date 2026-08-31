@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  DURACAO_PADRAO_MINUTOS,
   MAX_PRICE_CENTS,
   MAX_SPORTS_POR_PROFISSIONAL,
   MAX_SPORT_NAME_LENGTH,
@@ -26,20 +27,38 @@ const FORMATOS: { valor: SessionFormat; rotulo: string }[] = [
 interface PrecoEditavel {
   oferece: boolean;
   centavos: number;
+  /**
+   * Quanto dura a aula, em minutos.
+   *
+   * **Fica ao lado do preço, e não junto do nome da modalidade**, porque é o par (modalidade,
+   * formato) que determina os dois: turma de 90 minutos e individual de 60 são o mesmo esporte.
+   * "R$ 120" só quer dizer alguma coisa junto de "por 1 hora".
+   */
+  minutos: number;
 }
 
 type Precos = Record<SessionFormat, PrecoEditavel>;
 
 const VAZIO: Precos = {
-  [SessionFormat.Individual]: { oferece: false, centavos: 0 },
-  [SessionFormat.Pair]: { oferece: false, centavos: 0 },
-  [SessionFormat.ClassGroup]: { oferece: false, centavos: 0 },
+  [SessionFormat.Individual]: { oferece: false, centavos: 0, minutos: DURACAO_PADRAO_MINUTOS },
+  [SessionFormat.Pair]: { oferece: false, centavos: 0, minutos: DURACAO_PADRAO_MINUTOS },
+  [SessionFormat.ClassGroup]: { oferece: false, centavos: 0, minutos: DURACAO_PADRAO_MINUTOS },
 };
+
+/**
+ * As durações do seletor. **Não é um campo livre de minutos**, e a escolha é deliberada: quase
+ * toda aula tem uma destas durações, e um campo aberto convida ao 47 que a API recusa.
+ */
+const DURACOES = [30, 45, 50, 60, 75, 90, 120] as const;
 
 function precosDe(modalidade: ProfessionalSportRow): Precos {
   const precos = structuredClone(VAZIO);
   for (const preco of modalidade.prices) {
-    precos[preco.sessionFormat] = { oferece: true, centavos: preco.amountCents };
+    precos[preco.sessionFormat] = {
+      oferece: true,
+      centavos: preco.amountCents,
+      minutos: preco.defaultDurationMinutes,
+    };
   }
   return precos;
 }
@@ -49,6 +68,7 @@ function paraEnvio(precos: Precos) {
   return FORMATOS.filter(({ valor }) => precos[valor].oferece).map(({ valor }) => ({
     sessionFormat: valor,
     amountCents: precos[valor].centavos,
+    defaultDurationMinutes: precos[valor].minutos,
   }));
 }
 
@@ -515,6 +535,26 @@ function LinhaDePreco({
           }
           className="w-32 rounded-lg border border-(--color-border) bg-(--color-surface-muted) px-3 py-2 text-right text-sm outline-none focus:ring-2 focus:ring-(--color-ink)/20 disabled:opacity-40"
         />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <label htmlFor={`${id}-duracao`} className="text-sm text-(--color-ink-muted)">
+          por
+        </label>
+        <select
+          id={`${id}-duracao`}
+          disabled={!preco.oferece}
+          aria-label={`Duração da aula no formato ${rotulo}, em minutos`}
+          value={preco.minutos}
+          onChange={(evento) => onChange({ ...preco, minutos: Number(evento.target.value) })}
+          className="rounded-lg border border-(--color-border) bg-(--color-surface-muted) px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-(--color-ink)/20 disabled:opacity-40"
+        >
+          {DURACOES.map((minutos) => (
+            <option key={minutos} value={minutos}>
+              {minutos} min
+            </option>
+          ))}
+        </select>
       </div>
 
       {preco.oferece && preco.centavos <= 0 ? (

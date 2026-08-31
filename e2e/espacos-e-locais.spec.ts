@@ -56,7 +56,7 @@ async function locais() {
 async function modalidades() {
   return (await (await comoDono.get(`${API}/professionals/me/sports`)).json()) as {
     id: string;
-    sport: { name: string };
+    sport: { id: string; name: string };
     locationIds: string[];
   }[];
 }
@@ -353,5 +353,120 @@ test.describe('Em que relógio a aula acontece', () => {
       data: { state: 'SC' },
     });
     expect(((await movido.json()) as { timeZone: string }).timeZone).toBe('America/Sao_Paulo');
+  });
+});
+
+/**
+ * **Os dois campos que a Fase 6 acrescentou a telas da Fase 3.**
+ *
+ * O dado já existia no banco e na API antes destas telas; enquanto não existisse campo, ninguém
+ * conseguia corrigir um fuso errado nem dizer que a aula dura 45 minutos. Dado sem tela é dado
+ * que só o programador alcança.
+ *
+ * Usam a conta que o `beforeAll` deste arquivo já criou — a DT-018 deixou a margem de cadastros
+ * por hora em zero.
+ */
+test.describe('O que a agenda acrescentou ao perfil', () => {
+  /**
+   * O campo mora no formulário do local, que só existe depois de "Editar".
+   *
+   * **Escopado ao bloco**, e não `.first()` na página: o bloco de modalidades vem antes e tem um
+   * "Editar" idêntico. O primeiro `.first()` desta suíte clicava nele, e o teste falhava dizendo
+   * que o campo do fuso não existia — quando o que não existia era o formulário certo aberto.
+   */
+  function blocoDeLocais() {
+    return pagina.locator('section').filter({ hasText: 'Onde você atende' });
+  }
+
+  async function editarPrimeiroLocal() {
+    await pagina.goto('/painel/perfil');
+    await blocoDeLocais()
+      .getByRole('button', { name: /^Editar$/ })
+      .first()
+      .click();
+  }
+
+  test('o local diz em que relógio as aulas dele acontecem', async () => {
+    await editarPrimeiroLocal();
+
+    // A frase aparece **resolvida, sem ninguém escolher nada**: a UF preenche. Um seletor de
+    // fuso ao lado da UF pediria duas vezes a mesma informação, e a segunda vez é a que ninguém
+    // sabe responder.
+    await expect(blocoDeLocais().getByText(/Horário do local:/i)).toBeVisible();
+    await expect(blocoDeLocais().getByText(/horário de Sao Paulo/i)).toBeVisible();
+  });
+
+  test('quem sabe que a UF errou consegue corrigir na tela', async () => {
+    // O caso real é Eirunepé: fica no Amazonas e está uma hora atrás de Manaus. Sem este botão,
+    // o professor de lá não teria como consertar — e a aula apareceria no horário errado para
+    // todos os alunos dele, sem erro nenhum na tela.
+    await editarPrimeiroLocal();
+    await blocoDeLocais()
+      .getByRole('button', { name: /não é esse/i })
+      .click();
+
+    const seletor = blocoDeLocais().getByLabel('Fuso horário do local');
+    await expect(seletor).toBeVisible();
+    await seletor.selectOption('America/Eirunepe');
+    await blocoDeLocais()
+      .getByRole('button', { name: /^Salvar$/ })
+      .click();
+
+    await expect
+      .poll(async () => (await locais()).find((l) => l.id === arena)?.timeZone)
+      .toBe('America/Eirunepe');
+  });
+
+  test('a duração da aula fica ao lado do preço, e vale por formato', async () => {
+    // O tênis já está no perfil desde o bloco "Em qual local cada modalidade acontece" — este
+    // arquivo compartilha uma conta só. Editar em vez de criar mantém isso verdadeiro sem
+    // gastar cadastro.
+    const tenis = (await modalidades()).find((m) => m.sport.id === TENIS);
+    expect(tenis, 'o tênis sumiu do perfil').toBeDefined();
+
+    const editada = await comoDono.patch(`${API}/professionals/me/sports/${tenis!.id}`, {
+      data: {
+        prices: [{ sessionFormat: 'INDIVIDUAL', amountCents: 12000, defaultDurationMinutes: 45 }],
+      },
+    });
+    expect(editada.status(), await editada.text()).toBe(200);
+
+    await pagina.goto('/painel/perfil');
+    await pagina
+      .locator('section')
+      .filter({ hasText: 'O que você ensina' })
+      .getByRole('button', { name: /^Editar$/ })
+      .last()
+      .click();
+
+    // O seletor existe **por formato**, e não um por modalidade: é o par (modalidade, formato)
+    // que determina a duração, e turma de 90 com individual de 60 é o mesmo esporte.
+    const duracao = pagina.getByLabel(/Duração da aula no formato Individual/i);
+    await expect(duracao).toBeVisible();
+    await expect(duracao).toHaveValue('45');
+
+    // **E a tela precisa saber gravar, não só mostrar.** A primeira versão deste teste parava na
+    // linha acima: ela punha a duração pela API e a conferia na tela, então apagar o campo do
+    // corpo enviado deixava tudo verde. Sabotagem provou, e o teste cresceu.
+    await duracao.selectOption('90');
+    await pagina
+      .locator('section')
+      .filter({ hasText: 'O que você ensina' })
+      .getByRole('button', { name: /^Salvar$/ })
+      .click();
+
+    await expect
+      .poll(
+        async () =>
+          (
+            (await (await comoDono.get(`${API}/professionals/me/sports`)).json()) as {
+              id: string;
+              prices: { sessionFormat: string; defaultDurationMinutes: number }[];
+            }[]
+          )
+            .find((m) => m.id === tenis!.id)
+            ?.prices.find((p) => p.sessionFormat === 'INDIVIDUAL')?.defaultDurationMinutes,
+      )
+      .toBe(90);
   });
 });

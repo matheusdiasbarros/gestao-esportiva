@@ -1,3 +1,4 @@
+export * from './fuso';
 export * from './health';
 export * from './http';
 export * from './iam';
