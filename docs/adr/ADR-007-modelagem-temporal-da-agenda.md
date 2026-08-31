@@ -1,8 +1,40 @@
 # ADR-007 — Modelagem temporal da agenda
 
-- Status: proposta
+- Status: **aceita** em 2026-08-30
 - Data: 2026-08-30
 - Fase: 6
+
+> **Aceita depois de as apostas serem executadas contra o PostgreSQL 17 deste projeto**, dentro
+> de transações desfeitas. Uma ADR que decide comportamento de banco e não o executa é uma
+> hipótese bem escrita — e a abertura desta fase já achou uma garantia declarada e inexistente
+> (`uq_spaces_location_id`) para não repetir o método. O que foi medido está na
+> [§0](#0-o-que-foi-executado-antes-de-aceitar).
+
+## 0. O que foi executado antes de aceitar
+
+| A aposta | O que o banco respondeu |
+| --- | --- |
+| `tstzrange` é imutável, então serve em coluna gerada | `provolatile = 'i'` ✅ |
+| A coluna `period` `GENERATED ALWAYS AS ... STORED` é criável | `CREATE TABLE` ✅ |
+| As duas `EXCLUDE ... WHERE` parciais são criáveis com `btree_gist` | `ALTER TABLE` ✅ nas duas |
+| **Início + duração não serve**, que é o motivo de a alternativa simples estar descartada | `ERROR: generation expression is not immutable` ✅ |
+| `'[)'` deixa a aula das 20h encostar na que terminou às 20h | as duas linhas entraram ✅ |
+| Duas aulas **sem professor** no mesmo horário não conflitam (`NULL = NULL` não é verdadeiro) | as duas linhas entraram ✅ |
+| A trava recusa a sobreposição de verdade | `23P01` ✅ |
+
+**E o vazamento do `DETAIL` deixou de ser previsão.** Este é o texto exato que o PostgreSQL
+devolveu na recusa:
+
+```text
+ERROR:  conflicting key value violates exclusion constraint "ex_prof"
+DETAIL:  Key (teacher_id, period)=(0000…0001, ["2026-09-01 22:30:00+00","2026-09-01 23:30:00+00"))
+         conflicts with existing key (teacher_id, period)=(0000…0001,
+         ["2026-09-01 22:00:00+00","2026-09-01 23:00:00+00")).
+```
+
+A linha `conflicts with existing key` é **o horário da aula do outro clube**, com o identificador
+do professor. Entregá-la a quem tentou marcar é entregar a agenda de um cliente a outro, e é o
+que a §4 existe para impedir.
 
 ## Contexto
 
@@ -399,7 +431,7 @@ as sessões existentes.
 | Coluna | Nota |
 | --- | --- |
 | `session_id` | FK `ON DELETE CASCADE` |
-| `student_id` | FK `students(id)` **`ON DELETE CASCADE`** — ver abaixo |
+| `student_id` | FK `students(id)` **`ON DELETE RESTRICT`** — ver abaixo |
 | `attendance` | `session_participants_attendance_enum('PRESENT','ABSENT')` **NULL** |
 | `cancelled_at`, `cancelled_by_user_id`, `cancelled_by_role`, `cancellation_reason` | o cancelamento **do participante** (produto §8, caso 7) |
 | `UNIQUE (session_id, student_id)` | a mesma ficha duas vezes na mesma aula não quer dizer nada |
@@ -408,12 +440,39 @@ as sessões existentes.
 (produto §4.2). O fechamento automático não escreve presença — inventar um fato sobre uma pessoa
 vira dinheiro na Fase 7.
 
-**`ON DELETE CASCADE` em `student_id`, e foi verificado por que.** `students` é apagada de verdade
-(`students.service.ts:480`). Com `RESTRICT`, a rota de apagar ficha da Fase 5 passaria a devolver 500
-no dia em que a ficha tivesse uma aula. Com `CASCADE`, o direito de apagar continua funcionando —
-e sobra uma consequência que **é de produto, não minha**: a sessão pode ficar com zero
-participantes. **Padrão que proponho e que o `product` confirma ou troca:** apagar a ficha cancela,
-na mesma transação, as sessões que ficarem sem ninguém. Fica registrado como pendência nomeada.
+**`ON DELETE RESTRICT` em `student_id` — e esta linha foi corrigida na aceitação da ADR.**
+
+A proposta original era `CASCADE`, com um argumento correto sobre o mecanismo: `students` é
+apagada de verdade (`students.service.ts:480`, conferido), então `RESTRICT` faria a rota de
+apagar ficha da Fase 5 devolver 500 no dia em que a ficha tivesse uma aula.
+
+**O argumento estava certo e a conclusão errada, porque a regra já existe.** A
+[`students.md`](../domain/students.md) §7.5 decidiu isto na Fase 5, escrito com todas as letras
+*"a partir da Fase 6"*:
+
+| Quando | O que acontece |
+| --- | --- |
+| A ficha **não tem histórico** | `DELETE` de verdade |
+| A ficha **tem histórico** — a partir da Fase 6 | **não é apagável**: vira anonimizar a ficha; as linhas de sessão e de cobrança continuam, sem identificar ninguém |
+
+Com `CASCADE`, apagar a ficha apagaria as participações — **inclusive as das aulas já dadas**, que
+é precisamente o registro contábil que a §7.5 existe para proteger, e que a Fase 9 vai cobrar em
+cima. O `CASCADE` não teria falhado nunca: teria destruído em silêncio, que é a pior das duas.
+
+Vale registrar o mecanismo do engano, porque ele é sutil: a §7.5 é a mesma técnica de
+*write-ahead* que salvou tempo em três lugares desta fase, e desta vez **ela não foi lida**. Um
+aviso escrito no documento certo só funciona se alguém o abrir — e a ADR abriu o `students.md`,
+mas pela §7.6, que era o assunto do momento.
+
+**Portanto:** o banco recusa (`RESTRICT`), e a rota da Fase 5 passa a recusar **traduzido**, nunca
+com 500 — a recusa diz que a ficha tem aulas registradas e oferece *encerrar*, que já existe e já
+é o caminho normal. **Anonimizar não sai nesta fase**, e a razão é a mesma que a §7.4 já usa: o
+prazo de retenção mora na Política de Privacidade, que não existe (§15). Registrado com gatilho
+nomeado em `tech-debt.md`.
+
+Some junto a pendência de produto que o `CASCADE` criava — "a sessão pode ficar com zero
+participantes". Com `RESTRICT` ela não existe: nenhuma sessão perde o último participante por
+apagamento de ficha.
 
 **A duplicação de colunas de cancelamento entre sessão e participante é deliberada.** Elas respondem
 perguntas diferentes: a da sessão é *"o serviço não foi prestado"*; a do participante é *"esta pessoa
@@ -785,8 +844,10 @@ ADR-003.
 consequência de modelagem: presença é do par (aula, pessoa), e o estado quebraria na dupla — que
 está no MVP — antes mesmo da Fase 8.
 
-**`session_participants.student_id` com `ON DELETE RESTRICT`.** Recusada porque quebraria uma rota
-existente da Fase 5, verificada no código. Ver §2.6.
+**~~`session_participants.student_id` com `ON DELETE RESTRICT`~~ — esta alternativa virou a
+decisão, na aceitação da ADR.** Ela havia sido recusada por quebrar uma rota existente da Fase 5,
+o que é verdade; mas a `students.md` §7.5 já mandava a rota mudar de comportamento *"a partir da
+Fase 6"*, e `CASCADE` teria apagado em silêncio o registro contábil das aulas dadas. Ver §2.6.
 
 **Tabela de eventos da agenda (auditoria completa) já nesta fase.** Recusada: o que o professor
 realmente pergunta é *"quantas vezes esta pessoa remarcou"*, e isso são três colunas. Extrato

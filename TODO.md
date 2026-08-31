@@ -1856,59 +1856,194 @@ recorrentes, sem possibilidade de agendamento conflitante (garantido no banco).
 no banco ·
 `product` ⬤ política de conflito, recorrência, cancelamento e timezone ·
 `backend` ⬤ · `web` ⬤ calendário ·
+`mobile` ⬤ **corrigido em 2026-08-30** ·
 `qa` ⬤ **teste de concorrência obrigatório**: dois agendamentos simultâneos no mesmo horário
 não podem passar ·
-`security` ○
+`security` ⬤ **elevado de ○ em 2026-08-30**
+
+> **Duas correções na linha acima, feitas na abertura da fase.**
+>
+> **`mobile` era omissão, e a tabela consolidada da §1 tem data anterior à regra dos dois
+> canais.** O `iam.md` §10 diz que o profissional é atendido **principalmente no aplicativo** —
+> ele trabalha em pé, na quadra —, e a agenda é o caso mais forte disso no sistema inteiro. Não
+> entregar a agenda no aplicativo seria a DT-012 pela quarta fase seguida, e desta vez com a
+> capacidade que mais precisa dele. Fecha o argumento uma promessa que já está na tela:
+> `apps/mobile/app/painel.tsx` diz hoje, ao profissional, que *"presença, agenda e cobrança
+> chegam ao aplicativo nas fases que as criarem"*.
+>
+> **`security` sobe a obrigatório** porque esta é a primeira restrição de banco que **atravessa
+> negócios**: o `DETAIL` do `23P01` devolve o horário e o professor da aula do outro clube, e o
+> nome da restrição é sozinho um oráculo. A `staff.md` §9.5 já deixou um oráculo de ocupação
+> mapeado e em aberto.
+
+### O que foi decidido na abertura, em 2026-08-30
+
+Documentos: [`abertura-fase-06.md`](docs/product/2026-08-30-abertura-fase-06.md) (plano de
+execução), [`agenda-regras.md`](docs/product/2026-08-30-agenda-regras.md) (regras de negócio) e
+[`ADR-007`](docs/adr/ADR-007-modelagem-temporal-da-agenda.md) (modelagem temporal, **aceita**).
+
+**Pelo dono:**
+
+| | Decisão |
+| --- | --- |
+| A fase sai em **duas partes** | primeiro a agenda do profissional (web **e** aplicativo); depois o aluno marcando sozinho, na web |
+| Os três prazos | **12 h** de antecedência mínima · **14 dias** de janela máxima · **24 h** para cancelar sem consequência. Ajustáveis por professor |
+| O professor em dois clubes | o clube **só enxerga e só marca dentro da grade declarada para ele**. A alternativa vaza a agenda do professor no concorrente por tentativa e erro |
+| Duração da aula | **padrão por (modalidade, formato), editável na aula**. Hoje o sistema sabe quanto uma aula custa e não sabe quanto dura, o que deixa o preço pela metade |
+
+**Decidido por mim, e registrado com o porquê:**
+
+- **A aula fecha sozinha 24 h depois, como realizada e sem presença marcada** — o professor
+  corrige em 7 dias. Se cada aula exigir um clique, ele registra as de segunda e desiste na
+  quarta; mas o sistema não pode afirmar que **uma pessoa** compareceu sem ninguém ter dito,
+  porque na Fase 7 presença vira dinheiro. *O plano de execução §1.6 mandava isto para a Fase 7 e
+  as regras de negócio §4.3 o traziam para cá; fica aqui, no Epic 6.6, junto da tela que ele
+  serve.*
+- **A escala de nível do aluno fica para a Fase 8**, com o formato `CLASS_GROUP` recusado em faixa
+  até lá. Nível só existe para turma conferir nível; não há turma nesta fase; e mexer na ficha
+  arrastaria a carteira inteira para o aplicativo no meio da fase de maior risco do projeto.
 
 ### Épicos e tarefas
 
+**Parte A — a agenda do profissional.** Entregável e utilizável sozinha: o professor larga a
+planilha. **Se for para cortar, corta-se de baixo** — o 6.5 vira lista com filtro de dia e o 6.7
+vira a fase seguinte, e nenhum dos dois derruba a promessa da fase.
+
+- [x] **Epic 6.0 — Os locais e as quadras do negócio** ✅ 2026-08-30 — a DT-016, bloqueio
+      declarado da fase, fechada **antes** do primeiro épico. `GET
+      /professionals/me/locations?negocio=` devolve os locais e espaços do dono ao membro; **só a
+      leitura** aceita o parâmetro, e escrever continua sendo do dono. Quatro testes, **dois
+      provados quebrando**, e **zero** cadastros gastos — entraram no arquivo que já monta dono e
+      membro. E12 (ver a ocupação com o nome do colega) continua de pé: depende de `sessions`
 - [ ] **Epic 6.1 — Disponibilidade**
   - [ ] Grade semanal recorrente **por professor e por negócio** (decisão E19 da Fase 5.5)
-  - [ ] **Cada faixa reserva formato, local e modalidade** — requisito (B) acima. "Terça 19h às
-        20h" não basta; é "terça 19h às 20h, turma de tênis, Quadra 2 do Clube X". Sem isso o
+  - [ ] **Cada faixa reserva formato, local, espaço e modalidade** — requisito (B). "Terça 19h às
+        20h" não basta; é "terça 19h às 20h, individual de tênis, Quadra 2 do Clube X". Sem isso o
         aluno marca individual em horário de turma, ou marca num clube onde o professor não está
-  - [ ] Exceções e bloqueios pontuais (férias, feriados)
-  - [ ] Antecedência mínima e janela máxima de agendamento
-  - [ ] **A chave "o aluno marca sozinho", por professor** — requisito (A) acima. Desligada é o
-        padrão seguro: o professor que não sabe que existe não é surpreendido por uma aula que
-        ele não marcou
-- [ ] **Epic 6.2 — Aulas (sessões)**
-  - [ ] Criação de aula individual
-  - [ ] Edição, remarcação e cancelamento
-  - [ ] Estados da aula (agendada, confirmada, realizada, cancelada, falta)
-  - [ ] Vínculo com aluno, local e modalidade
+  - [ ] **Faixas podem se sobrepor, e isso é decisão**: faixa é **oferta**, não compromisso.
+        "Às 19h eu dou tênis ou beach tennis" precisa caber, e quem impede duas aulas é a trava da
+        sessão, não a grade
+  - [ ] **`CLASS_GROUP` é recusado como formato de faixa** até a Fase 8. Faixa de turma numa fase
+        sem turma é um horário em que ninguém pode marcar nada; quem já dá turma cobre o caso com
+        **bloqueio**, que é a ferramenta certa
+  - [ ] Exceções e bloqueios pontuais (férias, feriados). **Bloqueio esconde, não impede** — mesmo
+        argumento do `PAUSED` em `students.md` §7.2
+  - [ ] Antecedência mínima (**12 h**), janela máxima (**14 dias**) e prazo de cancelamento
+        (**24 h**), em `booking_policies`. **Ausência de linha é o padrão** — ninguém precisa
+        configurar para a agenda funcionar
+  - [ ] **A chave "o aluno marca sozinho", por professor** — requisito (A). Desligada é o padrão
+        seguro: o professor que não sabe que existe não é surpreendido por uma aula que ele não
+        marcou
+  - [ ] **Mudar a grade nunca mexe em aula já marcada**, e a lista "aulas fora da
+        disponibilidade" fica ao lado da lista "aulas sem professor" que a Fase 5.5 encomendou
+- [ ] **Epic 6.2 — A sessão, e as duas travas** *(o antigo 6.4 entra aqui)*
+  - [ ] **`btree_gist`** — a primeira `CREATE EXTENSION` do projeto, com `DROP` simétrico
+  - [ ] `sessions` com `starts_at`, `ends_at` e `period tstzrange` **gerado e materializado**;
+        `teacher_id` **anulável**; chave estrangeira **composta** para `spaces(location_id, id)`
+  - [ ] **`session_participants`** — participante é **relação, não coluna**: a aula em dupla é uma
+        sessão com dois participantes. `ON DELETE RESTRICT`, e a rota de apagar ficha da Fase 5
+        passa a **recusar traduzido** quando há histórico, como a `students.md` §7.5 mandou
+  - [ ] **As duas `EXCLUDE USING gist` na mesma migration** que cria a tabela — por professor e
+        por espaço, ambas só para aula não cancelada. Separá-las em duas migrations significaria
+        escrever a segunda com dado dentro
+  - [ ] **A tradução do `23P01`, e o `DETAIL` que nunca sai** — nem na resposta, nem no log. As
+        duas travas respondem **idêntico byte a byte**: o nome da restrição é sozinho um oráculo
+  - [ ] Três estados: `SCHEDULED`, `COMPLETED`, `CANCELLED`. *Confirmada* e *falta* saíram — a
+        primeira porque ninguém soube dizer quem confirma, a segunda porque **falta é presença de
+        uma pessoa**, e com dois alunos na quadra um faltou e o outro não
+  - [ ] Criação, remarcação e cancelamento. **Remarcar altera a mesma aula**; fora do prazo o
+        aluno não remarca, cancela — senão a remarcação vira a porta dos fundos do cancelamento
+        tardio
+  - [ ] **O fato que a Fase 7 recebe pronto**: quando, quem, **o papel** de quem cancelou, e o
+        **prazo copiado no nascimento da aula** — mesma regra do preço em
+        `professional-profile.md` §6.5. "Cancelou tarde" é derivado, nunca coluna
+  - [ ] **O arnês de teste de integração** (`*.itest.ts`, `maxWorkers: 1`), sem o qual o teste de
+        concorrência obrigatório desta fase **não tem onde rodar**
+  - [ ] **O teste de concorrência**: dois agendamentos simultâneos no mesmo horário, e só um passa
+- [ ] **Epic 6.6 — Registro de aula, e o aplicativo**
+  - [ ] Presença por **participante**, notas da aula, registrar aula passada
+  - [ ] **A aula fecha sozinha 24 h depois, como realizada e sem presença** — job repetível
+  - [ ] **As telas do profissional no aplicativo**: agenda do dia, detalhe da sessão, registro de
+        aula, remarcar/cancelar, criar aula avulsa. **Vem cedo de propósito** — adiado, é a
+        DT-012 pela quarta vez, e desta vez na capacidade que mais precisa do celular
+  - [ ] **O seletor de negócio no aplicativo**, que hoje não existe: sem ele, o professor de dois
+        clubes não consegue dizer em qual está trabalhando
 - [ ] **Epic 6.3 — Recorrência**
-  - [ ] Modelo de série recorrente e materialização de ocorrências
-  - [ ] Edição de "esta ocorrência" vs. "toda a série"
-  - [ ] Fim da recorrência (data, número de ocorrências, indefinida)
-- [ ] **Epic 6.4 — Conflitos e concorrência**
-  - [ ] Detecção de sobreposição de horários
-  - [ ] Constraint de exclusão no PostgreSQL (`btree_gist` + `tstzrange`)
-  - [ ] Locks/transações no caminho de agendamento
-  - [ ] Tempo de deslocamento entre locais
+  - [ ] Série semanal simples, **materializada** com horizonte declarado (ADR-007 §5)
+  - [ ] Edição de "esta ocorrência" e "desta em diante" — **duas** opções, não três: "todas"
+        incluiria as passadas
+  - [ ] Fim da recorrência: data, número de ocorrências, ou indefinida com janela deslizante
+  - [ ] **Sem RRULE, sem série indefinida sem janela, sem edição retroativa** — o que sobra é o
+        caso de 95% dos professores, que é "toda terça, 19h"
 - [ ] **Epic 6.5 — Calendário (web)**
-  - [ ] Visões dia/semana/mês
-  - [ ] Criação e arraste com feedback de conflito
-- [ ] **Epic 6.6 — Registro de aula**
-  - [ ] Marcar presença/falta e realizada
-  - [ ] Notas da aula
+  - [ ] Dia e semana em grade, mês em densidade
+  - [ ] Criação clicando no horário livre, com feedback de conflito. **Sem arraste** — é o
+        amortecedor declarado do cronograma
+
+**Parte B — o aluno marca sozinho.** Só começa com a Parte A fechada.
+
+- [ ] **Epic 6.7 — Reserva pelo aluno (web)**
+  - [ ] Os horários livres de um professor dele, dentro da janela de 14 dias
+  - [ ] Reservar, e cancelar dentro da antecedência de 24 h
+  - [ ] **O portão da assistência do responsável** — `GuardianAssistanceService.pendente()`, que
+        a Fase 5.7 construiu *fail-closed* exatamente para isto. Ele fecha o adolescente
+        **marcar**; não fecha o professor marcar para ele, nem o adolescente **cancelar**
+  - [ ] **Na web, e é decisão**: o aluno não instala aplicativo para marcar duas aulas por semana
+        (`iam.md` §10). A agenda do aluno no aplicativo é da Fase 11
 
 ### Decisões da fase
 
-- [ ] Política de conflitos: bloquear sempre, permitir com aviso, permitir *overbooking* explícito?
-- [ ] Comportamento de aulas recorrentes ao editar disponibilidade retroativamente
-- [ ] Timezone: armazenar em UTC e converter na borda? Qual é o fuso de referência do profissional? Como tratar horário de verão?
-- [ ] Política de cancelamento: prazo, por quem, consequência (regra financeira detalhada na Fase 7)
-- [ ] Aula tem duração fixa por modalidade ou livre?
+**As nove estavam abertas na manhã de 2026-08-30. Todas foram fechadas na abertura da fase**, e o
+porquê de cada uma está no documento nomeado.
+
+- [x] ~~Política de conflitos: bloquear sempre, permitir com aviso, permitir *overbooking*?~~
+      **Bloquear sempre, e no banco.** *Overbooking* de uma quadra é uma segunda quadra, e quem
+      tem duas cadastra duas — a resposta certa é modelagem, não exceção. Permitir com aviso põe a
+      garantia na tela, e tela não é garantia. ADR-007 §3
+- [x] ~~Comportamento de aulas recorrentes ao editar disponibilidade retroativamente~~ **Mudar a
+      grade nunca mexe em aula marcada.** É o padrão "nada muda sozinho" das Fases 5 e 5.5. O que
+      aparece é uma **lista** de aulas que ficaram fora da nova disponibilidade, ao lado da lista
+      de aulas sem professor. Regras §1.2
+- [x] ~~Timezone~~ **UTC no banco; o fuso é do local, não do profissional nem do aluno** — a aula
+      acontece no relógio da quadra. Coluna nova `locations.time_zone` (IANA), pré-preenchida pela
+      UF e editável: o Brasil tem quatro fusos e o Amazonas tem dois, então **nenhuma UF garante o
+      fuso sozinha**. Sem horário de verão desde 2019, mas as duas regras de salto ficam escritas
+      e testadas, porque ele já voltou antes. ADR-007 §1.3
+- [x] ~~Política de cancelamento~~ **24 h por padrão, ajustável por professor.** Dentro do prazo o
+      aluno cancela sozinho; fora dele, não cancela — avisa o professor, e ele decide. **Nesta
+      fase não custa dinheiro nem crédito**, porque crédito não existe: a fase **registra o
+      fato**, com o prazo copiado no nascimento da aula, para a Fase 7 encontrar o dado pronto.
+      Regras §3
+- [x] ~~Aula tem duração fixa por modalidade ou livre?~~ **Padrão por (modalidade, formato),
+      editável na aula.** Nem fixa (proíbe a experimental de 30 minutos) nem livre (cobra dois
+      campos por aula, todo dia, por uma informação que quase nunca muda). Coluna nova
+      `professional_sport_prices.default_duration_minutes` — hoje o sistema sabe quanto uma aula
+      custa e não sabe quanto dura, o que deixa "R$ 120" pela metade
 - [x] ~~Quem pode agendar: só o profissional, ou o aluno também?~~ **Fechada pelo dono em
       2026-08-29: os dois, e quem decide é o professor**, por uma chave dele. Ver o requisito (A)
       no cabeçalho da fase
-- [ ] **Nível do aluno: onde mora, e por modalidade?** — requisito (C). O mesmo aluno é avançado
-      no tênis e iniciante no padel, então nível na ficha "solto" já nasce errado. Decidir junto
-      da Fase 8, que é quem consome
-- [ ] Reagendamento cria nova aula ou altera a existente? (impacta histórico e auditoria)
-- [ ] Horizonte de materialização de séries recorrentes (gerar quantos meses à frente?)
-- [ ] Aula que aconteceu mas não foi marcada: fecha automaticamente após X horas?
+- [x] ~~**Nível do aluno: onde mora, e por modalidade?**~~ **Mora no par (ficha, modalidade), em
+      tabela própria — e nasce na Fase 8, não aqui.** O mesmo aluno é avançado no tênis e
+      iniciante no padel, então nível "solto" na ficha já nasce errado; isso está decidido. O que
+      mudou é **quando**: com `CLASS_GROUP` fora das faixas desta fase, nada aqui precisa do
+      nível, e mexer na ficha acionaria o gatilho da DT-012 — levar a carteira inteira para o
+      aplicativo — dentro da fase de maior risco do projeto. A escala ("iniciante, intermediário,
+      avançado", ou as letras do beach tennis) é a primeira pergunta da Fase 8
+- [x] ~~Reagendamento cria nova aula ou altera a existente?~~ **Altera a existente**, com contador
+      de remarcações e o carimbo da última. Criar aula nova a cada remarcação faria a Fase 7
+      estornar e recobrar por um evento que, para o aluno, é *"mudei de quinta para sexta"*. O
+      extrato completo de remarcações tem gatilho escrito e fase (9). Regras §3.3
+- [x] ~~Horizonte de materialização de séries recorrentes~~ **56 dias (8 semanas)**, ligado por
+      invariante à janela do aluno: **horizonte ≥ maior janela de agendamento**. Os dois números
+      são coisas diferentes — 14 dias é o que o **aluno** enxerga, 56 é o que o **sistema** cria
+      à frente — e confundi-los deixaria o aluno olhando para um horário que ainda não existe. O
+      número maior que o `product` recomendou perdeu o argumento quando o dono trocou 60 dias por
+      14. ADR-007 §5
+- [x] ~~Aula que aconteceu mas não foi marcada: fecha automaticamente após X horas?~~ **Sim, 24 h,
+      como realizada e sem presença marcada**, com 7 dias para o professor corrigir. Se cada aula
+      exigir um clique, ele registra as de segunda e desiste na quarta — mas o sistema não pode
+      afirmar que **uma pessoa** compareceu sem ninguém ter dito, porque na Fase 7 presença vira
+      dinheiro. Regras §4.3
 
 ### Tecnologias
 
@@ -2857,10 +2992,10 @@ ADRs previstas (não escritas ainda):
 | ADR-004 | Estratégia de autenticação | 2 | ✅ |
 | ADR-005 | Fronteira do perfil profissional | 3 | ✅ |
 | ADR-006 | **Equipe e delegação de acesso** | 5.5 | ✅ |
-| ADR-007 | Provedor de pagamento | 9 | ⬜ |
+| ADR-007 | **Modelagem temporal da agenda** | 6 | ✅ |
 | ADR-008 | Hospedagem e deploy | 18 | ⬜ |
 | ADR-009 | PostGIS e provedor de geocoding | 12 | ⬜ |
-| ADR-010 | Modelagem temporal da agenda | 6 | ⬜ |
+| ADR-010 | Provedor de pagamento | 9 | ⬜ |
 
 > **O 005 mudou de dono, e a regra vale para os próximos.** Estava reservado para PostGIS, e
 > foi tomado pela fronteira do perfil em 2026-08-25. Número de ADR se atribui **quando o
@@ -2935,15 +3070,15 @@ Estrutura-alvo. **Criar cada diretório apenas quando ele tiver conteúdo real.*
 | **Maior de idade sob responsável é caso normal** — o aviso da carteira vira oferta | 5 | nota ao fim da Fase 5 |
 | **Desvinculação do acesso pedida pelo próprio aluno maior de idade** | 11 | nota ao fim da Fase 5 |
 | ~~**Teto de membros por equipe**~~ ✅ **fica em 50**, decidido pela revisão de segurança em 2026-08-30; o que mudou foi o lugar da conferência | 5.5 | `docs/domain/staff.md` §13 |
-| **Nível do aluno: onde mora, e por modalidade?** — turma só aceita aluno do mesmo nível (requisito do dono, 2026-08-29). O conceito não existe em lugar nenhum hoje, e o mesmo aluno é avançado no tênis e iniciante no padel | 6 / 8 | cabeçalho da Fase 6 |
+| ~~**Nível do aluno: onde mora, e por modalidade?**~~ **Onde** está decidido: o par (ficha, modalidade), em tabela própria. **Quando** também: a Fase 8, que é quem consome — a 6 não precisa dele, e mexer na ficha antes acionaria a DT-012. Falta só a **escala** | 8 | `docs/product/2026-08-30-abertura-fase-06.md` §1.4 |
 | **O preço da modalidade pode mudar de local para local?** — o clube fica com uma parte, então ele cobra diferente lá. Caso real, e pendurar dinheiro agora numa tabela que ainda não cobra seria prematuro | 9 | `docs/domain/professional-profile.md` §7.1b |
 | **A base legal da ficha de criança com menos de 12 anos** — hoje é legítimo interesse; o art. 14 §1 pede consentimento nessa faixa. Não é o mecanismo que está em dúvida, é a base legal | 5.7 | **advogado.** `iam.md` §8.1 |
-| Política de conflitos de agenda | 6 | `docs/domain/scheduling.md` |
-| Timezone e modelagem temporal | 6 | ADR-010 |
-| Política de cancelamento | 6 / 7 | `docs/domain/scheduling.md` |
+| ~~Política de conflitos de agenda~~ **bloquear sempre, e no banco** | ✅ 6 | ADR-007 §3 |
+| ~~Timezone e modelagem temporal~~ **o fuso é do local; UTC no banco** | ✅ 6 | **ADR-007** |
+| ~~Política de cancelamento~~ **24 h, ajustável; a Fase 6 registra o fato, a 7 lhe dá preço** | ✅ 6 / 7 | `docs/product/2026-08-30-agenda-regras.md` §3 |
 | Consumo, validade e estorno de créditos | 7 | `docs/domain/packages-credits.md` |
 | Comportamento da lista de espera | 8 | `docs/domain/class-groups.md` |
-| Provedor de pagamento e fluxo do dinheiro | 9 | ADR-007 |
+| Provedor de pagamento e fluxo do dinheiro | 9 | **ADR-010** — o 007 foi para a modelagem temporal |
 | Modelo de monetização | 9 | `docs/product/` |
 | Provedor e custo de WhatsApp | 10 | `docs/domain/notifications.md` |
 | Quem pode reservar e cancelar no app | 11 | `docs/domain/scheduling.md` |
