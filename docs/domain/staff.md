@@ -328,6 +328,11 @@ está associado a mim".
 > A outra é **falha fechada** e virou pendência da Fase 6: *ver os locais e espaços do negócio*
 > diz **sim** e a rota devolve os locais do próprio membro. Registrada em `tech-debt.md` como
 > DT-016, junto de E12, que depende da mesma consulta.
+>
+> **Fechada em 2026-08-30**, na abertura da Fase 6 e antes do primeiro épico dela:
+> `GET /professionals/me/locations?negocio=` devolve os locais e espaços do negócio, e **só a
+> leitura** aceita o parâmetro — criar, editar e apagar continuam sendo do dono, que é a linha
+> de baixo da mesma célula. **E12 continua de pé**, porque depende de `sessions`.
 
 **Contando só as colunas *Dono* e *Membro*: catorze recusas absolutas e dez restrições** ("só as
 dele"). O `iam.md` §7.6 exige teste para cada uma, e a restrição precisa de **dois** testes — o

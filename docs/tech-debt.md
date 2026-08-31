@@ -428,7 +428,28 @@ ficar em silêncio — foi o achado #9 da revisão da Fase 5.5.
 **Gatilho para pagar:** a Fase 9, quando a ficha ganhar o primeiro campo de dinheiro. Aí a
 terceira forma deixa de ser cópia e passa a ter conteúdo próprio.
 
-### DT-016 — O membro não enxerga os locais e os espaços do negócio
+### ~~DT-016 — O membro não enxerga os locais e os espaços do negócio~~ ✅ resolvido em 2026-08-30
+
+Resolvido na abertura da Fase 6, pelo gatilho previsto e antes do primeiro épico. `GET
+/professionals/me/locations` passou a aceitar `?negocio=`, resolvido por `ProfissionalAtual.negocio()`
+— que é `escopoDaCarteira` do `iam`, a mesma porta que a carteira de alunos já usava. **Nada
+novo precisou ser inventado:** o mecanismo e o DTO validado nasceram na Fase 5.5 e nunca tinham
+sido ligados aqui.
+
+**A assimetria é a regra, e é o que os testes guardam:** só a rota de *leitura* aceita o
+parâmetro. As de escrita continuam em `id()`, a carteira de quem chama — um membro que mande
+`POST` cria quadra no perfil **dele**, nunca no do clube. Quatro testes em
+`e2e/equipe-acesso.spec.ts`, **dois provados quebrando**: desligar a checagem de participação
+derruba o 404, e desligar o parâmetro derruba a leitura. Custo de cadastro: **zero** — entraram
+no arquivo que já monta dono e membro, como a DT-018 exige.
+
+Fica de pé a outra metade da célula: **E12, ver a ocupação dos espaços com o nome do colega**,
+que depende de `sessions` e sai dentro da fase.
+
+---
+
+<details>
+<summary>O texto original</summary>
 
 **O que:** a matriz da `staff.md` §7 diz "ver os locais e espaços do negócio · Membro: **sim**".
 `GET /professionals/me/locations` como membro devolve **os locais dele**, não os do clube —
@@ -444,6 +465,8 @@ segurança, é célula de matriz sem implementação.
 **Gatilho para pagar:** a Fase 6, obrigatoriamente e junto com E12 (ver a ocupação dos espaços
 com o nome do colega), que depende da mesma consulta. Um professor que não sabe em qual quadra
 vai dar aula não tem agenda.
+
+</details>
 
 ### DT-017 — O token do convite fica em claro na fila do Redis por 7 dias
 

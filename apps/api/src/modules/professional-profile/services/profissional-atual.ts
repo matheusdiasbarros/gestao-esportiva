@@ -27,4 +27,27 @@ export class ProfissionalAtual {
     }
     return professionalId;
   }
+
+  /**
+   * De qual **negócio** é a leitura — a própria carteira, ou a de uma equipe de que a conta faz
+   * parte.
+   *
+   * Existe só para **leitura**, e a assimetria é a regra: a matriz da `staff.md` §7 diz que o
+   * membro vê os locais e espaços do negócio e **não** os cria, edita ou apaga. Por isso as
+   * rotas de escrita continuam em `id()`, que é sempre a carteira de quem chama — um membro que
+   * mande `POST` cria quadra no perfil **dele**, nunca no do clube, e isso não é acidente feliz:
+   * é a única porta que a escrita conhece.
+   *
+   * Negócio de que a conta não participa responde **404**, não 403, e a decisão é do
+   * `AccessService`: dizer "existe, mas você não está nele" confirmaria a existência daquele
+   * profissional a quem só tem o identificador.
+   *
+   * **Isto é a DT-016**, aberta pela revisão de segurança da Fase 5.5 e fechada na abertura da
+   * Fase 6 — a célula da matriz existia desde então sem implementação, e ela vira bloqueio aqui
+   * porque um professor que não sabe em qual quadra vai dar aula não tem agenda.
+   */
+  async negocio(userId: string, negocioId?: string): Promise<string> {
+    const { professionalId } = await this.access.escopoDaCarteira(userId, negocioId);
+    return professionalId;
+  }
 }

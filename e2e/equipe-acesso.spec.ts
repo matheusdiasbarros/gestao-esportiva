@@ -361,6 +361,96 @@ test.describe('O que o dono não vê', () => {
  * Fica no fim do arquivo de propósito: depois daqui o membro não faz mais parte da equipe, e
  * qualquer teste acrescentado abaixo herdaria esse estado.
  */
+/**
+ * **DT-016 — o membro precisa saber em qual quadra vai dar aula.**
+ *
+ * A matriz da `staff.md` §7 diz *ver os locais e espaços do negócio: **sim***, e a rota devolvia
+ * os locais **dele**, não os do clube. Era falha fechada — ele via de menos, nunca de mais —, e
+ * por isso a revisão de segurança da Fase 5.5 a registrou como dívida em vez de defeito. Vira
+ * bloqueio na Fase 6: um professor que não sabe onde vai dar aula não tem agenda.
+ *
+ * O par de sempre neste arquivo: o que ele alcança, e o que ele **não** alcança. Aqui o segundo
+ * é o mais importante, porque *ver* e *gerenciar* são células diferentes da mesma linha da
+ * matriz, e a rota de leitura e as de escrita agora resolvem a carteira por caminhos diferentes.
+ */
+test.describe('Os locais e as quadras do negócio — DT-016', () => {
+  let localDoClube: string;
+
+  test.beforeAll(async () => {
+    const criado = await comoDono.post(`${API}/professionals/me/locations`, {
+      data: { name: 'Arena Central', kind: 'OWN_VENUE', city: 'Florianópolis', state: 'SC' },
+    });
+    expect(criado.status()).toBe(201);
+    localDoClube = ((await criado.json()) as { id: string }).id;
+
+    expect(
+      (
+        await comoDono.post(`${API}/professionals/me/locations/${localDoClube}/spaces`, {
+          data: { name: 'Quadra 2' },
+        })
+      ).status(),
+    ).toBe(201);
+  });
+
+  test.afterAll(async () => {
+    await comoDono.delete(`${API}/professionals/me/locations/${localDoClube}`);
+  });
+
+  test('o membro enxerga os locais do negócio, com as quadras dentro', async () => {
+    const resposta = await comoMembro.get(
+      `${API}/professionals/me/locations?negocio=${carteiraDoDono}`,
+    );
+    expect(resposta.status()).toBe(200);
+
+    const locais = (await resposta.json()) as { id: string; spaces: { name: string }[] }[];
+    const arena = locais.find((local) => local.id === localDoClube);
+
+    expect(arena, 'o membro não enxergou o local do clube em que ele dá aula').toBeDefined();
+    expect(arena?.spaces.map((espaco) => espaco.name)).toContain('Quadra 2');
+  });
+
+  test('sem dizer o negócio, ele continua vendo só a lista dele', async () => {
+    // **Este é o teste que prova que a rota não passou a vazar.** Sem ele, trocar
+    // `escopoDaCarteira` por "os locais de todo mundo em quem eu confio" passaria em verde.
+    const locais = (await (await comoMembro.get(`${API}/professionals/me/locations`)).json()) as {
+      id: string;
+    }[];
+
+    expect(locais.map((local) => local.id)).not.toContain(localDoClube);
+  });
+
+  test('negócio de que ele não participa responde 404, e não 403', async () => {
+    // 404 é decisão de segurança, não descuido: 403 confirmaria que aquele profissional existe
+    // a quem só tem o identificador dele.
+    const resposta = await comoMembro.get(
+      `${API}/professionals/me/locations?negocio=${CARTEIRA_INEXISTENTE}`,
+    );
+    expect(resposta.status()).toBe(404);
+  });
+
+  test('ele vê, e não cadastra quadra no clube', async () => {
+    // A rota de escrita **não aceita `?negocio=`**, e o parâmetro aqui é para provar que mandá-lo
+    // não muda nada: a quadra nasce no perfil do próprio membro, nunca no do clube.
+    const criado = await comoMembro.post(
+      `${API}/professionals/me/locations?negocio=${carteiraDoDono}`,
+      { data: { name: 'Quadra Pirata', kind: 'OWN_VENUE', city: 'Florianópolis', state: 'SC' } },
+    );
+    expect(criado.status()).toBe(201);
+    const intrusa = ((await criado.json()) as { id: string }).id;
+
+    const doClube = (await (await comoDono.get(`${API}/professionals/me/locations`)).json()) as {
+      id: string;
+    }[];
+
+    expect(
+      doClube.map((local) => local.id),
+      'o membro cadastrou local dentro da carteira do dono',
+    ).not.toContain(intrusa);
+
+    await comoMembro.delete(`${API}/professionals/me/locations/${intrusa}`);
+  });
+});
+
 test.describe('Quem saiu perde na hora, e as fichas ficam sem professor', () => {
   let doClube: string;
   let particular: string;

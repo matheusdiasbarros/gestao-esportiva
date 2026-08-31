@@ -10,10 +10,12 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../iam/auth/current-user.decorator';
 import { Papeis } from '../iam/auth/papeis.decorator';
+import { CarteiraQuery } from '../iam/dto/carteira.dto';
 import { CreateLocationDto, SpaceDto, UpdateLocationDto } from './dto/location.dto';
 import { LocationsService } from './services/locations.service';
 import { ProfissionalAtual } from './services/profissional-atual';
@@ -34,10 +36,18 @@ export class LocationsController {
     private readonly profissional: ProfissionalAtual,
   ) {}
 
+  /**
+   * **A única rota deste controller que aceita `?negocio=`**, e a assimetria é a regra da
+   * `staff.md` §7: o membro da equipe **vê** os locais e espaços do negócio e não os gerencia.
+   * Sem esta leitura ele não sabe em qual quadra vai dar aula — DT-016.
+   */
   @Get()
   @ApiOperation({ summary: 'Os locais de atendimento, com o principal na frente' })
-  async listar(@CurrentUser() user: AuthenticatedUser): Promise<LocationRow[]> {
-    return this.locais.listar(await this.profissional.id(user.id));
+  async listar(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: CarteiraQuery,
+  ): Promise<LocationRow[]> {
+    return this.locais.listar(await this.profissional.negocio(user.id, query.negocio));
   }
 
   @Post()
