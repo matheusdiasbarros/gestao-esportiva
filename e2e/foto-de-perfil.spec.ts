@@ -5,7 +5,7 @@ import {
   type BrowserContext,
   type Page,
 } from '@playwright/test';
-import { cadastrar } from './apoio';
+import { cadastrar, type Conta } from './apoio';
 import {
   GIF,
   JPEG_COM_EXIF,
@@ -47,18 +47,45 @@ function enviar(
   });
 }
 
+/**
+ * **Uma conta para o bloco, e não uma por teste** — DT-018.
+ *
+ * Estes cinco testes **gravam**, ao contrário dos do bloco de baixo, então compartilhar a conta
+ * exige duas coisas: execução serial, e a foto removida antes de cada um. As duas custam uma
+ * requisição; cinco cadastros custam cinco unidades de um teto de 100 por hora que a suíte
+ * inteira divide, e a margem era zero.
+ */
 test.describe('Enviar a foto', () => {
-  test('a foto entra, vira WebP e conta na completude', async ({ page }) => {
-    await cadastrar(page);
+  test.describe.configure({ mode: 'serial' });
 
-    const envio = await enviar(page.request, JPEG_COM_EXIF);
+  let contexto: BrowserContext;
+  let pagina: Page;
+
+  test.beforeAll(async ({ browser }) => {
+    contexto = await browser.newContext();
+    pagina = await contexto.newPage();
+    await cadastrar(pagina);
+  });
+
+  test.afterAll(async () => {
+    await contexto.close();
+  });
+
+  // Volta ao estado de perfil sem foto. Sem isto, "a completude vai a zero" leria a foto que o
+  // teste anterior deixou.
+  test.beforeEach(async () => {
+    await pagina.request.delete(`${API}/professionals/me/photo`);
+  });
+
+  test('a foto entra, vira WebP e conta na completude', async () => {
+    const envio = await enviar(pagina.request, JPEG_COM_EXIF);
     expect(envio.status()).toBe(201);
 
     const perfil = (await envio.json()) as Perfil;
     expect(perfil.completeness).toMatchObject({ hasPhoto: true, done: 1 });
     expect(perfil.photoUrl).toMatch(/^professionals\/photos\/[0-9a-f]{32}\.webp\?v=\d+$/);
 
-    const imagem = await page.request.get(`${API}/${perfil.photoUrl}`);
+    const imagem = await pagina.request.get(`${API}/${perfil.photoUrl}`);
     expect(imagem.status()).toBe(200);
     // Entrou JPEG, sai WebP: o que fica gravado é uma imagem **reescrita por nós**, e não os
     // bytes que chegaram. Um formato em disco significa um tipo de conteúdo na resposta.
@@ -66,51 +93,46 @@ test.describe('Enviar a foto', () => {
     expect((await imagem.body()).subarray(8, 12).toString()).toBe('WEBP');
   });
 
-  test('o EXIF não sobrevive — é o endereço de casa de quem tirou a selfie', async ({ page }) => {
-    await cadastrar(page);
-
+  test('o EXIF não sobrevive — é o endereço de casa de quem tirou a selfie', async () => {
     // A entrada tem a sonda dentro, junto com coordenadas de GPS. Se ela chegar do outro lado,
     // a plataforma publicou em `/treine-com/:slug` onde a foto foi tirada.
     expect(JPEG_COM_EXIF.includes(Buffer.from(SONDA_DE_EXIF))).toBe(true);
 
-    const { photoUrl } = (await (await enviar(page.request, JPEG_COM_EXIF)).json()) as Perfil;
-    const servida = await (await page.request.get(`${API}/${photoUrl}`)).body();
+    const { photoUrl } = (await (await enviar(pagina.request, JPEG_COM_EXIF)).json()) as Perfil;
+    const servida = await (await pagina.request.get(`${API}/${photoUrl}`)).body();
 
     expect(servida.includes(Buffer.from(SONDA_DE_EXIF))).toBe(false);
     expect(servida.includes(Buffer.from('EXIF'))).toBe(false);
     expect(servida.includes(Buffer.from('GPS'))).toBe(false);
   });
 
-  test('PNG também entra', async ({ page }) => {
-    await cadastrar(page);
-    expect((await enviar(page.request, PNG, 'foto.png', 'image/png')).status()).toBe(201);
+  test('PNG também entra', async () => {
+    expect((await enviar(pagina.request, PNG, 'foto.png', 'image/png')).status()).toBe(201);
   });
 
-  test('trocar a foto muda o endereço e derruba o anterior', async ({ page }) => {
-    await cadastrar(page);
-    const primeira = ((await (await enviar(page.request, JPEG_COM_EXIF)).json()) as Perfil)
+  test('trocar a foto muda o endereço e derruba o anterior', async () => {
+    const primeira = ((await (await enviar(pagina.request, JPEG_COM_EXIF)).json()) as Perfil)
       .photoUrl;
     const segunda = (
-      (await (await enviar(page.request, PNG, 'f.png', 'image/png')).json()) as Perfil
+      (await (await enviar(pagina.request, PNG, 'f.png', 'image/png')).json()) as Perfil
     ).photoUrl;
 
     expect(segunda).not.toBe(primeira);
     // O arquivo antigo é apagado do disco. Sem isso, cada troca deixaria para trás a foto que a
     // pessoa quis substituir — e uma URL que ainda a mostra não é substituição, é acúmulo.
-    expect((await page.request.get(`${API}/${primeira}`)).status()).toBe(404);
-    expect((await page.request.get(`${API}/${segunda}`)).status()).toBe(200);
+    expect((await pagina.request.get(`${API}/${primeira}`)).status()).toBe(404);
+    expect((await pagina.request.get(`${API}/${segunda}`)).status()).toBe(200);
   });
 
-  test('remover a foto apaga o arquivo e volta a completude', async ({ page }) => {
-    await cadastrar(page);
-    const { photoUrl } = (await (await enviar(page.request, JPEG_COM_EXIF)).json()) as Perfil;
+  test('remover a foto apaga o arquivo e volta a completude', async () => {
+    const { photoUrl } = (await (await enviar(pagina.request, JPEG_COM_EXIF)).json()) as Perfil;
 
-    expect((await page.request.delete(`${API}/professionals/me/photo`)).status()).toBe(204);
+    expect((await pagina.request.delete(`${API}/professionals/me/photo`)).status()).toBe(204);
 
-    const perfil = await perfilDe(page);
+    const perfil = await perfilDe(pagina);
     expect(perfil.photoUrl).toBeNull();
     expect(perfil.completeness).toMatchObject({ hasPhoto: false, done: 0 });
-    expect((await page.request.get(`${API}/${photoUrl}`)).status()).toBe(404);
+    expect((await pagina.request.get(`${API}/${photoUrl}`)).status()).toBe(404);
   });
 });
 
@@ -195,13 +217,26 @@ test.describe('O que o servidor recusa', () => {
   });
 });
 
+/** Uma conta para o bloco, pelo mesmo motivo dos outros dois — DT-018. */
 test.describe('A rota que serve a foto', () => {
-  test('é pública — a página de captação é vista por quem não tem conta', async ({
-    page,
-    request,
-  }) => {
-    await cadastrar(page);
-    const { photoUrl } = (await (await enviar(page.request, JPEG_COM_EXIF)).json()) as Perfil;
+  test.describe.configure({ mode: 'serial' });
+
+  let contexto: BrowserContext;
+  let pagina: Page;
+  let conta: Conta;
+
+  test.beforeAll(async ({ browser }) => {
+    contexto = await browser.newContext();
+    pagina = await contexto.newPage();
+    conta = await cadastrar(pagina);
+  });
+
+  test.afterAll(async () => {
+    await contexto.close();
+  });
+
+  test('é pública — a página de captação é vista por quem não tem conta', async ({ request }) => {
+    const { photoUrl } = (await (await enviar(pagina.request, JPEG_COM_EXIF)).json()) as Perfil;
 
     // `request` é um contexto sem sessão nenhuma.
     const semSessao = await request.get(`${API}/${photoUrl}`);
@@ -209,10 +244,9 @@ test.describe('A rota que serve a foto', () => {
     expect(semSessao.headers()['x-content-type-options']).toBe('nosniff');
   });
 
-  test('o nome do arquivo não diz de quem é a foto', async ({ page }) => {
-    const conta = await cadastrar(page);
-    const { id } = (await (await page.request.get(`${API}/auth/me`)).json()) as { id: string };
-    const { photoUrl } = (await (await enviar(page.request, JPEG_COM_EXIF)).json()) as Perfil;
+  test('o nome do arquivo não diz de quem é a foto', async () => {
+    const { id } = (await (await pagina.request.get(`${API}/auth/me`)).json()) as { id: string };
+    const { photoUrl } = (await (await enviar(pagina.request, JPEG_COM_EXIF)).json()) as Perfil;
 
     // A foto é servida sem autenticação. O que protege a privacidade é o nome ser aleatório:
     // derivado de identificador, a URL contaria de quem é; previsível, daria para varrer a

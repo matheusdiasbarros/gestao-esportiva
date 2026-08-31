@@ -1,4 +1,10 @@
-import { expect, test, type Page } from '@playwright/test';
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type BrowserContext,
+  type Page,
+} from '@playwright/test';
 import { cadastrar, contaNova } from './apoio';
 
 /**
@@ -56,6 +62,48 @@ interface Perfil {
   };
 }
 
+test.describe.configure({ mode: 'serial' });
+
+/**
+ * **Uma conta para o arquivo inteiro, e não uma por teste** — DT-018.
+ *
+ * Este arquivo criava 26 contas, sozinho, e a suíte tem 100 cadastros por hora. A margem era
+ * zero, e o sintoma de estourá-la aparece longe daqui: um teste de outro arquivo falha porque a
+ * conta dele não pôde nascer. Cada teste agora começa de um perfil limpo, e limpar não custa
+ * cadastro nenhum.
+ *
+ * `mode: 'serial'` é o que torna isso seguro: com a conta compartilhada, dois testes em paralelo
+ * mexeriam no mesmo perfil.
+ */
+let contexto: BrowserContext;
+let pagina: Page;
+let como: APIRequestContext;
+
+/** Um segundo profissional, para as duas afirmações sobre recurso alheio. */
+let contextoOutro: BrowserContext;
+let comoOutro: APIRequestContext;
+
+test.beforeAll(async ({ browser }) => {
+  contexto = await browser.newContext();
+  pagina = await contexto.newPage();
+  await cadastrar(pagina);
+  como = pagina.request;
+
+  contextoOutro = await browser.newContext();
+  const abaDoOutro = await contextoOutro.newPage();
+  await cadastrar(abaDoOutro);
+  comoOutro = abaDoOutro.request;
+});
+
+test.afterAll(async () => {
+  await contexto.close();
+  await contextoOutro.close();
+});
+
+test.beforeEach(async () => {
+  await limparPerfil();
+});
+
 const emJurere = {
   name: 'Arena Beira-Mar',
   kind: 'PARTNER_VENUE',
@@ -65,11 +113,34 @@ const emJurere = {
   state: 'SC',
 };
 
-async function perfilDe(page: Page): Promise<Perfil> {
-  const resposta = await page.request.get(`${API}/professionals/me`);
+async function perfilDe(): Promise<Perfil> {
+  const resposta = await como.get(`${API}/professionals/me`);
   expect(resposta.status()).toBe(200);
   return (await resposta.json()) as Perfil;
 }
+
+/**
+ * Devolve o perfil ao estado de recém-criado: sem modalidade, sem local, sem bio.
+ *
+ * **É o que substitui uma conta por teste.** Cada teste daqui precisa de um perfil limpo — vários
+ * afirmam "a completude diz zero de três" —, e a forma barata de conseguir isso era criar uma
+ * conta nova toda vez. Barata em código, cara no único recurso que a suíte não tem: cadastros por
+ * hora. Limpar custa duas requisições e nenhum cadastro.
+ */
+async function limparPerfil(): Promise<void> {
+  const perfil = await perfilDe();
+  for (const modalidade of perfil.sports) {
+    await como.delete(`${API}/professionals/me/sports/${modalidade.id}`);
+  }
+  for (const local of perfil.locations) {
+    await como.delete(`${API}/professionals/me/locations/${local.id}`);
+  }
+  await como.patch(`${API}/professionals/me`, { data: { bio: '', credentials: '' } });
+}
+
+// **O que `limparPerfil` não desfaz:** a modalidade *pendente* que o escape cria. Ela é linha do
+// catálogo, que é compartilhado, e o teto de três por conta conta as criadas — não as vinculadas.
+// É por isso que o teste do teto tem conta própria.
 
 test.describe('Quem pode chegar ao perfil', () => {
   test('visitante recebe 401 em todas as rotas do perfil', async ({ request }) => {
@@ -83,6 +154,8 @@ test.describe('Quem pode chegar ao perfil', () => {
   });
 
   test('aluno recebe 403 — a rota existe, o papel não alcança', async ({ page }) => {
+    // **O único cadastro de aluno deste arquivo, e ele é insubstituível:** a afirmação é sobre o
+    // papel, e a sessão compartilhada é de profissional.
     const conta = contaNova();
     await page.goto('/criar-conta/aluno');
     await page.getByLabel('Nome completo').fill(conta.nome);
@@ -104,9 +177,8 @@ test.describe('O catálogo de modalidades', () => {
     expect((await request.get(`${API}/sports`)).status()).toBe(401);
   });
 
-  test('para quem está logado, traz só as aprovadas', async ({ page }) => {
-    await cadastrar(page);
-    const resposta = await page.request.get(`${API}/sports`);
+  test('para quem está logado, traz só as aprovadas', async () => {
+    const resposta = await como.get(`${API}/sports`);
     expect(resposta.status()).toBe(200);
 
     const catalogo = (await resposta.json()) as { id: string; name: string; status: string }[];
@@ -117,9 +189,8 @@ test.describe('O catálogo de modalidades', () => {
 });
 
 test.describe('Sobre mim', () => {
-  test('perfil novo vem vazio, e a completude diz zero de três', async ({ page }) => {
-    await cadastrar(page);
-    const perfil = await perfilDe(page);
+  test('perfil novo vem vazio, e a completude diz zero de três', async () => {
+    const perfil = await perfilDe();
 
     // Conta recém-criada não tem linha de perfil, e isso é estado válido: a resposta descreve
     // o vazio em vez de 404. A tela precisa do vazio para mostrar o que falta.
@@ -139,10 +210,8 @@ test.describe('Sobre mim', () => {
     });
   });
 
-  test('salvar um bloco não apaga o outro, e vazio apaga de propósito', async ({ page }) => {
-    await cadastrar(page);
-
-    const comBio = await page.request.patch(`${API}/professionals/me`, {
+  test('salvar um bloco não apaga o outro, e vazio apaga de propósito', async () => {
+    const comBio = await como.patch(`${API}/professionals/me`, {
       data: { bio: 'Dou aula de beach tennis em Jurerê há dez anos.' },
     });
     expect(comBio.status()).toBe(200);
@@ -150,21 +219,20 @@ test.describe('Sobre mim', () => {
     // O segundo salvamento manda só a formação. Se a bio sumisse aqui, salvar um bloco do
     // editor apagaria o outro — o defeito que a distinção entre ausente e vazio existe para
     // impedir.
-    await page.request.patch(`${API}/professionals/me`, {
+    await como.patch(`${API}/professionals/me`, {
       data: { credentials: 'CREF 000000-G/SC' },
     });
 
-    const depois = await perfilDe(page);
+    const depois = await perfilDe();
     expect(depois.bio).toBe('Dou aula de beach tennis em Jurerê há dez anos.');
     expect(depois.credentials).toBe('CREF 000000-G/SC');
 
-    const limpa = await page.request.patch(`${API}/professionals/me`, { data: { bio: '' } });
+    const limpa = await como.patch(`${API}/professionals/me`, { data: { bio: '' } });
     expect(((await limpa.json()) as Perfil).bio).toBeNull();
   });
 
-  test('bio acima do limite é recusada com 422', async ({ page }) => {
-    await cadastrar(page);
-    const resposta = await page.request.patch(`${API}/professionals/me`, {
+  test('bio acima do limite é recusada com 422', async () => {
+    const resposta = await como.patch(`${API}/professionals/me`, {
       data: { bio: 'a'.repeat(601) },
     });
     expect(resposta.status()).toBe(422);
@@ -172,10 +240,8 @@ test.describe('Sobre mim', () => {
 });
 
 test.describe('Modalidades e preços', () => {
-  test('acrescentar uma modalidade com preço muda a completude', async ({ page }) => {
-    await cadastrar(page);
-
-    const criada = await page.request.post(`${API}/professionals/me/sports`, {
+  test('acrescentar uma modalidade com preço muda a completude', async () => {
+    const criada = await como.post(`${API}/professionals/me/sports`, {
       data: {
         sportId: BEACH_TENNIS,
         experienceSinceYear: 2016,
@@ -187,7 +253,7 @@ test.describe('Modalidades e preços', () => {
     });
     expect(criada.status()).toBe(201);
 
-    const perfil = await perfilDe(page);
+    const perfil = await perfilDe();
     expect(perfil.completeness).toMatchObject({ hasSportWithPrice: true, done: 1 });
     expect(perfil.sports).toHaveLength(1);
     expect(perfil.sports[0]).toMatchObject({
@@ -205,9 +271,7 @@ test.describe('Modalidades e preços', () => {
     ]);
   });
 
-  test('o preço é inteiro em centavos, e a borda da API recusa o resto', async ({ page }) => {
-    await cadastrar(page);
-
+  test('o preço é inteiro em centavos, e a borda da API recusa o resto', async () => {
     const recusados = [
       { rotulo: 'reais com centavos', amountCents: 120.5 },
       { rotulo: 'zero', amountCents: 0 },
@@ -216,27 +280,25 @@ test.describe('Modalidades e preços', () => {
     ];
 
     for (const { amountCents } of recusados) {
-      const resposta = await page.request.post(`${API}/professionals/me/sports`, {
+      const resposta = await como.post(`${API}/professionals/me/sports`, {
         data: { sportId: BEACH_TENNIS, prices: [{ sessionFormat: 'INDIVIDUAL', amountCents }] },
       });
       expect(resposta.status()).toBe(422);
     }
 
     // Nenhum dos quatro entrou: a modalidade não existe no perfil.
-    expect((await perfilDe(page)).sports).toHaveLength(0);
+    expect((await perfilDe()).sports).toHaveLength(0);
   });
 
-  test('modalidade sem preço nenhum não entra', async ({ page }) => {
-    await cadastrar(page);
-    const resposta = await page.request.post(`${API}/professionals/me/sports`, {
+  test('modalidade sem preço nenhum não entra', async () => {
+    const resposta = await como.post(`${API}/professionals/me/sports`, {
       data: { sportId: BEACH_TENNIS, prices: [] },
     });
     expect(resposta.status()).toBe(422);
   });
 
-  test('dois preços para o mesmo formato não têm desempate possível', async ({ page }) => {
-    await cadastrar(page);
-    const resposta = await page.request.post(`${API}/professionals/me/sports`, {
+  test('dois preços para o mesmo formato não têm desempate possível', async () => {
+    const resposta = await como.post(`${API}/professionals/me/sports`, {
       data: {
         sportId: BEACH_TENNIS,
         prices: [
@@ -248,23 +310,19 @@ test.describe('Modalidades e preços', () => {
     expect(resposta.status()).toBe(422);
   });
 
-  test('a mesma modalidade duas vezes responde 409, com o que fazer', async ({ page }) => {
-    await cadastrar(page);
+  test('a mesma modalidade duas vezes responde 409, com o que fazer', async () => {
     const dados = {
       sportId: BEACH_TENNIS,
       prices: [{ sessionFormat: 'INDIVIDUAL', amountCents: 12000 }],
     };
-    expect(
-      (await page.request.post(`${API}/professionals/me/sports`, { data: dados })).status(),
-    ).toBe(201);
+    expect((await como.post(`${API}/professionals/me/sports`, { data: dados })).status()).toBe(201);
 
-    const repetida = await page.request.post(`${API}/professionals/me/sports`, { data: dados });
+    const repetida = await como.post(`${API}/professionals/me/sports`, { data: dados });
     expect(repetida.status()).toBe(409);
   });
 
-  test('escolher da lista e digitar o mesmo nome caem na mesma modalidade', async ({ page }) => {
-    await cadastrar(page);
-    await page.request.post(`${API}/professionals/me/sports`, {
+  test('escolher da lista e digitar o mesmo nome caem na mesma modalidade', async () => {
+    await como.post(`${API}/professionals/me/sports`, {
       data: {
         sportId: BEACH_TENNIS,
         prices: [{ sessionFormat: 'INDIVIDUAL', amountCents: 12000 }],
@@ -274,36 +332,46 @@ test.describe('Modalidades e preços', () => {
     // É o caso que motivou o catálogo curado: ele digita a variação sem perceber que já
     // escolheu a modalidade na lista. A normalização leva as duas à mesma linha, e o índice
     // único recusa — em vez de criar "beach-tennis" ao lado de "Beach tennis".
-    const digitada = await page.request.post(`${API}/professionals/me/sports`, {
+    const digitada = await como.post(`${API}/professionals/me/sports`, {
       data: { sportName: 'beach-tennis', prices: [{ sessionFormat: 'PAIR', amountCents: 8000 }] },
     });
     expect(digitada.status()).toBe(409);
   });
 
-  test('o escape cria uma pendente, e ela não entra no catálogo dos outros', async ({ page }) => {
-    await cadastrar(page);
+  test('o escape cria uma pendente, e ela não entra no catálogo dos outros', async () => {
     const nome = `Slackline ${Date.now()}`;
 
-    const criada = await page.request.post(`${API}/professionals/me/sports`, {
+    const criada = await como.post(`${API}/professionals/me/sports`, {
       data: { sportName: nome, prices: [{ sessionFormat: 'INDIVIDUAL', amountCents: 9000 }] },
     });
     expect(criada.status()).toBe(201);
 
-    const perfil = await perfilDe(page);
+    const perfil = await perfilDe();
     expect(perfil.sports[0]?.sport).toMatchObject({ name: nome, status: 'PENDING' });
 
     // A pendente é dele até a curadoria decidir. No catálogo público ela não aparece — se
     // aparecesse, cada variação digitada errada viraria opção para o próximo profissional.
-    const catalogo = (await (await page.request.get(`${API}/sports`)).json()) as { name: string }[];
+    const catalogo = (await (await como.get(`${API}/sports`)).json()) as { name: string }[];
     expect(catalogo.map((sport) => sport.name)).not.toContain(nome);
   });
 
-  test('o escape tem teto: três pendentes por conta', async ({ page }) => {
-    await cadastrar(page);
+  /**
+   * **O único teste do arquivo com conta própria, e o motivo é o assunto dele.**
+   *
+   * O teto de pendentes é **por conta e permanente**: apagar o vínculo com a modalidade não
+   * apaga a modalidade pendente que ela criou no catálogo, e nem deveria — o catálogo é recurso
+   * compartilhado, e é disso que o teto defende. Numa conta compartilhada, o teste anterior já
+   * teria gasto uma das três, e este falharia sem que nada estivesse errado no produto.
+   */
+  test('o escape tem teto: três pendentes por conta', async ({ browser }) => {
+    const contextoLimpo = await browser.newContext();
+    const abaLimpa = await contextoLimpo.newPage();
+    await cadastrar(abaLimpa);
+    const comoLimpo = abaLimpa.request;
     const semente = Date.now();
 
     for (let i = 0; i < 3; i++) {
-      const resposta = await page.request.post(`${API}/professionals/me/sports`, {
+      const resposta = await comoLimpo.post(`${API}/professionals/me/sports`, {
         data: {
           sportName: `Modalidade inventada ${semente} ${i}`,
           prices: [{ sessionFormat: 'INDIVIDUAL', amountCents: 5000 }],
@@ -312,7 +380,7 @@ test.describe('Modalidades e preços', () => {
       expect(resposta.status()).toBe(201);
     }
 
-    const quarta = await page.request.post(`${API}/professionals/me/sports`, {
+    const quarta = await comoLimpo.post(`${API}/professionals/me/sports`, {
       data: {
         sportName: `Modalidade inventada ${semente} 3`,
         prices: [{ sessionFormat: 'INDIVIDUAL', amountCents: 5000 }],
@@ -321,13 +389,12 @@ test.describe('Modalidades e preços', () => {
     // O escape existe para o professor de capoeira, não para alguém digitar cinquenta
     // variações num catálogo que é recurso compartilhado.
     expect(quarta.status()).toBe(422);
+
+    await contextoLimpo.close();
   });
 
-  test('escolher da lista e digitar ao mesmo tempo é ambiguidade, não preferência', async ({
-    page,
-  }) => {
-    await cadastrar(page);
-    const resposta = await page.request.post(`${API}/professionals/me/sports`, {
+  test('escolher da lista e digitar ao mesmo tempo é ambiguidade, não preferência', async () => {
+    const resposta = await como.post(`${API}/professionals/me/sports`, {
       data: {
         sportId: BEACH_TENNIS,
         sportName: 'Alguma outra coisa',
@@ -337,9 +404,8 @@ test.describe('Modalidades e preços', () => {
     expect(resposta.status()).toBe(422);
   });
 
-  test('ano de experiência no futuro é recusado', async ({ page }) => {
-    await cadastrar(page);
-    const resposta = await page.request.post(`${API}/professionals/me/sports`, {
+  test('ano de experiência no futuro é recusado', async () => {
+    const resposta = await como.post(`${API}/professionals/me/sports`, {
       data: {
         sportId: BEACH_TENNIS,
         experienceSinceYear: new Date().getUTCFullYear() + 1,
@@ -349,11 +415,8 @@ test.describe('Modalidades e preços', () => {
     expect(resposta.status()).toBe(422);
   });
 
-  test('a lista de preços enviada substitui a anterior — é como se deixa de oferecer um formato', async ({
-    page,
-  }) => {
-    await cadastrar(page);
-    await page.request.post(`${API}/professionals/me/sports`, {
+  test('a lista de preços enviada substitui a anterior — é como se deixa de oferecer um formato', async () => {
+    await como.post(`${API}/professionals/me/sports`, {
       data: {
         sportId: BEACH_TENNIS,
         prices: [
@@ -363,62 +426,55 @@ test.describe('Modalidades e preços', () => {
       },
     });
 
-    const { sports } = await perfilDe(page);
+    const { sports } = await perfilDe();
     const id = sports[0]?.id;
 
-    const editada = await page.request.patch(`${API}/professionals/me/sports/${id}`, {
+    const editada = await como.patch(`${API}/professionals/me/sports/${id}`, {
       data: { prices: [{ sessionFormat: 'INDIVIDUAL', amountCents: 13000 }] },
     });
     expect(editada.status()).toBe(200);
 
     // "Não dou mais aula em dupla" é a ausência da linha, nunca preço zero nem nulo.
-    expect((await perfilDe(page)).sports[0]?.prices).toEqual([
+    expect((await perfilDe()).sports[0]?.prices).toEqual([
       { sessionFormat: 'INDIVIDUAL', amountCents: 13000, defaultDurationMinutes: 60 },
     ]);
   });
 
-  test('remover a modalidade leva os preços junto e derruba a completude', async ({ page }) => {
-    await cadastrar(page);
-    await page.request.post(`${API}/professionals/me/sports`, {
+  test('remover a modalidade leva os preços junto e derruba a completude', async () => {
+    await como.post(`${API}/professionals/me/sports`, {
       data: { sportId: PADEL, prices: [{ sessionFormat: 'INDIVIDUAL', amountCents: 15000 }] },
     });
 
-    const { sports } = await perfilDe(page);
-    const remocao = await page.request.delete(`${API}/professionals/me/sports/${sports[0]?.id}`);
+    const { sports } = await perfilDe();
+    const remocao = await como.delete(`${API}/professionals/me/sports/${sports[0]?.id}`);
     expect(remocao.status()).toBe(204);
 
-    const depois = await perfilDe(page);
+    const depois = await perfilDe();
     expect(depois.sports).toHaveLength(0);
     expect(depois.completeness).toMatchObject({ hasSportWithPrice: false, done: 0 });
 
     // A modalidade saiu do perfil, não do catálogo: a FK é RESTRICT justamente para que
     // apagar um vínculo nunca alcance a linha compartilhada.
-    const catalogo = (await (await page.request.get(`${API}/sports`)).json()) as { id: string }[];
+    const catalogo = (await (await como.get(`${API}/sports`)).json()) as { id: string }[];
     expect(catalogo.map((sport) => sport.id)).toContain(PADEL);
   });
 
-  test('modalidade de outro profissional responde 404, e nunca 403', async ({ page, browser }) => {
-    const outro = await browser.newContext();
-    const abaDoOutro = await outro.newPage();
-    await cadastrar(abaDoOutro);
-    await abaDoOutro.request.post(`${API}/professionals/me/sports`, {
+  test('modalidade de outro profissional responde 404, e nunca 403', async () => {
+    await comoOutro.post(`${API}/professionals/me/sports`, {
       data: {
         sportId: BEACH_TENNIS,
         prices: [{ sessionFormat: 'INDIVIDUAL', amountCents: 12000 }],
       },
     });
-    const alheia = (await perfilDe(abaDoOutro)).sports[0]?.id;
-    await outro.close();
+    const alheia = ((await (await comoOutro.get(`${API}/professionals/me`)).json()) as Perfil)
+      .sports[0]?.id;
 
-    await cadastrar(page);
     // 403 diria "esta modalidade existe, mas não é sua" — e isso transforma a rota num
     // verificador de identificadores.
-    expect((await page.request.delete(`${API}/professionals/me/sports/${alheia}`)).status()).toBe(
-      404,
-    );
+    expect((await como.delete(`${API}/professionals/me/sports/${alheia}`)).status()).toBe(404);
     expect(
       (
-        await page.request.patch(`${API}/professionals/me/sports/${alheia}`, {
+        await como.patch(`${API}/professionals/me/sports/${alheia}`, {
           data: { experienceSinceYear: 2020 },
         })
       ).status(),
@@ -427,78 +483,71 @@ test.describe('Modalidades e preços', () => {
 });
 
 test.describe('Locais de atendimento', () => {
-  test('o primeiro local vira o principal sozinho', async ({ page }) => {
-    await cadastrar(page);
-
-    const criado = await page.request.post(`${API}/professionals/me/locations`, { data: emJurere });
+  test('o primeiro local vira o principal sozinho', async () => {
+    const criado = await como.post(`${API}/professionals/me/locations`, { data: emJurere });
     expect(criado.status()).toBe(201);
 
     const local = (await criado.json()) as Local;
     expect(local).toMatchObject({ isPrimary: true, city: 'Florianópolis', state: 'SC' });
-    expect((await perfilDe(page)).completeness).toMatchObject({ hasLocation: true, done: 1 });
+    expect((await perfilDe()).completeness).toMatchObject({ hasLocation: true, done: 1 });
   });
 
-  test('marcar outro como principal desmarca o anterior', async ({ page }) => {
-    await cadastrar(page);
-    await page.request.post(`${API}/professionals/me/locations`, { data: emJurere });
+  test('marcar outro como principal desmarca o anterior', async () => {
+    await como.post(`${API}/professionals/me/locations`, { data: emJurere });
     const segundo = (await (
-      await page.request.post(`${API}/professionals/me/locations`, {
+      await como.post(`${API}/professionals/me/locations`, {
         data: { ...emJurere, name: 'Condomínio Aquarela', neighborhood: 'Canasvieiras' },
       })
     ).json()) as Local;
 
     expect(segundo.isPrimary).toBe(false);
 
-    const promovido = await page.request.patch(`${API}/professionals/me/locations/${segundo.id}`, {
+    const promovido = await como.patch(`${API}/professionals/me/locations/${segundo.id}`, {
       data: { isPrimary: true },
     });
     expect(promovido.status()).toBe(200);
 
     // Exatamente um principal: o índice único parcial recusaria dois, então a troca precisa
     // desmarcar o anterior na mesma transação.
-    const locais = (await perfilDe(page)).locations;
+    const locais = (await perfilDe()).locations;
     expect(locais.filter((local) => local.isPrimary)).toHaveLength(1);
     expect(locais[0]).toMatchObject({ id: segundo.id, isPrimary: true });
   });
 
-  test('não dá para ficar sem principal — só para trocar de principal', async ({ page }) => {
-    await cadastrar(page);
+  test('não dá para ficar sem principal — só para trocar de principal', async () => {
     const local = (await (
-      await page.request.post(`${API}/professionals/me/locations`, { data: emJurere })
+      await como.post(`${API}/professionals/me/locations`, { data: emJurere })
     ).json()) as Local;
 
-    const tentativa = await page.request.patch(`${API}/professionals/me/locations/${local.id}`, {
+    const tentativa = await como.patch(`${API}/professionals/me/locations/${local.id}`, {
       data: { isPrimary: false },
     });
     expect(tentativa.status()).toBe(422);
   });
 
-  test('excluir o principal promove o mais antigo dos que ficaram', async ({ page }) => {
-    await cadastrar(page);
+  test('excluir o principal promove o mais antigo dos que ficaram', async () => {
     const primeiro = (await (
-      await page.request.post(`${API}/professionals/me/locations`, { data: emJurere })
+      await como.post(`${API}/professionals/me/locations`, { data: emJurere })
     ).json()) as Local;
     const segundo = (await (
-      await page.request.post(`${API}/professionals/me/locations`, {
+      await como.post(`${API}/professionals/me/locations`, {
         data: { ...emJurere, name: 'Praia dos Ingleses', kind: 'PUBLIC_SPACE' },
       })
     ).json()) as Local;
 
-    expect(
-      (await page.request.delete(`${API}/professionals/me/locations/${primeiro.id}`)).status(),
-    ).toBe(204);
+    expect((await como.delete(`${API}/professionals/me/locations/${primeiro.id}`)).status()).toBe(
+      204,
+    );
 
     // Deixar o profissional sem principal quebraria o formulário de agenda da Fase 6 por um
     // motivo que ele não pediu: ele apagou um local, não desconfigurou a agenda.
-    const locais = (await perfilDe(page)).locations;
+    const locais = (await perfilDe()).locations;
     expect(locais).toHaveLength(1);
     expect(locais[0]).toMatchObject({ id: segundo.id, isPrimary: true });
   });
 
-  test('casa do aluno não aceita endereço — o endereço é dado do aluno', async ({ page }) => {
-    await cadastrar(page);
-
-    const comEndereco = await page.request.post(`${API}/professionals/me/locations`, {
+  test('casa do aluno não aceita endereço — o endereço é dado do aluno', async () => {
+    const comEndereco = await como.post(`${API}/professionals/me/locations`, {
       data: {
         name: 'Atendo em domicílio',
         kind: 'STUDENT_HOME',
@@ -511,7 +560,7 @@ test.describe('Locais de atendimento', () => {
 
     // Sem endereço, o mesmo local entra: a linha significa um arranjo — "vou até o aluno,
     // nesta cidade" —, e é onde a disponibilidade da Fase 6 vai pendurar a grade.
-    const semEndereco = await page.request.post(`${API}/professionals/me/locations`, {
+    const semEndereco = await como.post(`${API}/professionals/me/locations`, {
       data: {
         name: 'Atendo em domicílio',
         kind: 'STUDENT_HOME',
@@ -524,14 +573,13 @@ test.describe('Locais de atendimento', () => {
     expect(((await semEndereco.json()) as Local).streetAddress).toBeNull();
   });
 
-  test('virar casa do aluno apaga o endereço que estava lá', async ({ page }) => {
-    await cadastrar(page);
+  test('virar casa do aluno apaga o endereço que estava lá', async () => {
     const local = (await (
-      await page.request.post(`${API}/professionals/me/locations`, { data: emJurere })
+      await como.post(`${API}/professionals/me/locations`, { data: emJurere })
     ).json()) as Local;
     expect(local.streetAddress).not.toBeNull();
 
-    const virou = await page.request.patch(`${API}/professionals/me/locations/${local.id}`, {
+    const virou = await como.patch(`${API}/professionals/me/locations/${local.id}`, {
       data: { kind: 'STUDENT_HOME' },
     });
     expect(virou.status()).toBe(200);
@@ -540,39 +588,32 @@ test.describe('Locais de atendimento', () => {
     expect(((await virou.json()) as Local).streetAddress).toBeNull();
   });
 
-  test('UF inválida é recusada', async ({ page }) => {
-    await cadastrar(page);
-    const resposta = await page.request.post(`${API}/professionals/me/locations`, {
+  test('UF inválida é recusada', async () => {
+    const resposta = await como.post(`${API}/professionals/me/locations`, {
       data: { ...emJurere, state: 'XX' },
     });
     expect(resposta.status()).toBe(422);
   });
 
-  test('UF em minúscula é aceita e guardada em maiúscula', async ({ page }) => {
-    await cadastrar(page);
-    const resposta = await page.request.post(`${API}/professionals/me/locations`, {
+  test('UF em minúscula é aceita e guardada em maiúscula', async () => {
+    const resposta = await como.post(`${API}/professionals/me/locations`, {
       data: { ...emJurere, state: 'sc' },
     });
     expect(resposta.status()).toBe(201);
     expect(((await resposta.json()) as Local).state).toBe('SC');
   });
 
-  test('local de outro profissional responde 404', async ({ page, browser }) => {
-    const outro = await browser.newContext();
-    const abaDoOutro = await outro.newPage();
-    await cadastrar(abaDoOutro);
+  test('local de outro profissional responde 404', async () => {
     const alheio = (await (
-      await abaDoOutro.request.post(`${API}/professionals/me/locations`, { data: emJurere })
+      await comoOutro.post(`${API}/professionals/me/locations`, { data: emJurere })
     ).json()) as Local;
-    await outro.close();
 
-    await cadastrar(page);
-    expect(
-      (await page.request.delete(`${API}/professionals/me/locations/${alheio.id}`)).status(),
-    ).toBe(404);
+    expect((await como.delete(`${API}/professionals/me/locations/${alheio.id}`)).status()).toBe(
+      404,
+    );
     expect(
       (
-        await page.request.patch(`${API}/professionals/me/locations/${alheio.id}`, {
+        await como.patch(`${API}/professionals/me/locations/${alheio.id}`, {
           data: { name: 'Meu agora' },
         })
       ).status(),

@@ -492,7 +492,43 @@ se alguém estiver mexendo na fila por outro motivo.
 
 ## Fase 5.7
 
-### DT-018 — A suíte de tela gasta 100 dos 100 cadastros por hora, e a margem é zero
+### ~~DT-018 — A suíte de tela gasta 100 dos 100 cadastros por hora, e a margem é zero~~ ✅ resolvido em 2026-08-30
+
+Paga na Fase 6, pelo gatilho que ela própria marcou — *"a próxima fase que precisar de um teste
+de tela que crie conta"* —, e pelo remédio que ela própria descreveu: **uma conta por bloco, em
+vez de uma por teste**.
+
+| Arquivo | Antes | Depois |
+| --- | --- | --- |
+| `perfil.spec.ts` | 28 | **3** |
+| `foto-de-perfil.spec.ts` | 8 | **3** |
+| a suíte inteira (contagem estática) | 93 | **63** |
+
+**A prova não é a contagem, é o comportamento:** a suíte inteira roda **duas vezes seguidas**, as
+duas verdes, 312 testes cada. Antes, a segunda execução dentro da mesma hora falhava — e falhava
+como o DT-010 avisou que falharia, com testes de arquivos sem relação nenhuma parados em
+`toHaveURL('/painel')`.
+
+**O que substituiu a conta por teste:** um `limparPerfil()` que devolve o perfil ao estado de
+recém-criado — sem modalidade, sem local, sem bio. Custa duas requisições e nenhum cadastro. Com
+`mode: 'serial'` no arquivo, a conta compartilhada é segura.
+
+**Duas exceções ficaram, e as duas têm motivo escrito no código:** o teste do papel de aluno
+(a sessão compartilhada é de profissional) e o do **teto de modalidades pendentes** — que é por
+conta e **permanente**, porque apagar o vínculo não apaga a linha que ele criou no catálogo. Numa
+conta compartilhada, esse teste falharia sem nada estar errado no produto.
+
+**E o caminho revelou um segundo defeito, este mais sério.** Três arquivos de teste usavam o mesmo
+dono da seed e, na limpeza, encerravam **todos os membros ativos** dele — inclusive os dos outros
+arquivos, que rodam em paralelo. O sintoma era um teste de autorização respondendo 404 sem nada
+de errado no produto, e ele aparecia e sumia conforme a ordem de execução. Cada arquivo agora
+encerra **só o que ele criou**. A regra que sobra: *limpar o que eu sujei, nunca tudo o que
+existe.*
+
+---
+
+<details>
+<summary>O texto original</summary>
 
 **O que:** uma execução limpa da suíte faz **exatamente 100** requisições ao cadastro de
 profissional, e `LimitarCadastro` permite 100 por hora por IP. **Medido em 2026-08-30**, contando
@@ -525,6 +561,8 @@ compartilham.
 **Gatilho para pagar:** **a próxima fase que precisar de um teste de tela que crie conta.** Não é
 "quando der" — é agora ou o próximo desenvolvedor perde a tarde que este documento existe para
 poupar. A conferência custa três comandos, e está em `docs/sistema/fase-05-7-idade-minima.md`.
+
+</details>
 
 ### DT-019 — Dado de um terceiro que não é usuário, guardado para sempre e sem canal
 

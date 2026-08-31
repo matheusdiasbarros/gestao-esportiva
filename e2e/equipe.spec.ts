@@ -57,14 +57,37 @@ async function convidar(email: string) {
   return comoDono.post(`${API}/staff/invites`, { data: { email } });
 }
 
-/** Devolve a equipe do dono, encerrando toda participação que o teste tenha criado. */
+/**
+ * Encerra as participações **que este arquivo criou**, e só elas.
+ *
+ * **Antes encerrava todos os membros ativos do dono**, e isso quebrava outro arquivo: o dono é da
+ * seed, `equipe-acesso.spec.ts` usa o mesmo, e os arquivos rodam em paralelo. A limpeza daqui
+ * derrubava a participação de lá no meio da execução, e o sintoma era um teste de acesso
+ * respondendo 404 sem nada de errado no produto — barulho que já custou uma investigação.
+ *
+ * Quem entra na equipe por este arquivo é registrado em `criadas`. É mais código do que
+ * `filter(ACTIVE)`, e é o que separa "limpar o que eu sujei" de "limpar tudo o que existe".
+ */
+const criadas = new Set<string>();
+
 async function limparEquipe(): Promise<void> {
   const equipe = (await (await comoDono.get(`${API}/staff`)).json()) as {
-    members: { id: string; status: string }[];
+    members: { id: string; professionalId: string; status: string }[];
   };
-  for (const membro of equipe.members.filter((m) => m.status === 'ACTIVE')) {
+  for (const membro of equipe.members.filter(
+    (m) => m.status === 'ACTIVE' && criadas.has(m.professionalId),
+  )) {
     await comoDono.patch(`${API}/staff/${membro.id}/status`, { data: { status: 'ENDED' } });
   }
+  criadas.clear();
+}
+
+/** Registra quem acabou de entrar, para a limpeza saber o que é dela. */
+async function registrarEntrada(requisicao: APIRequestContext): Promise<void> {
+  const { professionalId } = (await (await requisicao.get(`${API}/auth/me`)).json()) as {
+    professionalId: string | null;
+  };
+  if (professionalId) criadas.add(professionalId);
 }
 
 test.describe('Emissão do convite', () => {
@@ -145,6 +168,7 @@ test.describe('Aceite', () => {
     const { token } = (await (await convidar(convidado.email)).json()) as { token: string };
 
     expect((await page.request.post(`${API}/staff/invites/${token}/join`)).status()).toBe(204);
+    await registrarEntrada(page.request);
 
     const equipe = (await (await comoDono.get(`${API}/staff`)).json()) as {
       members: { fullName: string; status: string }[];
@@ -221,6 +245,7 @@ test.describe('Aceite', () => {
     const { token } = (await (await convidar(convidado.email)).json()) as { token: string };
 
     expect((await page.request.post(`${API}/staff/invites/${token}/join`)).status()).toBe(204);
+    await registrarEntrada(page.request);
     expect((await page.request.post(`${API}/staff/invites/${token}/join`)).status()).toBe(404);
   });
 
@@ -277,6 +302,7 @@ test.describe('A porta dos 18 anos, por dentro', () => {
     await comoJovem.post(`${API}/auth/login`, { data: { email, password: senha } });
 
     const entrou = await comoJovem.post(`${API}/staff/invites/${token}/join`);
+    if (entrou.status() === 204) await registrarEntrada(comoJovem);
     expect(entrou.status(), 'um menor de 18 virou profissional pelo convite').toBe(403);
     expect(await entrou.text()).toContain('18 anos');
 

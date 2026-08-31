@@ -92,10 +92,18 @@ test.beforeAll(async ({ browser }) => {
 test.afterAll(async () => {
   for (const id of descartaveis) await comoDono.delete(`${API}/students/${id}`);
 
+  // **Encerra só o membro deste arquivo, e não todos os ativos do dono.**
+  //
+  // A versão anterior fazia `members.filter(ACTIVE)` e encerrava todos. Como `equipe.spec.ts` usa
+  // o mesmo dono da seed e os arquivos rodam em paralelo, a limpeza de um derrubava a
+  // participação do outro no meio da execução — e o sintoma era um teste de acesso respondendo
+  // 404 sem nada de errado no produto. Levou uma investigação para ser achado.
   const equipe = (await (await comoDono.get(`${API}/staff`)).json()) as {
-    members: { id: string; status: string }[];
+    members: { id: string; professionalId: string; status: string }[];
   };
-  for (const membro of equipe.members.filter((m) => m.status === 'ACTIVE')) {
+  for (const membro of equipe.members.filter(
+    (m) => m.status === 'ACTIVE' && m.professionalId === carteiraDoMembro,
+  )) {
     await comoDono.patch(`${API}/staff/${membro.id}/status`, { data: { status: 'ENDED' } });
   }
 
