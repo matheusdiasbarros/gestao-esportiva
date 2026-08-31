@@ -33,6 +33,11 @@ import dataSource from '../data-source';
  *   precisam mexer no estado da própria conta do dono — suspender, reativar — sem derrubar os
  *   outros arquivos de teste, que rodam em paralelo e usam Rodrigo e Ana. Nasce sem ficha
  *   nenhuma. É também a persona de dono de clube (`personas.md`).
+ * - **Helena** — quarto profissional, **dedicado à agenda**. Nasceu porque os testes da Fase 6
+ *   montam perfil inteiro (local, quadra, modalidade com preço) e o desmontam no fim: fazer isso
+ *   no Sérgio quebrava o arquivo que o suspende, já que os arquivos rodam em paralelo. A regra
+ *   que isto preserva é a do próprio Sérgio — **uma conta descartável não pode ter dois donos**.
+ *   Nasce sem ficha e sem perfil.
  *
  * O administrador vem de variável de ambiente. Não existe rota pública que crie um: promover
  * uma conta é operação manual no banco enquanto não houver painel.
@@ -49,9 +54,11 @@ const ID = {
   beatriz: '01900000-0000-7000-8000-00000000e005',
   admin: '01900000-0000-7000-8000-00000000e006',
   sergio: '01900000-0000-7000-8000-00000000e007',
+  helena: '01900000-0000-7000-8000-00000000e008',
   profRodrigo: '01900000-0000-7000-8000-00000000f001',
   profAna: '01900000-0000-7000-8000-00000000f002',
   profSergio: '01900000-0000-7000-8000-00000000f003',
+  profHelena: '01900000-0000-7000-8000-00000000f004',
   fichaMarinaRodrigo: '01900000-0000-7000-8000-000000010001',
   fichaMarinaAna: '01900000-0000-7000-8000-000000010002',
   fichaJoao: '01900000-0000-7000-8000-000000010003',
@@ -118,6 +125,7 @@ async function seed(ds: DataSource): Promise<void> {
   await criarConta(ID.carlos, 'carlos@exemplo.local', 'Carlos Dias', '1985-02-20', senhaPadrao);
   await criarConta(ID.beatriz, 'beatriz@exemplo.local', 'Beatriz Lima', '2000-09-14', senhaPadrao);
   await criarConta(ID.sergio, 'sergio@exemplo.local', 'Sérgio Barreto', '1979-05-08', senhaPadrao);
+  await criarConta(ID.helena, 'helena@exemplo.local', 'Helena Duarte', '1991-06-22', senhaPadrao);
 
   const criarProfissional = async (id: string, userId: string, slug: string): Promise<void> => {
     if (await professionals.exists({ where: { id } })) return;
@@ -127,6 +135,7 @@ async function seed(ds: DataSource): Promise<void> {
   await criarProfissional(ID.profRodrigo, ID.rodrigo, 'rodrigo-beach-tennis');
   await criarProfissional(ID.profAna, ID.ana, 'ana-tenis');
   await criarProfissional(ID.profSergio, ID.sergio, 'sergio-arena');
+  await criarProfissional(ID.profHelena, ID.helena, 'helena-agenda');
 
   const criarFicha = async (ficha: Partial<Student> & { id: string }): Promise<void> => {
     if (await students.exists({ where: { id: ficha.id } })) return;

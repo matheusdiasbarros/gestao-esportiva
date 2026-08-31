@@ -112,6 +112,22 @@ export default async function Painel() {
 
       {sessao.professionalId ? (
         <section className="rounded-xl border border-(--color-border) bg-(--color-surface-muted) p-6">
+          <h2 className="text-sm font-medium">Sua agenda</h2>
+          <p className="mt-1 text-sm text-(--color-ink-muted)">
+            Os horários em que você atende, e quem pode marcar. É a grade que a marcação de aula vai
+            usar — a aula em si ainda não existe.
+          </p>
+          <Link
+            href="/painel/agenda"
+            className="mt-4 inline-block rounded-lg border border-(--color-border) px-3 py-1.5 text-xs font-medium"
+          >
+            Ver agenda
+          </Link>
+        </section>
+      ) : null}
+
+      {sessao.professionalId ? (
+        <section className="rounded-xl border border-(--color-border) bg-(--color-surface-muted) p-6">
           <h2 className="text-sm font-medium">Sua equipe</h2>
           <p className="mt-1 text-sm text-(--color-ink-muted)">
             Se outros professores dão aula pelo seu negócio, é aqui que você os convida e associa

@@ -18,15 +18,25 @@ import { entrar } from './apoio';
  * suíte inteira, e o sintoma apareceria em `perfil.spec.ts`, longe daqui.
  */
 const API = 'http://localhost:3333/api/v1';
-const DONO = { email: 'sergio@exemplo.local', senha: 'desenvolvimento1' };
+/**
+ * **A Helena é da seed e existe só para a agenda.**
+ *
+ * O Sérgio parecia a escolha óbvia — é o profissional descartável —, mas ele já é de quem o
+ * suspende e reativa (`equipe-dono-suspenso.spec.ts`), e os arquivos rodam em paralelo: montar
+ * e desmontar o perfil dele aqui derrubava aquele arquivo de forma intermitente. **Uma conta
+ * descartável não pode ter dois donos**, e a seed ganhou a quarta por causa disto.
+ */
+const DONO = { email: 'helena@exemplo.local', senha: 'desenvolvimento1' };
 
 /** Uma modalidade aprovada do catálogo semeado pela migration da Fase 3. */
 const BEACH_TENNIS = '01a10000-0000-7000-8000-000000000001';
 const TENIS = '01a10000-0000-7000-8000-000000000002';
+const PADEL = '01a10000-0000-7000-8000-000000000003';
 
 test.describe.configure({ mode: 'serial' });
 
 let contexto: BrowserContext;
+let pagina: Page;
 let como: APIRequestContext;
 
 /** Montados uma vez: dois locais, uma quadra no primeiro, duas modalidades com preço. */
@@ -35,6 +45,8 @@ let praia: string;
 let quadra: string;
 let beachTennis: string;
 let tenisSoNaArena: string;
+/** Os três formatos com preço — é a modalidade das telas e a das durações. */
+let padel: string;
 
 async function faixa(dados: Record<string, unknown>) {
   const resposta = await como.post(`${API}/scheduling/availability`, { data: dados });
@@ -56,7 +68,7 @@ function valida(extra: Record<string, unknown> = {}) {
 
 test.beforeAll(async ({ browser }) => {
   contexto = await browser.newContext();
-  const pagina: Page = await contexto.newPage();
+  pagina = await contexto.newPage();
   await entrar(pagina, DONO.email, DONO.senha);
   // `entrar()` não espera a navegação. Sem esta linha, `pagina.request` sai sem o cookie e tudo
   // responde 401 — custou uma investigação inteira na Fase 5.7, e está escrito para não custar
@@ -79,7 +91,7 @@ test.beforeAll(async ({ browser }) => {
   quadra = (
     (await (
       await como.post(`${API}/professionals/me/locations/${arena}/spaces`, {
-        data: { name: 'Quadra da Agenda' },
+        data: { name: 'Quadra Azul' },
       })
     ).json()) as { id: string }
   ).id;
@@ -106,6 +118,23 @@ test.beforeAll(async ({ browser }) => {
     })
   ).json()) as { id: string; sport: { id: string } }[];
   tenisSoNaArena = comTenis.find((m) => m.sport.id === TENIS)!.id;
+
+  // **O preço de turma existe de propósito.** Sem ele, o teste que diz que "Turma não aparece no
+  // seletor" passaria mesmo sem o filtro da tela — não haveria o que filtrar. Uma sabotagem
+  // mostrou exatamente isso.
+  const comPadel = (await (
+    await como.post(`${API}/professionals/me/sports`, {
+      data: {
+        sportId: PADEL,
+        prices: [
+          { sessionFormat: 'INDIVIDUAL', amountCents: 12000, defaultDurationMinutes: 60 },
+          { sessionFormat: 'PAIR', amountCents: 8000, defaultDurationMinutes: 90 },
+          { sessionFormat: 'CLASS_GROUP', amountCents: 6000, defaultDurationMinutes: 90 },
+        ],
+      },
+    })
+  ).json()) as { id: string; sport: { id: string } }[];
+  padel = comPadel.find((m) => m.sport.id === PADEL)!.id;
 });
 
 test.afterAll(async () => {
@@ -117,7 +146,10 @@ test.afterAll(async () => {
   for (const id of [arena, praia]) {
     await como.delete(`${API}/professionals/me/locations/${id}`);
   }
-  for (const id of [beachTennis, tenisSoNaArena]) {
+  await como.put(`${API}/scheduling/policy`, {
+    data: { studentSelfBookingEnabled: false, minLeadTimeMinutes: 720, maxHorizonDays: 14 },
+  });
+  for (const id of [beachTennis, tenisSoNaArena, padel]) {
     await como.delete(`${API}/professionals/me/sports/${id}`);
   }
   await contexto.close();
@@ -368,32 +400,19 @@ test.describe('A faixa reserva quatro coisas', () => {
  * a dívida muda onde um teste nasce, e vale registrar que ela muda.
  */
 test.describe('A duração da aula', () => {
-  test('o mesmo esporte tem duas durações, uma por formato', async () => {
-    // **Este é o par que justifica a coluna estar no preço.** Individual de 45 e turma de 90 são
+  test('o mesmo esporte tem três durações, uma por formato', async () => {
+    // **Este é o par que justifica a coluna estar no preço.** Individual de 60 e turma de 90 são
     // o mesmo esporte; em `ProfessionalSport` só caberia uma das duas.
-    const criada = await como.post(`${API}/professionals/me/sports`, {
-      data: {
-        sportId: '01a10000-0000-7000-8000-000000000003',
-        prices: [
-          { sessionFormat: 'INDIVIDUAL', amountCents: 12000, defaultDurationMinutes: 45 },
-          { sessionFormat: 'CLASS_GROUP', amountCents: 6000, defaultDurationMinutes: 90 },
-        ],
-      },
-    });
-    expect(criada.status(), await criada.text()).toBe(201);
-
-    const lista = (await criada.json()) as {
-      id: string;
-      sport: { id: string };
-      prices: { sessionFormat: string; defaultDurationMinutes: number }[];
-    }[];
-    const nova = lista.find((m) => m.sport.id === '01a10000-0000-7000-8000-000000000003')!;
+    const precos = (
+      (await (await como.get(`${API}/professionals/me/sports`)).json()) as {
+        id: string;
+        prices: { sessionFormat: string; defaultDurationMinutes: number }[];
+      }[]
+    ).find((m) => m.id === padel)!.prices;
 
     expect(
-      Object.fromEntries(nova.prices.map((p) => [p.sessionFormat, p.defaultDurationMinutes])),
-    ).toEqual({ INDIVIDUAL: 45, CLASS_GROUP: 90 });
-
-    await como.delete(`${API}/professionals/me/sports/${nova.id}`);
+      Object.fromEntries(precos.map((p) => [p.sessionFormat, p.defaultDurationMinutes])),
+    ).toEqual({ INDIVIDUAL: 60, PAIR: 90, CLASS_GROUP: 90 });
   });
 
   test('quem não informa duração fica com 60, e não com zero', async () => {
@@ -408,9 +427,8 @@ test.describe('A duração da aula', () => {
   });
 
   test('aula de 47 minutos é sempre digitação errada', async () => {
-    const resposta = await como.post(`${API}/professionals/me/sports`, {
+    const resposta = await como.patch(`${API}/professionals/me/sports/${padel}`, {
       data: {
-        sportId: '01a10000-0000-7000-8000-000000000003',
         prices: [{ sessionFormat: 'INDIVIDUAL', amountCents: 12000, defaultDurationMinutes: 47 }],
       },
     });
@@ -499,5 +517,135 @@ test.describe('Os bloqueios', () => {
       },
     });
     expect(resposta.status()).toBe(422);
+  });
+});
+
+// ============================================================== as telas
+
+/** O bloco de um dia da semana. Sete seções iguais, e o nome é o que as distingue. */
+function dia(nome: string) {
+  return pagina.locator('section').filter({ has: pagina.getByRole('heading', { name: nome }) });
+}
+
+test.describe('Quem marca aula', () => {
+  test('a chave nasce desligada, e os prazos só aparecem depois dela', async () => {
+    await pagina.goto('/painel/agenda');
+
+    const chave = pagina.getByRole('checkbox', { name: /Deixar o aluno marcar sozinho/i });
+    await expect(chave).not.toBeChecked();
+
+    // **Os três prazos não valem para ninguém enquanto a chave estiver desligada** — só o
+    // professor mexe na própria agenda. Mostrá-los seria oferecer três seletores sem efeito.
+    await expect(pagina.getByLabel(/Marcar com no mínimo/i)).toHaveCount(0);
+
+    await chave.check();
+    await expect(pagina.getByLabel(/Marcar com no mínimo/i)).toBeVisible();
+    await expect(pagina.getByLabel(/Agenda aberta até/i)).toHaveValue('14');
+  });
+
+  test('a tela não promete cobrança que ainda não existe', async () => {
+    // Mesma disciplina do formulário da Fase 5.7: prometer consequência antes de ela existir é
+    // o erro que aquela fase evitou de propósito.
+    await pagina.goto('/painel/agenda');
+    await expect(pagina.getByText(/ainda não cobra nada/i)).toBeVisible();
+  });
+
+  test('o que ela grava sobrevive a recarregar a página', async () => {
+    await pagina.goto('/painel/agenda');
+    await pagina.getByLabel(/Marcar com no mínimo/i).selectOption('180');
+
+    // **Espera o servidor, não o relógio.** A tela atualiza o seletor otimisticamente, então
+    // recarregar na linha seguinte às vezes chegava antes de a gravação terminar — e o teste
+    // falhava uma vez a cada tantas execuções, sem que nada estivesse errado no produto. Esperar
+    // o fato acontecer é a diferença entre um teste e um teste instável.
+    await expect
+      .poll(
+        async () =>
+          (
+            (await (await como.get(`${API}/scheduling/policy`)).json()) as {
+              minLeadTimeMinutes: number;
+            }
+          ).minLeadTimeMinutes,
+      )
+      .toBe(180);
+
+    await pagina.reload();
+    await expect(pagina.getByLabel(/Marcar com no mínimo/i)).toHaveValue('180');
+  });
+});
+
+test.describe('A grade semanal', () => {
+  test('abre um horário, e ele aparece com formato, modalidade e lugar', async () => {
+    await pagina.goto('/painel/agenda');
+    await expect(dia('segunda').getByText(/Você não atende segunda/i)).toBeVisible();
+
+    await dia('segunda').getByRole('button', { name: 'Abrir horário' }).click();
+    await dia('segunda').getByLabel('Hora de início').fill('19:00');
+    await dia('segunda').getByLabel('Modalidade da faixa').selectOption(padel);
+    await dia('segunda').getByLabel('Local da faixa').selectOption(arena);
+    await dia('segunda').getByLabel('Quadra ou sala').selectOption({ label: 'Quadra Azul' });
+    await dia('segunda').getByRole('button', { name: 'Abrir horário' }).click();
+
+    // **A faixa reserva quatro coisas, e a lista mostra as quatro.** Uma linha que dissesse só
+    // "19:00 às 20:00" não deixaria o professor conferir o que ele acabou de abrir.
+    await expect(dia('segunda').getByText(/19:00 às 20:00/)).toBeVisible();
+    await expect(dia('segunda').getByText(/Individual de Padel/i)).toBeVisible();
+    await expect(dia('segunda').getByText(/Arena da Agenda, Quadra Azul/i)).toBeVisible();
+  });
+
+  test('o fim é calculado pela duração da modalidade, e não digitado', async () => {
+    // A duração já está no preço. Pedi-la de novo aqui seria pedir duas vezes a mesma
+    // informação, com a chance de as duas discordarem.
+    await pagina.goto('/painel/agenda');
+    await dia('quinta').getByRole('button', { name: 'Abrir horário' }).click();
+    await dia('quinta').getByLabel('Modalidade da faixa').selectOption(padel);
+
+    await expect(dia('quinta').getByText(/termina às 20:00/)).toBeVisible();
+
+    // Dupla dura 90 minutos nesta modalidade, e o fim acompanha sozinho.
+    await dia('quinta').getByLabel('Formato da aula').selectOption('PAIR');
+    await expect(dia('quinta').getByText(/termina às 20:30/)).toBeVisible();
+  });
+
+  test('duas faixas no mesmo horário são aceitas, e a tela não reclama', async () => {
+    // "Das 19h às 20h eu dou tênis ou beach tennis." Faixa é oferta, não compromisso — quem
+    // impede duas aulas ao mesmo tempo é a trava da sessão, no servidor.
+    await pagina.goto('/painel/agenda');
+    await dia('sexta').getByRole('button', { name: 'Abrir horário' }).click();
+    await dia('sexta').getByLabel('Modalidade da faixa').selectOption(padel);
+    await dia('sexta').getByLabel('Local da faixa').selectOption(arena);
+    await dia('sexta').getByRole('button', { name: 'Abrir horário' }).click();
+    await expect(dia('sexta').getByText(/Individual de Padel/i)).toBeVisible();
+
+    await dia('sexta').getByRole('button', { name: 'Abrir horário' }).click();
+    await dia('sexta').getByLabel('Modalidade da faixa').selectOption(padel);
+    await dia('sexta').getByLabel('Formato da aula').selectOption('PAIR');
+    await dia('sexta').getByLabel('Local da faixa').selectOption(arena);
+    await dia('sexta').getByRole('button', { name: 'Abrir horário' }).click();
+
+    await expect(dia('sexta').getByText(/Dupla de Padel/i)).toBeVisible();
+    await expect(dia('sexta').getByText(/Individual de Padel/i)).toBeVisible();
+  });
+
+  test('turma não aparece como formato, porque turma ainda não existe', async () => {
+    // O servidor recusa, e a tela não oferece. Oferecer e recusar depois ensinaria ao professor
+    // que o sistema é imprevisível.
+    await pagina.goto('/painel/agenda');
+    await dia('sábado').getByRole('button', { name: 'Abrir horário' }).click();
+    await dia('sábado').getByLabel('Modalidade da faixa').selectOption(padel);
+
+    const formatos = dia('sábado').getByLabel('Formato da aula');
+    await expect(formatos.getByRole('option', { name: 'Turma' })).toHaveCount(0);
+    await expect(formatos.getByRole('option', { name: 'Individual' })).toHaveCount(1);
+  });
+
+  test('fechar um horário tira ele da grade', async () => {
+    await pagina.goto('/painel/agenda');
+    pagina.once('dialog', (dialogo) => void dialogo.accept());
+    await dia('segunda')
+      .getByRole('button', { name: /^Fechar segunda/ })
+      .click();
+
+    await expect(dia('segunda').getByText(/Você não atende segunda/i)).toBeVisible();
   });
 });
