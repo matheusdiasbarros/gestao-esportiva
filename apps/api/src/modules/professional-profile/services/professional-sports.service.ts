@@ -1,4 +1,5 @@
 import {
+  DURACAO_PADRAO_MINUTOS,
   MAX_SPORTS_POR_PROFISSIONAL,
   MIN_EXPERIENCE_YEAR,
   SessionFormat,
@@ -93,6 +94,7 @@ export class ProfessionalSportsService {
             .map((preco) => ({
               sessionFormat: preco.sessionFormat,
               amountCents: preco.amountCents,
+              defaultDurationMinutes: preco.defaultDurationMinutes,
             })),
         };
       })
@@ -133,6 +135,7 @@ export class ProfessionalSportsService {
             professionalSportId: vinculo.id,
             sessionFormat: preco.sessionFormat,
             amountCents: preco.amountCents,
+            defaultDurationMinutes: preco.defaultDurationMinutes ?? DURACAO_PADRAO_MINUTOS,
           })),
         );
         await this.gravarLocais(manager, vinculo.id, locais);
@@ -191,6 +194,7 @@ export class ProfessionalSportsService {
           professionalSportId: id,
           sessionFormat: preco.sessionFormat,
           amountCents: preco.amountCents,
+          defaultDurationMinutes: preco.defaultDurationMinutes ?? DURACAO_PADRAO_MINUTOS,
         })),
       );
     });

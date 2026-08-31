@@ -197,9 +197,11 @@ test.describe('Modalidades e preços', () => {
 
     // Ordem fixa: individual, dupla, turma. Sem ela a lista sai na ordem em que o banco
     // devolveu, e o formulário embaralha entre um salvamento e outro.
+    // A duração entrou no contrato do preço no Epic 6.1, e **60 é o padrão de quem não a
+    // informa** — "R$ 120" só quer dizer alguma coisa junto de "por 1 hora".
     expect(perfil.sports[0]?.prices).toEqual([
-      { sessionFormat: 'INDIVIDUAL', amountCents: 12000 },
-      { sessionFormat: 'CLASS_GROUP', amountCents: 6000 },
+      { sessionFormat: 'INDIVIDUAL', amountCents: 12000, defaultDurationMinutes: 60 },
+      { sessionFormat: 'CLASS_GROUP', amountCents: 6000, defaultDurationMinutes: 60 },
     ]);
   });
 
@@ -371,7 +373,7 @@ test.describe('Modalidades e preços', () => {
 
     // "Não dou mais aula em dupla" é a ausência da linha, nunca preço zero nem nulo.
     expect((await perfilDe(page)).sports[0]?.prices).toEqual([
-      { sessionFormat: 'INDIVIDUAL', amountCents: 13000 },
+      { sessionFormat: 'INDIVIDUAL', amountCents: 13000, defaultDurationMinutes: 60 },
     ]);
   });
 

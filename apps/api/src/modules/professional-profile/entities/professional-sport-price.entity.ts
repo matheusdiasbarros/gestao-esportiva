@@ -44,4 +44,16 @@ export class ProfessionalSportPrice extends BaseEntity {
    */
   @Column({ type: 'integer' })
   amountCents: number;
+
+  /**
+   * Quanto dura uma aula deste par (modalidade, formato), em minutos.
+   *
+   * **Mora aqui, e não em `ProfessionalSport`, porque turma de 90 minutos e individual de 60 são
+   * o mesmo esporte** — lá caberia só um dos dois. É o que completa o sentido do preço: "R$ 120"
+   * só quer dizer alguma coisa junto de "por 1 hora" (`professional-profile.md` §14.4).
+   *
+   * É **padrão, não obrigação**: a aula específica muda para 90, ou para os 30 da experimental.
+   */
+  @Column({ type: 'smallint', default: 60 })
+  defaultDurationMinutes: number;
 }

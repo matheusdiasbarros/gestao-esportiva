@@ -8,6 +8,7 @@ import { EnvironmentVariables, NodeEnv } from './config/env.validation';
 import { HealthModule } from './modules/health/health.module';
 import { IamModule } from './modules/iam/iam.module';
 import { ProfessionalProfileModule } from './modules/professional-profile/professional-profile.module';
+import { SchedulingModule } from './modules/scheduling/scheduling.module';
 import { SportsModule } from './modules/sports/sports.module';
 import { RedisModule } from './redis/redis.module';
 
@@ -110,6 +111,7 @@ export function mascararSegredoNoCaminho(caminho: string): string {
     IamModule,
     SportsModule,
     ProfessionalProfileModule,
+    SchedulingModule,
   ],
 })
 export class AppModule {}

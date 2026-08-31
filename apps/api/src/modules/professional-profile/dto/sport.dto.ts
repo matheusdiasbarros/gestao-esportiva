@@ -1,9 +1,13 @@
 import {
+  DURACAO_PADRAO_MINUTOS,
+  MAX_DURACAO_MINUTOS,
   MAX_LOCATIONS_POR_PROFISSIONAL,
   MAX_PRICE_CENTS,
   MAX_SPORT_NAME_LENGTH,
+  MIN_DURACAO_MINUTOS,
   MIN_PRICE_CENTS,
   SessionFormat,
+  duracaoValida,
 } from '@gestao/types';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
@@ -19,9 +23,30 @@ import {
   Length,
   Max,
   Min,
+  Validate,
   ValidateNested,
+  ValidatorConstraint,
+  type ValidatorConstraintInterface,
 } from 'class-validator';
 import { Trim } from '../../../common/validation/trim';
+
+/**
+ * A duração cabe na faixa e no passo de 5.
+ *
+ * Um validador só, em vez de `@Min` + `@Max` + um terceiro para o passo: as três recusas dizem a
+ * mesma coisa para quem preenche — *"escolha uma duração de verdade"* — e três mensagens
+ * diferentes para o mesmo engano é ruído.
+ */
+@ValidatorConstraint({ name: 'duracaoValida' })
+class DuracaoValida implements ValidatorConstraintInterface {
+  validate(valor: unknown): boolean {
+    return typeof valor === 'number' && duracaoValida(valor);
+  }
+
+  defaultMessage(): string {
+    return `A duração vai de ${MIN_DURACAO_MINUTOS} a ${MAX_DURACAO_MINUTOS} minutos, de 5 em 5.`;
+  }
+}
 
 /** Quantos formatos existem. Mais que isso na mesma modalidade só pode ser repetição. */
 const FORMATOS = Object.keys(SessionFormat).length;
@@ -46,6 +71,24 @@ export class PriceInputDto {
   @Min(MIN_PRICE_CENTS, { message: 'O preço precisa ser maior que zero.' })
   @Max(MAX_PRICE_CENTS, { message: 'Confira o valor: esse preço passa de R$ 1.000.000 por aula.' })
   amountCents: number;
+
+  /**
+   * Quanto dura a aula, em minutos. **Opcional, e 60 é o padrão** — quase ninguém muda.
+   *
+   * Passo de 5 porque aula de 47 minutos é sempre digitação errada, e porque o seletor da tela
+   * fica curto. Mínimo de 15 para a experimental; máximo de 240 porque acima disso é evento.
+   */
+  @ApiProperty({
+    required: false,
+    minimum: MIN_DURACAO_MINUTOS,
+    maximum: MAX_DURACAO_MINUTOS,
+    example: DURACAO_PADRAO_MINUTOS,
+    description: 'Duração padrão, em minutos, de 5 em 5.',
+  })
+  @IsOptional()
+  @IsInt({ message: 'A duração vai em minutos inteiros.' })
+  @Validate(DuracaoValida)
+  defaultDurationMinutes?: number;
 }
 
 /**

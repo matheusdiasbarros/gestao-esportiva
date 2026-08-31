@@ -56,6 +56,14 @@ export interface PriceRow {
    * ela custa mais caro para consertar.
    */
   amountCents: number;
+  /**
+   * Quanto dura a aula deste par (modalidade, formato), em minutos.
+   *
+   * **É padrão, não obrigação** — a aula específica muda. Mora aqui porque "R$ 120" só quer
+   * dizer alguma coisa junto de "por 1 hora", e porque turma de 90 e individual de 60 são o
+   * mesmo esporte (`professional-profile.md` §14.4).
+   */
+  defaultDurationMinutes: number;
 }
 
 /** Uma modalidade que o profissional atende, com os preços dela. */

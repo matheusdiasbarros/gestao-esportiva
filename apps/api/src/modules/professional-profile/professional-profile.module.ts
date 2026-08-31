@@ -21,6 +21,7 @@ import { ProfessionalSportsService } from './services/professional-sports.servic
 import { ProfilePhotoService } from './services/profile-photo.service';
 import { ProfissionalAtual } from './services/profissional-atual';
 import { PublicProfileService } from './services/public-profile.service';
+import { RecursosDoNegocio } from './services/recursos-do-negocio';
 
 /**
  * O perfil profissional: bio, modalidades, preços, locais e foto.
@@ -67,6 +68,12 @@ import { PublicProfileService } from './services/public-profile.service';
     PhotoStorage,
     ProfilePhotoService,
     PublicProfileService,
+    RecursosDoNegocio,
   ],
+  // **A única coisa que este módulo exporta**, e ela é de leitura. O `scheduling` precisa saber
+  // se a modalidade, o local e a quadra de uma faixa existem e são deste negócio; a ADR-001
+  // proíbe que ele consulte estas tabelas por conta própria. A porta responde "o que existe" —
+  // decidir e recusar é de quem monta agenda.
+  exports: [RecursosDoNegocio],
 })
 export class ProfessionalProfileModule {}
