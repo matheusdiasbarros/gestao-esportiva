@@ -94,6 +94,13 @@ export interface LocationRow {
   /** "Quadra 3, entrada pelos fundos". Para o aluno vinculado achar o lugar. */
   accessNotes: string | null;
   /**
+   * O relógio em que a aula acontece, em identificador IANA — `America/Manaus`.
+   *
+   * **É do local, não do profissional nem do aluno** (ADR-007 §1.3). A UF preenche e não decide:
+   * o oeste do Amazonas é UTC−5 num estado UTC−4, então o campo é editável.
+   */
+  timeZone: string;
+  /**
    * As quadras, salas ou campos **dentro** deste local. **Nunca públicas.**
    *
    * Vêm junto do local, e não numa segunda requisição, porque não existem sem ele: espaço é

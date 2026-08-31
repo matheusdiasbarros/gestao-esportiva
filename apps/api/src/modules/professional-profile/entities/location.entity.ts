@@ -64,6 +64,20 @@ export class Location extends BaseEntity {
   accessNotes: string | null;
 
   /**
+   * Em que relógio a aula acontece — identificador IANA (`America/Manaus`).
+   *
+   * **O fuso é do local, não do profissional nem do aluno** (ADR-007 §1.3): a aula acontece no
+   * relógio da quadra. O professor que viaja não move a aula, e o aluno que abre a agenda de
+   * férias em Lisboa continua vendo "terça, 19h".
+   *
+   * A UF **preenche, e não decide** — nenhuma UF garante o fuso sozinha, porque o oeste do
+   * Amazonas é UTC−5 e o resto do estado é UTC−4. Por isso a coluna existe e é editável, em vez
+   * de ser derivada de `state` na hora de ler.
+   */
+  @Column({ type: 'varchar', length: 64, default: 'America/Sao_Paulo' })
+  timeZone: string;
+
+  /**
    * Exclusão lógica.
    *
    * A partir da Fase 6 uma sessão passada aponta para o local, e o endereço impresso no

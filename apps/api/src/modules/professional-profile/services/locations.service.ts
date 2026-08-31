@@ -16,6 +16,7 @@ import { EntityManager, In, Repository } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
 import { ehViolacaoDeUnicidade } from '../../../common/database/violacao-de-unicidade';
 import { CreateLocationDto, SpaceDto, UpdateLocationDto } from '../dto/location.dto';
+import { fusoDaUf } from './fuso-do-local';
 import { Location } from '../entities/location.entity';
 import { Space } from '../entities/space.entity';
 
@@ -82,6 +83,11 @@ export class LocationsService {
           city: dto.city,
           state: dto.state,
           accessNotes: dto.accessNotes || null,
+          // **O `DEFAULT` da coluna estaria errado para seis UFs.** A migration corrigiu o
+          // passado por *backfill*; sem esta linha, todo local novo em Manaus, Cuiabá ou Rio
+          // Branco nasceria com o fuso de São Paulo — e mostraria toda aula uma hora adiantada,
+          // sem erro nenhum aparecer. Foi a conferência das garantias no banco que pegou isto.
+          timeZone: dto.timeZone ?? fusoDaUf(dto.state),
         });
 
         await manager.insert(Location, novo);
@@ -136,7 +142,14 @@ export class LocationsService {
             ...(dto.kind !== undefined ? { kind } : {}),
             ...(dto.neighborhood !== undefined ? { neighborhood: dto.neighborhood || null } : {}),
             ...(dto.city !== undefined ? { city: dto.city } : {}),
-            ...(dto.state !== undefined ? { state: dto.state } : {}),
+            // **Trocar a UF re-sugere o fuso, e sobrescreve o que estava lá.** É a escolha certa
+            // porque o caso real de trocar a UF é ter cadastrado a errada, não mudar de estado —
+            // e um local em Manaus com fuso de São Paulo é pior do que um ajuste manual perdido.
+            // Quem editar o fuso de propósito não passa por aqui: é o outro campo.
+            ...(dto.state !== undefined ? { state: dto.state, timeZone: fusoDaUf(dto.state) } : {}),
+            // Depois do bloco acima **de propósito**: quem mandou o fuso na mão ganha de quem
+            // mandou só a UF, mesmo na requisição que muda os dois.
+            ...(dto.timeZone !== undefined ? { timeZone: dto.timeZone } : {}),
             ...(dto.accessNotes !== undefined ? { accessNotes: dto.accessNotes || null } : {}),
             ...(viraPrincipal ? { isPrimary: true } : {}),
             streetAddress,
@@ -386,6 +399,7 @@ export class LocationsService {
       city: local.city,
       state: local.state,
       accessNotes: local.accessNotes,
+      timeZone: local.timeZone,
       spaces,
     };
   }

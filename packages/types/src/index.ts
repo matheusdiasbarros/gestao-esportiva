@@ -2,6 +2,7 @@ export * from './health';
 export * from './http';
 export * from './iam';
 export * from './professional-profile';
+export * from './scheduling';
 export * from './sports';
 export * from './staff';
 export * from './students';

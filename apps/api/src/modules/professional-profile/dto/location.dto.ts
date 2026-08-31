@@ -1,13 +1,41 @@
 import { LocationKind, MAX_SPACE_NAME_LENGTH, UFS_DO_BRASIL } from '@gestao/types';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsEnum, IsIn, IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import {
+  IsEnum,
+  IsIn,
+  IsOptional,
+  IsString,
+  Length,
+  MaxLength,
+  Validate,
+  ValidatorConstraint,
+  type ValidatorConstraintInterface,
+} from 'class-validator';
 import { BooleanEstrito } from '../../../common/validation/boolean-estrito';
 import { Trim } from '../../../common/validation/trim';
+import { fusoConhecido } from '../services/fuso-do-local';
 
 /** "sc" e " SC " são a mesma UF. Normalizar aqui evita duas grafias na mesma coluna. */
 const Uf = (): PropertyDecorator =>
   Transform(({ value }) => (typeof value === 'string' ? value.trim().toUpperCase() : value));
+
+/**
+ * Recusa deslocamento fixo (`-03:00`), sigla (`BRT`) e fuso que este runtime não conhece.
+ *
+ * **Deslocamento fixo é o erro que dói depois**: `-03:00` não sabe que dia é hoje, e no dia em
+ * que o horário de verão voltar, toda aula gravada com ele erra por uma hora.
+ */
+@ValidatorConstraint({ name: 'fusoValido' })
+class FusoValido implements ValidatorConstraintInterface {
+  validate(valor: unknown): boolean {
+    return typeof valor === 'string' && fusoConhecido(valor);
+  }
+
+  defaultMessage(): string {
+    return 'Fuso horário desconhecido. Use um identificador como America/Manaus.';
+  }
+}
 
 export class CreateLocationDto {
   @ApiProperty({ example: 'Arena Beira-Mar', description: 'Como ele reconhece o local. Privado.' })
@@ -73,6 +101,24 @@ export class CreateLocationDto {
   @IsString()
   @MaxLength(300)
   accessNotes?: string | null;
+
+  /**
+   * O fuso do local, em identificador IANA.
+   *
+   * **Opcional, e quase ninguém manda:** a UF preenche sozinha. Existe para o oeste do Amazonas
+   * (`America/Eirunepe`, UTC−5 num estado UTC−4) e para o oeste do Pará — os casos em que a UF
+   * dá a resposta errada e não há como adivinhar.
+   *
+   * A validação é contra `Intl.supportedValuesOf('timeZone')`, e **não dá para ser um `CHECK`**:
+   * `pg_timezone_names` é função, e `CHECK` não faz subconsulta. De todo modo é a `tzdata` do
+   * Node que importa, porque é ela que converte.
+   */
+  @ApiProperty({ required: false, example: 'America/Manaus', description: 'Padrão: pela UF.' })
+  @IsOptional()
+  @Trim()
+  @IsString()
+  @Validate(FusoValido)
+  timeZone?: string;
 }
 
 /**

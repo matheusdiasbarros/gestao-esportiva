@@ -271,6 +271,10 @@ Cada palavra dessa frase carrega uma decisão:
 | **naquele formato** | individual, dupla e turma são três preços | é a razão de existir a tabela filha |
 | **para um aluno** | o preço da **dupla** é o que **cada um** dos dois paga | é a ambiguidade mais cara do modelo. Se o professor digitar o total da dupla, a Fase 9 cobra o dobro do combinado de cada aluno. A tela precisa dizer "por aluno, por aula" ao lado do campo |
 
+**E, desde o Epic 6.1, a frase tem uma quinta parte: _por quanto tempo_.** `R$ 120` só quer dizer
+alguma coisa junto de `por 1 hora`, e a duração mora na mesma linha do preço porque é o mesmo par
+(modalidade, formato) que a determina. Ver §14.4.
+
 ### 6.2 Formato de atendimento
 
 Enum `SessionFormat`: `INDIVIDUAL`, `PAIR`, `CLASS_GROUP`.
@@ -354,7 +358,29 @@ sessão futura não é removível, só arquivável.
 | `city` | sim | |
 | `state` | sim | UF, 2 caracteres. "Centro, São José" é ambíguo em três estados |
 | `access_notes` | não | "quadra 3, entrada pelos fundos". Existe para o aluno vinculado achar o lugar |
+| `time_zone` | sim | ✱ **Epic 6.1.** Identificador IANA. Preenchido pela UF, editável |
 | `deleted_at` | — | exclusão lógica (§7.4) |
+
+**✱ O fuso é do local — nem do profissional, nem do aluno (Epic 6.1, ADR-007 §1.3).** A aula
+acontece **no relógio da quadra**: o professor que mora em São Paulo e dá aula em Manaus não move
+a aula ao viajar, e o aluno que abre a agenda de férias em Lisboa continua vendo "terça, 19h".
+
+**A UF preenche, e não decide.** O Brasil tem três deslocamentos em uso e **nenhuma UF garante o
+fuso sozinha**: o oeste do Amazonas é `America/Eirunepe` (UTC−5) dentro de um estado UTC−4, e o
+oeste do Pará é `America/Santarem`. Por isso o campo existe e é editável, em vez de ser derivado
+de `state` na hora de ler.
+
+Duas consequências que valem escrever, porque parecem detalhe e não são:
+
+- **Corrigir um fuso cadastrado errado conserta o histórico de exibição e não move nenhum
+  instante.** É o comportamento certo, e é o que se perde se o fuso for copiado para a sessão.
+- **Trocar a UF re-sugere o fuso e sobrescreve o que estava lá.** O caso real de trocar a UF é
+  ter cadastrado a errada — quem quer só o fuso manda o campo do fuso, que ganha na mesma
+  requisição.
+
+Nunca se grava **deslocamento fixo** (`-03:00`), em coluna nenhuma, e a API o recusa: ele não sabe
+que dia é hoje. O Brasil não tem horário de verão desde 2019, mas já teve, e o dia em que voltar
+não pode encontrar `-03:00` gravado em lugar nenhum.
 
 **Sem CEP e sem coordenada. (proposta)** CEP é quase o endereço exato e não compra nada sem
 mapa; coordenada é a Fase 4, que saiu do MVP. O que o MVP precisa saber é *onde* a aula
@@ -727,7 +753,7 @@ com o sistema é matriz que a próxima fase para de consultar.
 | Preço promocional, primeira aula grátis, aula experimental | Fase 12 (Epic 12.4) | é ferramenta de aquisição |
 | Histórico de preço ("o que eu cobrava em janeiro") | Fase 9, se o relatório precisar | o pacote guarda o valor vendido; a tabela de preços é configuração corrente |
 | Preço próprio de uma turma específica | Fase 8 | este modelo dá o valor padrão da vaga em turma; se a Fase 8 precisar sobrescrever por turma, ela sobrescreve |
-| Duração da aula por modalidade | Fase 6 (é decisão listada lá) | mas afeta o sentido do preço — ver §14.4 |
+| ~~Duração da aula por modalidade~~ ✅ **fechada no Epic 6.1**: `default_duration_minutes` na linha de preço | 6 | ver §14.4 |
 | Múltiplas moedas | quando existir o segundo país | ADR-003 |
 | Documento (CPF/CNPJ) e dados de recebimento | Fase 9 | coletar dado sensível sem consumidor é exposição sem contrapartida |
 | Telefone de contato | Fase 12 decide onde o contato acontece | expor WhatsApp na página de captação é desintermediar a própria plataforma |
@@ -806,6 +832,17 @@ adiante. É a regra principal do projeto aplicada: decidir o detalhe quando ele 
 **A Fase 6 precisa decidir isto olhando para cá, não do zero** — e a tela desta fase escreve
 "por aluno, por aula" ao lado do preço, para o profissional não gravar um valor de mês achando
 que gravou o de aula.
+
+> **Fechada em 2026-08-30, no Epic 6.1, e a opção (a) se pagou.** A duração ficou onde o preço já
+> estava — `professional_sport_prices.default_duration_minutes`, o par **(modalidade, formato)** —
+> e **não** em `ProfessionalSport`, que era onde a opção (b) a teria posto. A diferença é real:
+> turma de 90 minutos e individual de 60 são o mesmo esporte, e em `ProfessionalSport` só caberia
+> um dos dois. Ter adiado não custou migração de dado; ter antecipado teria custado a coluna no
+> lugar errado.
+>
+> É padrão, não obrigação: 60 minutos vem preenchido, e a aula específica muda para 90 ou para os
+> 30 da experimental. `CHECK` entre 15 e 240 minutos, em passo de 5 — aula de 47 minutos é sempre
+> digitação errada, e o passo mantém o seletor curto.
 
 ### 14.5 Limites — **adotados**
 

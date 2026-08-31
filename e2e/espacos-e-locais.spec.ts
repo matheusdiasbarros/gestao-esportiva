@@ -290,3 +290,68 @@ test.describe('O que continua fora da vitrine', () => {
     }
   });
 });
+
+/**
+ * **O fuso do local** — Epic 6.1, e a única coisa desta fase que mexe numa tabela da Fase 3.
+ *
+ * A aula acontece no relógio da quadra (ADR-007 §1.3). A UF preenche o campo e **não o decide**:
+ * nenhuma UF garante o fuso sozinha, porque o oeste do Amazonas é UTC−5 num estado UTC−4.
+ *
+ * **Este bloco existe por causa de um buraco que a conferência das garantias no banco encontrou.**
+ * A migration corrigiu o passado por *backfill*, e o `DEFAULT` da coluna é São Paulo — então, sem
+ * o mapa ligado na criação, todo local novo em Manaus nasceria uma hora adiantado, sem erro
+ * nenhum aparecer. Erro que não aparece é o que precisa de teste.
+ */
+test.describe('Em que relógio a aula acontece', () => {
+  const descartaveis: string[] = [];
+
+  test.afterAll(async () => {
+    for (const id of descartaveis) await comoDono.delete(`${API}/professionals/me/locations/${id}`);
+  });
+
+  async function local(state: string, timeZone?: string) {
+    const resposta = await comoDono.post(`${API}/professionals/me/locations`, {
+      data: {
+        name: `Fuso ${randomUUID().slice(0, 8)}`,
+        kind: 'PARTNER_VENUE',
+        city: 'X',
+        state,
+        ...(timeZone ? { timeZone } : {}),
+      },
+    });
+    const corpo = (await resposta.json()) as { id: string; timeZone: string };
+    if (resposta.status() === 201) descartaveis.push(corpo.id);
+    return { status: resposta.status(), corpo };
+  }
+
+  test('a UF preenche o fuso, e não é sempre São Paulo', async () => {
+    expect((await local('AM')).corpo.timeZone).toBe('America/Manaus');
+    expect((await local('AC')).corpo.timeZone).toBe('America/Rio_Branco');
+    expect((await local('MT')).corpo.timeZone).toBe('America/Cuiaba');
+    expect((await local('SC')).corpo.timeZone).toBe('America/Sao_Paulo');
+  });
+
+  test('quem sabe o fuso de verdade manda ele, e ganha da UF', async () => {
+    // O caso real: Eirunepé fica no Amazonas e está uma hora atrás de Manaus. Sem este campo,
+    // o professor de lá não tem como consertar.
+    const { corpo } = await local('AM', 'America/Eirunepe');
+    expect(corpo.timeZone).toBe('America/Eirunepe');
+  });
+
+  test('deslocamento fixo é recusado, e a recusa explica', async () => {
+    // **`-03:00` não sabe que dia é hoje.** No dia em que o horário de verão voltar, toda aula
+    // gravada assim erra por uma hora — e é o tipo de erro que ninguém liga à causa.
+    const { status } = await local('SP', '-03:00');
+    expect(status, 'o banco aceitou um deslocamento fixo como fuso').toBe(422);
+  });
+
+  test('trocar a UF re-sugere o fuso', async () => {
+    const { corpo } = await local('AM');
+    expect(corpo.timeZone).toBe('America/Manaus');
+
+    const movido = await comoDono.patch(`${API}/professionals/me/locations/${corpo.id}`, {
+      data: { state: 'SC' },
+    });
+    expect(((await movido.json()) as { timeZone: string }).timeZone).toBe('America/Sao_Paulo');
+  });
+});
